@@ -1,33 +1,37 @@
-# Selection-Stitch Model (SSM): Lattice Saturation Simulation
+# Selection-Stitch Model (SSM) Simulation Repository
 
-[SSM Visualization](ssm_saturation_k12.png)
-*(Note: This image is generated after running the simulation)*
+This repository contains the source code and simulation data supporting the findings in the paper:
+
+**"Resolving the Hubble Tension via a Topological Phase Transition in a Discrete Vacuum Tensor Network"**
 
 ## Overview
 
-This repository contains a Python computational proof-of-concept for the **Selection-Stitch Model (SSM)**. It procedurally generates a 3D vacuum lattice node-by-node, enforcing the model's core geometric constraints: **Stitch Length Uniformity** and **Geometric Exclusion**.
+The Selection-Stitch Model (SSM) proposes that the Hubble Tension arises from a geometric phase transition in the vacuum lattice structure. This repository includes two distinct Python simulations used to validate the kinematic consistency of the model and numerically verify the predicted expansion boost.
 
-The simulation empirically demonstrates the **Emergent Saturation Limit**, showing that a discrete network of equal-length constraints naturally converges to a maximum coordination number of **K ≈ 12** (related to the "Kissing Number" problem). This validates the theoretical prediction that the vacuum is a rigid "Mesh Phase" crystal rather than a fluid.
+## Repository Contents
 
-## Features
+### 1. Constructive Geometry Simulation
+* **File:** `selection-stitch-simulation.py`
+* **Purpose:** Corresponds to **Appendix B** of the paper.
+* **Description:** This script simulates the constructive growth of a 3D tensor network using the SSM "Lift and Stitch" operators. It tests whether a stochastic network can naturally saturate into a Face-Centered Cubic (FCC) lattice without "jamming" into an amorphous glass state.
+* **Key Output:**
+    * Verifies the saturation limit at Coordination Number $K=12$.
+    * Generates a 3D visualization of the lattice core vs. surface (Fig. 1 in the paper).
+    * Proves the geometric stability of the $K=12$ vacuum ground state.
 
-* **Procedural Lattice Growth:** Simulates the "mining" of new vacuum voxels from a genesis triangle, expanding outward.
-* **Geometric Exclusion (The "Selection" Operator):** Implements a spatial stabilizer check using KD-Trees to enforce the exclusion principle (no two nodes can be closer than the Stitch Length).
-* **3D Topology Lifting:** Simulates the formation of Tetrahedra (Volume) by selecting valid triangles on the boundary and "lifting" a new node into the third dimension.
-* **High-Res Visualization:** Generates a 300 DPI 3D scatter plot where nodes are color-coded by their connectivity (Degree), visually highlighting the saturated core vs. the active frontier.
+### 2. Topological Phase Transition (Monte Carlo)
+* **File:** `ssm-repair-simulation.py`
+* **Purpose:** Corresponds to **Appendix C** of the paper.
+* **Description:** This script performs a Monte Carlo analysis on a pre-existing $15^3$ FCC grid. It introduces random "cosmic voids" (vacancies) to model the late-time universe and calculates the effective topological degrees of freedom ($\nu$) available for nucleation.
+* **Key Output:**
+    * Tracks the shift in active nucleation channels as void fraction increases.
+    * Numerically confirms the transition from $\nu_{mean} \approx 12.0$ (Shielded Phase) to $\nu_{mean} \approx 13.0$ (Exposed Phase).
+    * Validates the theoretical expansion boost of $\xi = 13/12 \approx 8.3\%$.
 
-## Theoretical Background
+## Installation & Usage
 
-The code directly implements the two fundamental operators of the SSM:
-
-1.  **The Selection Operator ($\hat{O}$):** A fluctuation is only "selected" if it creates a valid geometry without overlapping existing nodes. In the code, this is the `stabilizer_check`, which rejects candidates within the `HARD_SHELL` radius.
-2.  **The Stitch Operator ($\hat{S}$):** Valid nodes are connected to their neighbors to form the lattice graph (`G.add_edge`).
-
-The simulation tracks the local coordination number ($K$) of every node. The emergence of a "Yellow Core" ($K=12$) in the output image represents the **Saturated Vacuum**—regions where the lattice is geometrically locked and "Graph Friction" (Inertia) becomes non-zero.
-
-## Installation
-
-To run this simulation, you need Python 3.x and the following scientific libraries:
+### Prerequisites
+The simulations require a standard Python 3 environment with the following scientific libraries:
 
 ```bash
-pip install numpy matplotlib networkx scipy
+pip install numpy matplotlib scipy
