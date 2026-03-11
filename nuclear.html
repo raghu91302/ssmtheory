@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuclear Binding 3D - SSM Theory</title>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+    #root { width: 100%; height: 100%; }
+  </style>
+  
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "three": "https://esm.sh/three@0.160.0"
+      }
+    }
+  </script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from "react";
+    import ReactDOM from "react-dom/client";
+    import * as THREE from "three";
+
+    const a = 2.0;
+    const nn = a / Math.sqrt(2);
+    const basis = [[0,0,0],[a/2,a/2,0],[a/2,0,a/2],[0,a/2,a/2]];
+    const posVoids = [[a/4,a/4,a/4],[3*a/4,3*a/4,a/4],[3*a/4,a/4,3*a/4],[a/4,3*a/4,3*a/4]];
+
+    const allAtoms = [];
+    for (let dx=-1;dx<=1;dx++)
+      for (let dy=-1;dy<=1;dy++)
+        for (let dz=-1;dz<=1;dz++)
+          for (const b of basis)
+            allAtoms.push([b[0]+dx*a,b[1]+dy*a,b[2]+dz*a]);
+
+    const dTet = a*Math.sqrt(3)/4;
+    const voidBounding = posVoids.map(v => {
+      const bnd = [];
+      for (const at of allAtoms) {
+        const d = Math.sqrt((at[0]-v[0])**2+(at[1]-v[1])**2+(at[2]-v[2])**2);
+        if (Math.abs(d-dTet)<0.01) bnd.push(at.map(x=>Math.round(x*1e4)/1e4));
+      }
+      return bnd;
+    });
+
+    const cx=a/2, cy=a/2, cz=a/2;
+    const nearAtoms = allAtoms.filter(p => Math.sqrt((p[0]-cx)**2+(p[1]-cy)**2+(p[2]-cz)**2) <= a*1.6);
+
+    function getSharedCount(at, nV) {
+      let c=0;
+      for (let vi=0;vi<nV;vi++)
+        for (const ba of voidBounding[vi])
+          if (Math.abs(at[0]-ba[0])<0.01&&Math.abs(at[1]-ba[1])<0.01&&Math.abs(at[2]-ba[2])<0.01){c++;break;}
+      return c;
+    }
+    function atomKey(at){return at.map(x=>Math.round(x*1e3)/1e3).join(",");}
+
+    function v3(p){return new THREE.Vector3(p[0]-cx,p[1]-cy,p[2]-cz);}
+    function makeCyl(p1,p2,r,mat){
+      const dir=new THREE.Vector3().subVectors(p2,p1);
+      const len=dir.length();
+      if(len<0.001)return null;
+      const mid=new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);
+      const geo=new THREE.CylinderGeometry(r,r,len,6);
+      const m=new THREE.Mesh(geo,mat);
+      m.position.copy(mid);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+      return m;
+    }
+
+    function buildScene(scene, group, nVoids) {
+      while(group.children.length) group.remove(group.children[0]);
+
+      for (const pos of nearAtoms) {
+        const sc = getSharedCount(pos, nVoids);
+        let color, size, emissive;
+        if(sc>=2){color=0xff8800;size=0.12;emissive=0x884400;}
+        else if(sc===1){color=0xcc2222;size=0.11;emissive=0x771111;}
+        else{color=0x2266aa;size=0.06;emissive=0x000000;}
+        const geo=new THREE.SphereGeometry(size,16,16);
+        const mat=new THREE.MeshPhongMaterial({color,emissive});
+        const mesh=new THREE.Mesh(geo,mat);
+        mesh.position.copy(v3(pos));
+        group.add(mesh);
+      }
+
+      const bondMat=new THREE.MeshPhongMaterial({color:0x336688,transparent:true,opacity:0.25});
+      for(let i=0;i<nearAtoms.length;i++)
+        for(let j=i+1;j<nearAtoms.length;j++){
+          const d=Math.sqrt((nearAtoms[i][0]-nearAtoms[j][0])**2+(nearAtoms[i][1]-nearAtoms[j][1])**2+(nearAtoms[i][2]-nearAtoms[j][2])**2);
+          if(Math.abs(d-nn)<0.05){const c=makeCyl(v3(nearAtoms[i]),v3(nearAtoms[j]),0.01,bondMat.clone());if(c)group.add(c);}
+        }
+
+      for(let vi=0;vi<nVoids;vi++){
+        const vc=posVoids[vi], ba=voidBounding[vi];
+        const intGeo=new THREE.SphereGeometry(0.13,24,24);
+        const intMat=new THREE.MeshPhongMaterial({color:0x00cc44,emissive:0x006622});
+        const intMesh=new THREE.Mesh(intGeo,intMat);
+        intMesh.position.copy(v3(vc));
+        group.add(intMesh);
+
+        for(const b of ba){
+          const sc=getSharedCount(b,nVoids);
+          const color=sc>=2?0xff6600:0x00aa33;
+          const em=sc>=2?0x663300:0x003311;
+          const cMat=new THREE.MeshPhongMaterial({color,emissive:em});
+          const cyl=makeCyl(v3(vc),v3(b),0.025,cMat);
+          if(cyl)group.add(cyl);
+        }
+
+        for(let i=0;i<ba.length;i++)
+          for(let j=i+1;j<ba.length;j++){
+            const d=Math.sqrt((ba[i][0]-ba[j][0])**2+(ba[i][1]-ba[j][1])**2+(ba[i][2]-ba[j][2])**2);
+            if(Math.abs(d-nn)<0.05){
+              const tMat=new THREE.MeshPhongMaterial({color:0xddaa00,transparent:true,opacity:0.6});
+              const cyl=makeCyl(v3(ba[i]),v3(ba[j]),0.015,tMat);
+              if(cyl)group.add(cyl);
+            }
+          }
+      }
+    }
+
+    function computeStats(nVoids) {
+      const sharedList=[];
+      for(let vi=0;vi<nVoids;vi++)
+        for(const b of voidBounding[vi]){
+          const sc=getSharedCount(b,nVoids);
+          if(sc>=2&&!sharedList.find(s=>atomKey(s)===atomKey(b))) sharedList.push(b);
+        }
+      let totalNN=0;
+      for(const sa of sharedList){
+        let nc=0;
+        for(const sa2 of sharedList){
+          if(atomKey(sa)===atomKey(sa2))continue;
+          const d=Math.sqrt((sa[0]-sa2[0])**2+(sa[1]-sa2[1])**2+(sa[2]-sa2[2])**2);
+          if(Math.abs(d-nn)<0.05)nc++;
+        }
+        totalNN+=nc;
+      }
+      const avgNN=sharedList.length>0?totalNN/sharedList.length:0;
+      const eps=4*(1+avgNN/3);
+      const BE=sharedList.length*eps*0.511;
+      return {nShared:sharedList.length, avgNN, eps, BE};
+    }
+
+    const configs = ["Empty Cell","Single Baryon","Deuteron (K₂)","Triton (K₃)","Alpha (K₄)"];
+    const observed = [0, 0, 2.224, 8.482, 28.296];
+
+    const descriptions = [
+      {title:"Empty FCC Cell", color:"#2266aa",
+       text:"8 tetrahedral voids, all empty. No matter, no nuclear force."},
+      {title:"Single Baryon", color:"#00cc44",
+       text:"1 interstitial at P₀. 4 bounding atoms. Each: 3 tet + 1 int + 8 out = 12. Mass = 1836 mₑ."},
+      {title:"Deuteron (K₂)", color:"#ff8800",
+       text:"2 interstitials, 1 shared atom. Shared: 6 tet + 2 int + 4 out = 12. nₙₙ=0 → ε=4 → B=2.04 MeV. No cooperative enhancement."},
+      {title:"Triton (K₃)", color:"#ff8800",
+       text:"3 interstitials, 3 shared atoms (triangle). Each has nₙₙ=2. ε=4(1+2/3)=6.67 → B=10.2 MeV. Cooperative: each shared atom reinforced by 2 neighbors."},
+      {title:"Alpha Particle (K₄)", color:"#ff8800",
+       text:"4 interstitials, 6 shared atoms (octahedral ring). Each has nₙₙ=4. ε=4(1+4/3)=9.33 → B=28.6 MeV. Maximally connected. Most stable per nucleon."},
+    ];
+
+    function NuclearBinding3D() {
+      const mountRef = useRef(null);
+      const groupRef = useRef(null);
+      const rotRef = useRef({x:0.35, y:0.6});
+      const mouseRef = useRef({isDown:false, x:0, y:0});
+      const autoRotRef = useRef(true);
+      const [config, setConfig] = useState(4);
+      const [autoRotate, setAutoRotate] = useState(true);
+      const rendererRef = useRef(null);
+      const cameraRef = useRef(null);
+
+      useEffect(() => {
+        const el = mountRef.current;
+        if (!el) return;
+        const W = el.clientWidth, H = el.clientHeight;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+        const camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
+        camera.position.set(0, 0, 7);
+        cameraRef.current = camera;
+
+        const renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setSize(W, H);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        el.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+        const dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(5,5,5);scene.add(dl);
+        const dl2=new THREE.DirectionalLight(0x8888cc,0.3);dl2.position.set(-3,-2,-4);scene.add(dl2);
+
+        const group = new THREE.Group();
+        scene.add(group);
+        groupRef.current = group;
+
+        buildScene(scene, group, 4);
+
+        let animId;
+        function animate() {
+          animId = requestAnimationFrame(animate);
+          if (autoRotRef.current && !mouseRef.current.isDown) rotRef.current.y += 0.004;
+          group.rotation.x = rotRef.current.x;
+          group.rotation.y = rotRef.current.y;
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        function onDown(e) {
+          mouseRef.current.isDown = true;
+          mouseRef.current.x = e.clientX || (e.touches && e.touches[0].clientX);
+          mouseRef.current.y = e.clientY || (e.touches && e.touches[0].clientY);
+        }
+        function onUp() { mouseRef.current.isDown = false; }
+        function onMove(e) {
+          if (!mouseRef.current.isDown) return;
+          const x = e.clientX || (e.touches && e.touches[0].clientX);
+          const y = e.clientY || (e.touches && e.touches[0].clientY);
+          rotRef.current.y += (x - mouseRef.current.x) * 0.01;
+          rotRef.current.x += (y - mouseRef.current.y) * 0.01;
+          rotRef.current.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotRef.current.x));
+          mouseRef.current.x = x;
+          mouseRef.current.y = y;
+        }
+
+        const canvas = renderer.domElement;
+        canvas.addEventListener("mousedown", onDown);
+        canvas.addEventListener("touchstart", onDown, {passive:true});
+        window.addEventListener("mouseup", onUp);
+        window.addEventListener("touchend", onUp);
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("touchmove", onMove, {passive:true});
+
+        function onResize() {
+          const w2 = el.clientWidth, h2 = el.clientHeight;
+          camera.aspect = w2/h2;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w2, h2);
+        }
+        window.addEventListener("resize", onResize);
+
+        return () => {
+          cancelAnimationFrame(animId);
+          canvas.removeEventListener("mousedown", onDown);
+          canvas.removeEventListener("touchstart", onDown);
+          window.removeEventListener("mouseup", onUp);
+          window.removeEventListener("touchend", onUp);
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("touchmove", onMove);
+          window.removeEventListener("resize", onResize);
+          renderer.dispose();
+          if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+        };
+      }, []);
+
+      useEffect(() => {
+        if (!groupRef.current) return;
+        const group = groupRef.current;
+        buildScene(group.parent, group, config);
+      }, [config]);
+
+      useEffect(() => {
+        autoRotRef.current = autoRotate;
+      }, [autoRotate]);
+
+      const stats = config >= 2 ? computeStats(config) : null;
+      const desc = descriptions[config];
+
+      return (
+        <div style={{width:"100%",height:"100vh",display:"flex",flexDirection:"column",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",background:"#fff"}}>
+          <div style={{padding:"8px 14px",background:"#f8f8f8",borderBottom:"1px solid #e0e0e0"}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#222"}}>Nuclear Binding from Tetrahedral Void Geometry</div>
+            <div style={{fontSize:11,color:"#555",marginTop:2}}>
+              {configs[config]}
+              {stats && ` — ${stats.nShared} shared, nₙₙ=${stats.avgNN.toFixed(0)}, ε=${stats.eps.toFixed(2)}, B=${stats.BE.toFixed(1)} MeV (obs: ${observed[config].toFixed(1)})`}
+              {config===1 && " — mass = 1836 mₑ"}
+              {config===0 && " — 8 empty tetrahedral voids"}
+            </div>
+          </div>
+
+          <div style={{flex:1,position:"relative",cursor:"grab"}} ref={mountRef}>
+            <div style={{position:"absolute",top:8,right:8,background:"rgba(255,255,255,0.94)",padding:"8px 12px",borderRadius:7,fontSize:11,color:"#444",border:"1px solid #e0e0e0",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",lineHeight:1.8,pointerEvents:"none"}}>
+              <div><span style={{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#2266aa",marginRight:5,verticalAlign:"middle"}}/>Lattice (K=12)</div>
+              {config>0&&<div><span style={{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#cc2222",marginRight:5,verticalAlign:"middle"}}/>Bounding (1 void)</div>}
+              {config>0&&<div><span style={{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#00cc44",marginRight:5,verticalAlign:"middle"}}/>Interstitial</div>}
+              {config>=2&&<div><span style={{display:"inline-block",width:9,height:9,borderRadius:"50%",background:"#ff8800",marginRight:5,verticalAlign:"middle"}}/><b>Shared (nuclear bond)</b></div>}
+              <div style={{marginTop:4,color:"#aaa",fontSize:10}}>Drag to rotate</div>
+            </div>
+
+            <div style={{position:"absolute",bottom:8,left:8,background:"rgba(255,255,255,0.94)",padding:"8px 12px",borderRadius:7,fontSize:11,color:"#444",border:"1px solid #e0e0e0",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",maxWidth:310,lineHeight:1.6,pointerEvents:"none"}}>
+              <b style={{color:desc.color}}>{desc.title}</b><br/>
+              {desc.text}
+            </div>
+          </div>
+
+          <div style={{padding:"8px 14px",background:"#f8f8f8",borderTop:"1px solid #e0e0e0",display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:12,color:"#888",marginRight:4}}>Config:</span>
+            {configs.map((name, i) => (
+              <button key={i} onClick={()=>setConfig(i)}
+                style={{padding:"6px 12px",border:config===i?"2px solid #2266aa":"1px solid #ccc",borderRadius:5,
+                  background:config===i?"#eef4ff":"#fff",color:config===i?"#1a5599":"#555",cursor:"pointer",
+                  fontSize:12,fontWeight:config===i?600:400,fontFamily:"inherit"}}>
+                {name}
+              </button>
+            ))}
+            <span style={{flexGrow:1}}/>
+            <button onClick={()=>setAutoRotate(!autoRotate)}
+              style={{padding:"6px 12px",border:autoRotate?"2px solid #2266aa":"1px solid #ccc",borderRadius:5,
+                background:autoRotate?"#eef4ff":"#fff",color:autoRotate?"#1a5599":"#555",cursor:"pointer",
+                fontSize:12,fontFamily:"inherit"}}>
+              Rotate: {autoRotate?"ON":"OFF"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Mount the React app to the DOM
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<NuclearBinding3D />);
+  </script>
+</body>
+</html>
