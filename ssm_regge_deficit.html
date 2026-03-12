@@ -75,6 +75,56 @@ for(var si2=0;si2<srt2.length&&triI.length<3;si2++){var ni2=srt2[si2];if(triI.le
 var tA=new THREE.Vector3(ns3[triI[0]][0],0,ns3[triI[0]][2]),tB=new THREE.Vector3(ns3[triI[1]][0],0,ns3[triI[1]][2]),tCV=new THREE.Vector3(ns3[triI[2]][0],0,ns3[triI[2]][2]);
 var cen2=new THREE.Vector3().addVectors(tA,tB).add(tCV).multiplyScalar(1/3);var apex2=new THREE.Vector3(cen2.x,lH,cen2.z);
 
+// SA: Bell pair — the seed
+steps.push({b:function(g){
+var p1=new THREE.Vector3(-L/2,0,0),p2=new THREE.Vector3(L/2,0,0);
+g.add(mS(p1,0.1,C.tl));g.add(mS(p2,0.1,C.tl));g.add(mC(p1,p2,0.04,C.tl,1));
+g.add(mL("L",new THREE.Vector3(0,0.35,0),"#009988"));
+g.add(mL("Node 1",new THREE.Vector3(-L/2,-0.35,0),"#555"));
+g.add(mL("Node 2",new THREE.Vector3(L/2,-0.35,0),"#555"));
+},ph:"k6",badge:"STITCH: BELL PAIR",bc:"#009988",label:"The Seed: One Entanglement Bond (Bell Pair)",
+desc:"Two nodes. One bond of length L. This is the Stitch operator's seed \u2014 a single maximally entangled EPR pair. The fundamental building block from which all of spacetime will be constructed.",
+legend:'<div class="lt">The Stitch Operator</div>One bond = one unit of entanglement.<br>Length = L (the Planck length).<br><br>K = 1 per node.<br><br>The operator will now extend this into a 2D sheet.',
+tl:'<b>You are here:</b><br>\u25B6 <b style="color:#009988">Stitching (Bell pair)</b><br>\u00A0\u00A0 K=6 Sheet<br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum'});
+
+// SB: First triangle
+steps.push({b:function(g){
+var p1=new THREE.Vector3(-L/2,0,-LH/3),p2=new THREE.Vector3(L/2,0,-LH/3),p3=new THREE.Vector3(0,0,2*LH/3);
+g.add(mS(p1,0.1,C.tl));g.add(mS(p2,0.1,C.tl));g.add(mS(p3,0.1,C.tl));
+g.add(mC(p1,p2,0.04,C.tl,1));g.add(mC(p2,p3,0.04,C.tl,1));g.add(mC(p3,p1,0.04,C.tl,1));
+g.add(mT(p1,p2,p3,C.tl,0.2));
+g.add(mL("First triangular face",new THREE.Vector3(0,0.5,0),"#009988"));
+g.add(mL("L",new THREE.Vector3((p1.x+p2.x)/2,-0.3,(p1.z+p2.z)/2),"#555"));
+g.add(mL("L",new THREE.Vector3((p2.x+p3.x)/2+0.3,0,(p2.z+p3.z)/2),"#555"));
+g.add(mL("L",new THREE.Vector3((p1.x+p3.x)/2-0.3,0,(p1.z+p3.z)/2),"#555"));
+},ph:"k6",badge:"STITCH: TRIANGLE",bc:"#009988",label:"First Stitch: The Fundamental Triangular Face",
+desc:"The Stitch operator finds the equidistant point at \u221A3/2\u00B7L from the edge midpoint. Three nodes, three bonds, one triangular face. This is the fundamental tile from which the entire 2D sheet will be built.",
+legend:'<div class="lt">First Triangle</div>3 nodes, 3 bonds.<br>All edges = L.<br><br>K = 2 per node.<br><br>This equilateral triangle is the irreducible tile of the hexagonal sheet.',
+tl:'<b>You are here:</b><br>\u25B6 <b style="color:#009988">Stitching (triangle)</b><br>\u00A0\u00A0 K=6 Sheet<br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum'});
+
+// SC: Growing hex — small ring (7 nodes, K approaching 6)
+steps.push({b:function(g){
+var ns7=[[0,0,0],[L,0,0],[L/2,0,LH],[-L/2,0,LH],[L/2,0,-LH],[3*L/2,0,LH],[-L/2,0,-LH]];
+var bs7=[];
+for(var i=0;i<ns7.length;i++)for(var j=i+1;j<ns7.length;j++){
+  var dx=ns7[i][0]-ns7[j][0],dz=ns7[i][2]-ns7[j][2];
+  if(dx*dx+dz*dz<BR2)bs7.push([i,j]);}
+// Center
+var cx7=0,cz7=0;for(var i=0;i<ns7.length;i++){cx7+=ns7[i][0];cz7+=ns7[i][2];}cx7/=ns7.length;cz7/=ns7.length;
+for(var b=0;b<bs7.length;b++){
+  g.add(mC(new THREE.Vector3(ns7[bs7[b][0]][0]-cx7,0,ns7[bs7[b][0]][2]-cz7),new THREE.Vector3(ns7[bs7[b][1]][0]-cx7,0,ns7[bs7[b][1]][2]-cz7),0.035,C.tl,0.7));}
+for(var k=0;k<ns7.length;k++){
+  // Count K
+  var ki=0;for(var b=0;b<bs7.length;b++){if(bs7[b][0]===k||bs7[b][1]===k)ki++;}
+  var col=ki>=6?C.gn:ki>=4?C.tl:C.or;
+  g.add(mS(new THREE.Vector3(ns7[k][0]-cx7,0,ns7[k][2]-cz7),0.08,col));}
+g.add(mL("Hexagonal ring forming",new THREE.Vector3(0,0.65,0),"#009988"));
+g.add(mL("Central nodes: K \u2192 6",new THREE.Vector3(0,0.3,0),"#555"));
+},ph:"k6",badge:"STITCH: HEX RING",bc:"#009988",label:"Stitching Continues: Hexagonal Ring Forming",
+desc:"Repeated stitching fills out the hexagonal ring. Central nodes approach K=6 \u2014 the maximum coordination for a 2D triangular lattice. Green nodes have already reached K=6. The hexagonal pattern is emerging.",
+legend:'<div class="lt">Growing the Sheet</div>Each stitch adds a node at \u221A3/2\u00B7L from an edge midpoint.<br><br>Interior nodes reach K = 6.<br><br>The flat hexagonal ground state is crystallizing.',
+tl:'<b>You are here:</b><br>\u25B6 <b style="color:#009988">Stitching (hex ring)</b><br>\u00A0\u00A0 K=6 Sheet<br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum'});
+
 // S0: K=6 sheet
 steps.push({b:function(g){for(var i=0;i<bs3.length;i++)g.add(mC(new THREE.Vector3(ns3[bs3[i][0]][0],0,ns3[bs3[i][0]][2]),new THREE.Vector3(ns3[bs3[i][1]][0],0,ns3[bs3[i][1]][2]),0.025,C.tl,0.6));for(var k=0;k<ns3.length;k++)g.add(mS(new THREE.Vector3(ns3[k][0],0,ns3[k][2]),0.06,C.tl));g.add(mL("K = 6  —  Perfectly Flat",new THREE.Vector3(0,0.7,0),"#009988"));},ph:"k6",badge:"K = 6  GROUND STATE",bc:"#009988",label:"Phase I: The 2D Hexagonal Ground State",desc:"The pre-inflationary vacuum. A flat hexagonal sheet with K=6. The Euler characteristic forces \u03C7 = 0: exactly zero curvature. This is genesis — a 2D holographic boundary.",legend:'<div class="lt">Phase I: K = 6</div>Flat hexagonal sheet.<br><span class="mt">\u03C7 = V(1 \u2212 K/6) = 0</span><br><br>No 3D volume exists yet.',tl:'<b>You are here:</b><br>\u25B6 <b style="color:#009988">K=6 Ground State</b><br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum'});
 
@@ -188,8 +238,8 @@ g.add(mL("\u03B4 = 0  |  R = 0  |  Flat",new THREE.Vector3(0,lH+0.8,0),"#22AA44"
 // RENDER
 var si3=0,pl2=false,pt2=null;var sli2=document.querySelector("#sld input");sli2.max=steps.length-1;
 function rn2(idx){si3=Math.max(0,Math.min(idx,steps.length-1));sli2.value=si3;while(G.children.length){var c=G.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}G.remove(c);}var s=steps[si3];s.b(G);document.getElementById("hd").className=s.ph==="k6"?"pk6":s.ph==="k4"?"pk4":"pk12";document.getElementById("pb").textContent=s.badge;document.getElementById("pb").style.background=s.bc;document.getElementById("sl2").textContent=s.label;document.getElementById("lg").innerHTML=s.legend;document.getElementById("dc").textContent=s.desc;document.getElementById("tl").innerHTML=s.tl;document.getElementById("fc").textContent=(si3+1)+"/"+steps.length;sli2.style.accentColor=s.bc;}
-function stp2(){pl2=false;if(pt2)clearInterval(pt2);pt2=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
-window.togP=function(){if(pl2){stp2();return;}pl2=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");pt2=setInterval(function(){if(si3>=steps.length-1){stp2();return;}rn2(si3+1);},5000);};
+function stp2(){pl2=false;if(pt2)clearTimeout(pt2);pt2=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togP=function(){if(pl2){stp2();return;}pl2=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nxt(){if(si3>=steps.length-1){stp2();return;}rn2(si3+1);var s=steps[si3];var delay=s.ph==="k6"?2500:4500;pt2=setTimeout(nxt,delay);}var s0=steps[si3];pt2=setTimeout(nxt,s0.ph==="k6"?2500:4500);};
 window.goS=function(){stp2();rn2(0);};window.goP=function(){stp2();rn2(si3-1);};window.goN=function(){stp2();rn2(si3+1);};window.goE=function(){stp2();rn2(steps.length-1);};window.goTo=function(v){stp2();rn2(v);};
 window.togR=function(){ar2=!ar2;var b=document.getElementById("br");b.textContent="Rot:"+(ar2?"ON":"OFF");b.classList.toggle("on",ar2);};
 window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togP();}});
