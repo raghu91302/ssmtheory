@@ -3,240 +3,115 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SSM: From Flat Sheet to Geometric Inflation</title>
+<title>SSM: K=6 → K=4 → K=12 — The Complete Geometric Timeline</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
-#header{padding:7px 14px;border-bottom:1px solid #ddd;transition:background 0.4s;}
-#header.phase-sheet{background:#e6f5f5;}
-#header.phase-lift{background:#f3eeff;}
-#header.phase-pack{background:#fff5e6;}
-#header.phase-gap{background:#ffe6e6;}
-#phase-badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;display:inline-block;margin-right:8px;}
-#snap-label{font-size:13px;font-weight:700;color:#222;}
-#stats{font-size:10.5px;color:#555;margin-top:2px;}
-#viewport{flex:1;position:relative;cursor:grab;}
-#viewport:active{cursor:grabbing;}
-#legend{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:7px;font-size:10.5px;color:#333;border:1px solid #ddd;line-height:1.7;pointer-events:none;max-width:280px;}
-.leg-title{font-weight:700;font-size:11px;margin-bottom:3px;}
-.math{font-family:'Courier New',monospace;color:#0077BB;font-size:10px;}
-#desc{position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:7px;font-size:11.5px;color:#333;border:1px solid #ddd;max-width:400px;line-height:1.6;pointer-events:none;}
-#controls{padding:7px 12px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
-.btn{padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;transition:all 0.15s;}
-.btn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
-.btn:hover{border-color:#999;}
-#slider{flex:1;margin:0 6px;}
-#slider input{width:100%;}
-#frame-ct{font-size:10.5px;color:#888;min-width:48px;text-align:right;}
+#hd{padding:7px 14px;border-bottom:1px solid #ddd;transition:background 0.4s;}
+.pk6{background:#e6f5f5;}.pk4{background:#f3eeff;}.pk12{background:#e6f0ff;}
+#pb{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;display:inline-block;margin-right:8px;}
+#sl2{font-size:13px;font-weight:700;color:#222;}
+#vp{flex:1;position:relative;cursor:grab;}#vp:active{cursor:grabbing;}
+#lg{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:7px;font-size:10.5px;color:#333;border:1px solid #ddd;line-height:1.7;pointer-events:none;max-width:280px;}
+.lt{font-weight:700;font-size:11px;margin-bottom:3px;}
+.mt{font-family:'Courier New',monospace;color:#0077BB;font-size:10px;}
+#dc{position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:7px;font-size:11.5px;color:#333;border:1px solid #ddd;max-width:400px;line-height:1.6;pointer-events:none;}
+#tl{position:absolute;bottom:8px;right:8px;background:rgba(255,255,255,0.96);padding:6px 10px;border-radius:7px;font-size:9.5px;color:#777;border:1px solid #ddd;pointer-events:none;line-height:1.6;}
+#ct{padding:7px 12px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+.bn{padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.bn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sld{flex:1;margin:0 6px;}#sld input{width:100%;}
+#fc{font-size:10.5px;color:#888;min-width:48px;text-align:right;}
 </style>
 </head>
 <body>
-<div id="header" class="phase-sheet">
-<div style="display:flex;align-items:center;"><span id="phase-badge" style="background:#006666;">2D SHEET</span><span id="snap-label">Building...</span></div>
-<div id="stats"></div>
-</div>
-<div id="viewport"><div id="legend"></div><div id="desc"></div></div>
-<div id="controls">
-<button class="btn" onclick="goStart()">⏮</button>
-<button class="btn" onclick="goPrev()">◀</button>
-<button class="btn" id="b-play" onclick="togglePlay()">▶ Play</button>
-<button class="btn" onclick="goNext()">▶</button>
-<button class="btn" onclick="goEnd()">⏭</button>
-<div id="slider"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
-<span id="frame-ct">0/0</span>
-<button class="btn on" id="b-rot" onclick="toggleRot()">Rot:ON</button>
+<div id="hd" class="pk6"><div style="display:flex;align-items:center;"><span id="pb" style="background:#009988;">K=6</span><span id="sl2">Loading...</span></div></div>
+<div id="vp"><div id="lg"></div><div id="dc"></div><div id="tl"></div></div>
+<div id="ct">
+<button class="bn" onclick="goS()">⏮</button><button class="bn" onclick="goP()">◀</button>
+<button class="bn on" id="bp" onclick="togP()">▶ Play</button>
+<button class="bn" onclick="goN()">▶</button><button class="bn" onclick="goE()">⏭</button>
+<div id="sld"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">0/0</span><button class="bn on" id="br" onclick="togR()">Rot:ON</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){"use strict";
-var L=1.8,LH=Math.sqrt(3)/2*L,liftH=Math.sqrt(2/3)*L,DIHEDRAL=Math.acos(1/3),DEFICIT=2*Math.PI-5*DIHEDRAL,BR2=(L*1.05)*(L*1.05);
-var CK={blue:0x0077BB,cyan:0x33BBEE,orange:0xEE7733,red:0xCC3311,teal:0x009988,wine:0xAA3377,grey:0x888888,lgrey:0xcccccc,yellow:0xEECC00};
-var vp=document.getElementById("viewport"),W=vp.clientWidth,H=vp.clientHeight;
-var scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
-var camera=new THREE.PerspectiveCamera(42,W/H,0.1,300);camera.position.set(0,3,9);camera.lookAt(0,0.3,0);
-var renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-vp.insertBefore(renderer.domElement,vp.firstChild);
-scene.add(new THREE.AmbientLight(0xffffff,0.5));
-var dl1=new THREE.DirectionalLight(0xffffff,0.5);dl1.position.set(5,10,6);scene.add(dl1);
-var dl2=new THREE.DirectionalLight(0x8888cc,0.2);dl2.position.set(-5,-3,-6);scene.add(dl2);
-var group=new THREE.Group();scene.add(group);
-var rot={x:0.35,y:-0.3},mDown=false,mx=0,my=0,autoRot=true;
-var cv=renderer.domElement;
-cv.addEventListener("mousedown",function(e){mDown=true;mx=e.clientX;my=e.clientY;});
-cv.addEventListener("touchstart",function(e){mDown=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
-window.addEventListener("mouseup",function(){mDown=false;});window.addEventListener("touchend",function(){mDown=false;});
-window.addEventListener("mousemove",function(e){if(!mDown)return;rot.y+=(e.clientX-mx)*0.006;rot.x+=(e.clientY-my)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx=e.clientX;my=e.clientY;});
-window.addEventListener("touchmove",function(e){if(!mDown)return;var t=e.touches[0];rot.y+=(t.clientX-mx)*0.006;rot.x+=(t.clientY-my)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
-cv.addEventListener("wheel",function(e){camera.position.z=Math.max(3,Math.min(25,camera.position.z+e.deltaY*0.015));e.preventDefault();},{passive:false});
-window.addEventListener("resize",function(){var w=vp.clientWidth,h=vp.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);});
-(function a(){requestAnimationFrame(a);if(autoRot&&!mDown)rot.y+=0.002;group.rotation.x=rot.x;group.rotation.y=rot.y;renderer.render(scene,camera);})();
+var L=1.6,LH=Math.sqrt(3)/2*L,lH=Math.sqrt(2/3)*L,DI=Math.acos(1/3),DEF=2*Math.PI-5*DI,BR2=(L*1.05)*(L*1.05);
+var C={b:0x0077BB,cy:0x33BBEE,or:0xEE7733,rd:0xCC3311,tl:0x009988,wn:0xAA3377,gr:0x888888,lg:0xcccccc,yl:0xEECC00,gn:0x22AA44};
+var vp=document.getElementById("vp"),W=vp.clientWidth,H=vp.clientHeight;
+var sc=new THREE.Scene();sc.background=new THREE.Color(0xffffff);
+var cam=new THREE.PerspectiveCamera(42,W/H,0.1,300);cam.position.set(0,3,10);cam.lookAt(0,0.3,0);
+var ren=new THREE.WebGLRenderer({antialias:true});ren.setSize(W,H);ren.setPixelRatio(Math.min(window.devicePixelRatio,2));
+vp.insertBefore(ren.domElement,vp.firstChild);
+sc.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(5,10,6);sc.add(dl);
+sc.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-5,-3,-6);
+var G=new THREE.Group();sc.add(G);
+var rot={x:0.35,y:-0.3},md2=false,mx2=0,my2=0,ar2=true,cv2=ren.domElement;
+cv2.addEventListener("mousedown",function(e){md2=true;mx2=e.clientX;my2=e.clientY;});
+cv2.addEventListener("touchstart",function(e){md2=true;mx2=e.touches[0].clientX;my2=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md2=false;});window.addEventListener("touchend",function(){md2=false;});
+window.addEventListener("mousemove",function(e){if(!md2)return;rot.y+=(e.clientX-mx2)*0.006;rot.x+=(e.clientY-my2)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx2=e.clientX;my2=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md2)return;var t=e.touches[0];rot.y+=(t.clientX-mx2)*0.006;rot.x+=(t.clientY-my2)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx2=t.clientX;my2=t.clientY;},{passive:true});
+cv2.addEventListener("wheel",function(e){cam.position.z=Math.max(3,Math.min(30,cam.position.z+e.deltaY*0.015));e.preventDefault();},{passive:false});
+window.addEventListener("resize",function(){var w=vp.clientWidth,h=vp.clientHeight;cam.aspect=w/h;cam.updateProjectionMatrix();ren.setSize(w,h);});
+(function a(){requestAnimationFrame(a);if(ar2&&!md2)rot.y+=0.002;G.rotation.x=rot.x;G.rotation.y=rot.y;ren.render(sc,cam);})();
 
-function mkS(p,r,c){var g=new THREE.SphereGeometry(r,10,10);var m=new THREE.MeshPhongMaterial({color:c});var s=new THREE.Mesh(g,m);s.position.copy(p);return s;}
-function mkC(p1,p2,r,c,op){var d=new THREE.Vector3().subVectors(p2,p1);var l=d.length();if(l<0.001)return new THREE.Group();var mid=new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);var g=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(g,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return s;}
-function mkT(v1,v2,v3,c,op){var g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1.x,v1.y,v1.z,v2.x,v2.y,v2.z,v3.x,v3.y,v3.z]),3));g.computeVertexNormals();return new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide}));}
-function mkL(text,pos,color){var cv2=document.createElement("canvas");cv2.width=300;cv2.height=64;var ctx=cv2.getContext("2d");ctx.font="bold 26px -apple-system,sans-serif";ctx.fillStyle=color||"#333";ctx.textAlign="center";ctx.fillText(text,150,40);var t=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.position.copy(pos);s.scale.set(1.4,0.3,1);return s;}
-function mkA(center,axis,startDir,angle,radius,color,seg){seg=seg||40;var pts=[];var ax=axis.clone().normalize();for(var i=0;i<=seg;i++){var a=(i/seg)*angle;pts.push(startDir.clone().applyAxisAngle(ax,a).multiplyScalar(radius).add(center));}return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:color}));}
-
+function mS(p,r,c){var g=new THREE.SphereGeometry(r,10,10);var m=new THREE.MeshPhongMaterial({color:c});var s=new THREE.Mesh(g,m);s.position.copy(p);return s;}
+function mC(p1,p2,r,c,op){var d=new THREE.Vector3().subVectors(p2,p1);var l=d.length();if(l<0.001)return new THREE.Group();var mid=new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);var g=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(g,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return s;}
+function mT(v1,v2,v3,c,op){var g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1.x,v1.y,v1.z,v2.x,v2.y,v2.z,v3.x,v3.y,v3.z]),3));g.computeVertexNormals();return new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide}));}
+function mL(t,p,c){var cv3=document.createElement("canvas");cv3.width=320;cv3.height=64;var ctx=cv3.getContext("2d");ctx.font="bold 26px -apple-system,sans-serif";ctx.fillStyle=c||"#333";ctx.textAlign="center";ctx.fillText(t,160,40);var tx=new THREE.CanvasTexture(cv3);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.copy(p);s.scale.set(1.5,0.3,1);return s;}
+function mA(cen,ax,sd,ang,r,c){var pts=[];var a2=ax.clone().normalize();for(var i=0;i<=40;i++){var a=(i/40)*ang;pts.push(sd.clone().applyAxisAngle(a2,a).multiplyScalar(r).add(cen));}return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:c}));}
 function hexN(rad){var ns=[];for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;ns.push([q*L+r*L/2,0,r*LH]);}return ns;}
 function hexB(ns){var bs=[];for(var i=0;i<ns.length;i++)for(var j=i+1;j<ns.length;j++){var dx=ns[i][0]-ns[j][0],dz=ns[i][2]-ns[j][2];if(dx*dx+dz*dz<BR2)bs.push([i,j]);}return bs;}
+function fccL(z,ty,rad){var off=[[0,0],[L/2,LH/3],[L,2*LH/3]];var o=off[ty%3];var ns=[];for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;ns.push([q*L+r*L/2+o[0],z,r*LH+o[1]]);}return ns;}
 
-var steps=[];
-// Build all steps
-(function(){
-var ns=hexN(3),bs=hexB(ns);
+var steps=[],ns3=hexN(3),bs3=hexB(ns3);
 // Find central triangle
-var triIdx=[],sorted=[];for(var i=0;i<ns.length;i++)sorted.push(i);
-sorted.sort(function(a,b){return(ns[a][0]*ns[a][0]+ns[a][2]*ns[a][2])-(ns[b][0]*ns[b][0]+ns[b][2]*ns[b][2]);});
-for(var si=0;si<sorted.length&&triIdx.length<3;si++){
-  var ni=sorted[si];
-  if(triIdx.length===0){triIdx.push(ni);continue;}
-  if(triIdx.length===1){var dx=ns[ni][0]-ns[triIdx[0]][0],dz=ns[ni][2]-ns[triIdx[0]][2];if(dx*dx+dz*dz<BR2){triIdx.push(ni);continue;}}
-  if(triIdx.length===2){var d1=Math.sqrt(Math.pow(ns[ni][0]-ns[triIdx[0]][0],2)+Math.pow(ns[ni][2]-ns[triIdx[0]][2],2));var d2=Math.sqrt(Math.pow(ns[ni][0]-ns[triIdx[1]][0],2)+Math.pow(ns[ni][2]-ns[triIdx[1]][2],2));if(d1<L*1.05&&d2<L*1.05){triIdx.push(ni);break;}}
-}
-var tA=new THREE.Vector3(ns[triIdx[0]][0],0,ns[triIdx[0]][2]),tB=new THREE.Vector3(ns[triIdx[1]][0],0,ns[triIdx[1]][2]),tCv=new THREE.Vector3(ns[triIdx[2]][0],0,ns[triIdx[2]][2]);
-var cent=new THREE.Vector3().addVectors(tA,tB).add(tCv).multiplyScalar(1/3);
-var apex=new THREE.Vector3(cent.x,liftH,cent.z);
+var triI=[],srt2=[];for(var i=0;i<ns3.length;i++)srt2.push(i);
+srt2.sort(function(a,b){return(ns3[a][0]*ns3[a][0]+ns3[a][2]*ns3[a][2])-(ns3[b][0]*ns3[b][0]+ns3[b][2]*ns3[b][2]);});
+for(var si2=0;si2<srt2.length&&triI.length<3;si2++){var ni2=srt2[si2];if(triI.length===0){triI.push(ni2);continue;}if(triI.length===1){var ddx=ns3[ni2][0]-ns3[triI[0]][0],ddz=ns3[ni2][2]-ns3[triI[0]][2];if(ddx*ddx+ddz*ddz<BR2){triI.push(ni2);continue;}}if(triI.length===2){var dd1=Math.sqrt(Math.pow(ns3[ni2][0]-ns3[triI[0]][0],2)+Math.pow(ns3[ni2][2]-ns3[triI[0]][2],2));var dd2=Math.sqrt(Math.pow(ns3[ni2][0]-ns3[triI[1]][0],2)+Math.pow(ns3[ni2][2]-ns3[triI[1]][2],2));if(dd1<L*1.05&&dd2<L*1.05){triI.push(ni2);break;}}}
+var tA=new THREE.Vector3(ns3[triI[0]][0],0,ns3[triI[0]][2]),tB=new THREE.Vector3(ns3[triI[1]][0],0,ns3[triI[1]][2]),tCV=new THREE.Vector3(ns3[triI[2]][0],0,ns3[triI[2]][2]);
+var cen2=new THREE.Vector3().addVectors(tA,tB).add(tCV).multiplyScalar(1/3);var apex2=new THREE.Vector3(cen2.x,lH,cen2.z);
 
-// S0: Flat sheet
-steps.push({build:function(g){
-  for(var b=0;b<bs.length;b++)g.add(mkC(new THREE.Vector3(ns[bs[b][0]][0],0,ns[bs[b][0]][2]),new THREE.Vector3(ns[bs[b][1]][0],0,ns[bs[b][1]][2]),0.025,CK.blue,0.5));
-  for(var k=0;k<ns.length;k++)g.add(mkS(new THREE.Vector3(ns[k][0],0,ns[k][2]),0.06,CK.blue));
-  g.add(mkL("K = 6",new THREE.Vector3(0,0.5,0),"#0077BB"));g.add(mkL("Perfectly Flat",new THREE.Vector3(0,0.85,0),"#555"));
-},phase:"sheet",badge:"2D SHEET",bc:"#006666",label:"The 2D Hexagonal Ground State (K = 6)",
-desc:"The minimal-energy ground state: a flat hexagonal sheet with K=6. The Euler characteristic forces \u03C7 \u2192 0, meaning exactly zero curvature. This IS the pre-inflationary universe.",
-legend:'<div class="leg-title">Phase I: K = 6 Sheet</div>Every node: 6 in-plane bonds.<br>Perfectly flat by construction.<br><br><span class="math">\u03C7 = V(1 \u2212 K/6) = 0</span><br><br>No volume. No inflation yet.'});
+// S0: K=6 sheet
+steps.push({b:function(g){for(var i=0;i<bs3.length;i++)g.add(mC(new THREE.Vector3(ns3[bs3[i][0]][0],0,ns3[bs3[i][0]][2]),new THREE.Vector3(ns3[bs3[i][1]][0],0,ns3[bs3[i][1]][2]),0.025,C.tl,0.6));for(var k=0;k<ns3.length;k++)g.add(mS(new THREE.Vector3(ns3[k][0],0,ns3[k][2]),0.06,C.tl));g.add(mL("K = 6  —  Perfectly Flat",new THREE.Vector3(0,0.7,0),"#009988"));},ph:"k6",badge:"K = 6  GROUND STATE",bc:"#009988",label:"Phase I: The 2D Hexagonal Ground State",desc:"The pre-inflationary vacuum. A flat hexagonal sheet with K=6. The Euler characteristic forces \u03C7 = 0: exactly zero curvature. This is genesis — a 2D holographic boundary.",legend:'<div class="lt">Phase I: K = 6</div>Flat hexagonal sheet.<br><span class="mt">\u03C7 = V(1 \u2212 K/6) = 0</span><br><br>No 3D volume exists yet.',tl:'<b>You are here:</b><br>\u25B6 <b style="color:#009988">K=6 Ground State</b><br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum'});
 
-// S1: Highlight triangle
-steps.push({build:function(g){
-  for(var b=0;b<bs.length;b++){var iT=triIdx.indexOf(bs[b][0])>=0&&triIdx.indexOf(bs[b][1])>=0;g.add(mkC(new THREE.Vector3(ns[bs[b][0]][0],0,ns[bs[b][0]][2]),new THREE.Vector3(ns[bs[b][1]][0],0,ns[bs[b][1]][2]),iT?0.04:0.02,iT?CK.orange:CK.blue,iT?1:0.3));}
-  for(var k=0;k<ns.length;k++){var iN=triIdx.indexOf(k)>=0;g.add(mkS(new THREE.Vector3(ns[k][0],0,ns[k][2]),iN?0.08:0.04,iN?CK.orange:CK.blue));}
-  g.add(mkT(tA,tB,tCv,CK.orange,0.4));g.add(mkL("This triangle will LIFT",new THREE.Vector3(cent.x,0.55,cent.z),"#EE7733"));
-},phase:"sheet",badge:"SELECT",bc:"#006666",label:"Selecting a Triangle for the Lift",
-desc:"A quantum fluctuation selects a triangular face. This equilateral triangle has circumradius Rex = L/\u221A3 \u2248 0.577L \u2014 the geometric singularity cutoff. It will serve as the base of the first tetrahedron.",
-legend:'<div class="leg-title">The Lift Target</div>Orange: the nucleation site.<br><br><span class="math">R<sub>ex</sub> = L/\u221A3 \u2248 0.577L</span><br><br>This triangle is the base from which 3D volume will be born.'});
+// S1: First lift
+steps.push({b:function(g){for(var i=0;i<bs3.length;i++)g.add(mC(new THREE.Vector3(ns3[bs3[i][0]][0],0,ns3[bs3[i][0]][2]),new THREE.Vector3(ns3[bs3[i][1]][0],0,ns3[bs3[i][1]][2]),0.015,C.tl,0.2));for(var k=0;k<ns3.length;k++){var iT=triI.indexOf(k)>=0;g.add(mS(new THREE.Vector3(ns3[k][0],0,ns3[k][2]),iT?0.07:0.035,iT?C.b:C.lg));}g.add(mT(tA,tB,tCV,C.cy,0.3));g.add(mS(apex2,0.09,C.or));g.add(mC(tA,apex2,0.035,C.or,0.9));g.add(mC(tB,apex2,0.035,C.or,0.9));g.add(mC(tCV,apex2,0.035,C.or,0.9));g.add(mT(tA,tB,apex2,C.or,0.15));g.add(mT(tB,tCV,apex2,C.or,0.15));g.add(mT(tCV,tA,apex2,C.or,0.15));g.add(mC(cen2,apex2,0.015,C.rd,0.9));g.add(mS(cen2,0.04,C.rd));g.add(mL("h = \u221A(2/3)\u00B7L",new THREE.Vector3(cen2.x+0.9,lH/2,cen2.z),"#CC3311"));g.add(mL("K=4 tetrahedron",new THREE.Vector3(apex2.x,apex2.y+0.4,apex2.z),"#EE7733"));},ph:"k6",badge:"FIRST LIFT  (e\u207B\u00B3 \u2248 5%)",bc:"#663377",label:"The Lift: First Tetrahedron Seeds the K=4 Phase",desc:"A quantum fluctuation lifts a vertex at height h = \u221A(2/3)\u00B7L. This creates the first K=4 tetrahedron — the seed of 3D volume. The lift probability is e\u207B\u00B3 \u2248 5%.",legend:'<div class="lt">The Lift Operator</div><span class="mt">h = \u221A(2/3)\u00B7L \u2248 0.817L</span><br><span class="mt">P = e<sup>\u22123</sup> \u2248 5%</span><br><br>First node outside the 2D plane.<br>K=4 locally.',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u25B6 <b style="color:#663377">K=6\u2192K=4 Nucleation</b><br>\u00A0\u00A0 K=12 Vacuum'});
 
-// S2: First lift
-steps.push({build:function(g){
-  for(var b=0;b<bs.length;b++)g.add(mkC(new THREE.Vector3(ns[bs[b][0]][0],0,ns[bs[b][0]][2]),new THREE.Vector3(ns[bs[b][1]][0],0,ns[bs[b][1]][2]),0.015,CK.blue,0.2));
-  for(var k=0;k<ns.length;k++){var iN=triIdx.indexOf(k)>=0;g.add(mkS(new THREE.Vector3(ns[k][0],0,ns[k][2]),iN?0.07:0.035,iN?CK.blue:CK.lgrey));}
-  g.add(mkT(tA,tB,tCv,CK.cyan,0.3));g.add(mkS(apex,0.09,CK.orange));
-  g.add(mkC(tA,apex,0.035,CK.orange,0.9));g.add(mkC(tB,apex,0.035,CK.orange,0.9));g.add(mkC(tCv,apex,0.035,CK.orange,0.9));
-  g.add(mkT(tA,tB,apex,CK.orange,0.15));g.add(mkT(tB,tCv,apex,CK.orange,0.15));g.add(mkT(tCv,tA,apex,CK.orange,0.15));
-  g.add(mkC(cent,apex,0.015,CK.red,0.9));g.add(mkS(cent,0.04,CK.red));
-  g.add(mkL("h = \u221A(2/3)\u00B7L \u2248 0.817L",new THREE.Vector3(cent.x+0.9,liftH/2,cent.z),"#CC3311"));
-  g.add(mkL("First tetrahedron!",new THREE.Vector3(apex.x,apex.y+0.4,apex.z),"#EE7733"));
-},phase:"lift",badge:"LIFT",bc:"#663377",label:"First Lift: A Tetrahedron is Born",
-desc:"The Lift operator projects a vertex upward at height h = \u221A(2/3)\u00B7L \u2248 0.817L. All four edges maintain length L exactly. This is the first tetrahedron \u2014 the birth of 3D volume from a 2D sheet.",
-legend:'<div class="leg-title">Phase II: The Lift</div><span class="math">h = \u221A(2/3)\u00B7L \u2248 0.817L</span><br><br>All 4 new edges = L (exact).<br>The apex (orange) is the first node outside the 2D plane.<br><br>This creates K=4 locally.'});
+// S2: Chaotic K=4 foam
+steps.push({b:function(g){var pos=[[0,0,0],[L*0.8,0.3,0.2],[-L*0.7,0.2,0.4],[0.3,0,-L*0.8],[-0.2,0.1,L*0.7],[L*0.4,L*0.7,0],[-L*0.3,L*0.6,0.3],[0.5,-L*0.6,0.4],[-0.4,-L*0.5,-0.3],[L*0.3,0.2,-L*0.5],[0,L*0.5,-L*0.4],[-L*0.6,-0.2,-L*0.3]];var cols=[C.b,C.cy,C.tl,C.or,C.wn,C.yl];for(var t=0;t<pos.length;t++){var cx=pos[t][0],cy=pos[t][1],cz=pos[t][2];var r=L*0.45;var v0=new THREE.Vector3(cx+r,cy-r*0.5,cz);var v1=new THREE.Vector3(cx-r*0.5,cy-r*0.5,cz+r*0.87);var v2=new THREE.Vector3(cx-r*0.5,cy-r*0.5,cz-r*0.87);var v3=new THREE.Vector3(cx,cy+r*0.8,cz);var ang=t*1.17+0.5;var ax=new THREE.Vector3(Math.sin(t),Math.cos(t*0.7),Math.sin(t*1.3)).normalize();var cc=new THREE.Vector3(cx,cy,cz);v0.sub(cc).applyAxisAngle(ax,ang).add(cc);v1.sub(cc).applyAxisAngle(ax,ang).add(cc);v2.sub(cc).applyAxisAngle(ax,ang).add(cc);v3.sub(cc).applyAxisAngle(ax,ang).add(cc);var c=cols[t%cols.length];g.add(mT(v0,v1,v2,c,0.18));g.add(mT(v0,v1,v3,c,0.18));g.add(mT(v1,v2,v3,c,0.18));g.add(mT(v0,v2,v3,c,0.18));g.add(mC(v0,v1,0.015,c,0.5));g.add(mC(v1,v2,0.015,c,0.5));g.add(mC(v0,v2,0.015,c,0.5));g.add(mC(v0,v3,0.015,c,0.5));g.add(mC(v1,v3,0.015,c,0.5));g.add(mC(v2,v3,0.015,c,0.5));g.add(mS(v0,0.04,c));g.add(mS(v1,0.04,c));g.add(mS(v2,0.04,c));g.add(mS(v3,0.04,c));}g.add(mL("K = 4  —  Chaotic Tetrahedral Foam",new THREE.Vector3(0,2.0,0),"#663377"));g.add(mL("INFLATION IN PROGRESS",new THREE.Vector3(0,1.6,0),"#CC3311"));},ph:"k4",badge:"K = 4  INFLATION",bc:"#663377",label:"Phase II: The K=4 Tetrahedral Foam — Inflation",desc:"The K=6 sheet has been consumed. The universe is now a chaotic, amorphous foam of tetrahedra (K=4). No long-range order, no flat layers, no ABC stacking. Just frustrated tetrahedra packing randomly. Every shared edge carries a 0.128 rad deficit.",legend:'<div class="lt">Phase II: K = 4 Foam</div>Chaotic. Amorphous. Frustrated.<br>No crystalline order.<br><br>Every shared edge: 0.128 rad deficit.<br>This drives exponential expansion.',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u25B6 <b style="color:#663377">K=4 Inflation</b><br>\u00A0\u00A0 K=12 Vacuum'});
 
-// S3: Multiple lifts
-var triSets=[];
-for(var i2=0;i2<ns.length;i2++)for(var j2=i2+1;j2<ns.length;j2++)for(var k2=j2+1;k2<ns.length;k2++){
-  var dd1=Math.pow(ns[i2][0]-ns[j2][0],2)+Math.pow(ns[i2][2]-ns[j2][2],2);
-  var dd2=Math.pow(ns[j2][0]-ns[k2][0],2)+Math.pow(ns[j2][2]-ns[k2][2],2);
-  var dd3=Math.pow(ns[i2][0]-ns[k2][0],2)+Math.pow(ns[i2][2]-ns[k2][2],2);
-  if(dd1<BR2&&dd2<BR2&&dd3<BR2){
-    var ccx=(ns[i2][0]+ns[j2][0]+ns[k2][0])/3,ccz=(ns[i2][2]+ns[j2][2]+ns[k2][2])/3;
-    if(ccx*ccx+ccz*ccz<(L*2.5)*(L*2.5))triSets.push([i2,j2,k2]);
-  }
-}
-var apices2=[];for(var t=0;t<triSets.length;t++){var ccx2=(ns[triSets[t][0]][0]+ns[triSets[t][1]][0]+ns[triSets[t][2]][0])/3;var ccz2=(ns[triSets[t][0]][2]+ns[triSets[t][1]][2]+ns[triSets[t][2]][2])/3;apices2.push([ccx2,liftH,ccz2]);}
+// S3: Deficit zoom
+steps.push({b:function(g){var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;g.add(mC(eA,eB,0.05,C.rd,1));g.add(mS(eA,0.08,C.rd));g.add(mS(eB,0.08,C.rd));var cols=[C.b,C.cy,C.tl,C.or,C.wn];for(var i=0;i<5;i++){var a=i*DI;var v=new THREE.Vector3(0,Math.sin(a)*r3,Math.cos(a)*r3);g.add(mS(v,0.06,cols[i]));g.add(mC(eA,v,0.02,cols[i],0.7));g.add(mC(eB,v,0.02,cols[i],0.7));var a2=(i+1)*DI;var v2=new THREE.Vector3(0,Math.sin(a2)*r3,Math.cos(a2)*r3);g.add(mT(eA,v,v2,cols[i],0.15));g.add(mT(eB,v,v2,cols[i],0.15));}var gS=5*DI,gM=(gS+2*Math.PI)/2,seg=20;for(var i=0;i<seg;i++){var a1=gS+(i/seg)*DEF,a22=gS+((i+1)/seg)*DEF;var vv1=new THREE.Vector3(0,Math.sin(a1)*r3,Math.cos(a1)*r3);var vv2=new THREE.Vector3(0,Math.sin(a22)*r3,Math.cos(a22)*r3);g.add(mT(eA,vv1,vv2,C.rd,0.5));g.add(mT(eB,vv1,vv2,C.rd,0.5));}var vGA=new THREE.Vector3(0,Math.sin(gS)*r3,Math.cos(gS)*r3),vGB=new THREE.Vector3(0,r3,0);g.add(mC(eA,vGA,0.035,C.rd,1));g.add(mC(eB,vGA,0.035,C.rd,1));g.add(mC(eA,vGB,0.035,C.rd,1));g.add(mC(eB,vGB,0.035,C.rd,1));g.add(mS(vGA,0.06,C.rd));g.add(mS(vGB,0.06,C.rd));var aD=new THREE.Vector3(0,Math.sin(gS),Math.cos(gS)).normalize();g.add(mA(new THREE.Vector3(0,0,0),new THREE.Vector3(1,0,0),aD,DEF,1.1,C.rd));var lp=new THREE.Vector3(0,Math.sin(gM)*1.7,Math.cos(gM)*1.7);g.add(mL("\u03B4 \u2248 7.36\u00B0 = 0.128 rad",lp,"#CC3311"));g.add(mL("THE DEFICIT GAP",new THREE.Vector3(lp.x,lp.y+0.35,lp.z),"#CC3311"));for(var i=0;i<3;i++){var aa=gS+(i+0.5)*(DEF/3);var inn=new THREE.Vector3(0,Math.sin(aa)*r3*0.5,Math.cos(aa)*r3*0.5);var out=new THREE.Vector3(0,Math.sin(aa)*r3*1.5,Math.cos(aa)*r3*1.5);g.add(mC(inn,out,0.025,C.yl,0.9));var tip=new THREE.Vector3(0,Math.sin(aa)*r3*1.65,Math.cos(aa)*r3*1.65);g.add(mC(out,tip,0.05,C.yl,0.9));}g.add(mL("R \u2248 0.128/lP\u00B2",new THREE.Vector3(2.2,1.3,0),"#0077BB"));g.add(mL("ns \u2248 0.9646",new THREE.Vector3(2.2,0.9,0),"#009988"));g.add(mL("\u039Beff \u2248 0.032/lP\u00B2",new THREE.Vector3(2.2,0.5,0),"#0077BB"));},ph:"k4",badge:"THE DEFICIT \u2192 INFLATION",bc:"#CC3311",label:"Inside the K=4 Foam: The 0.128 rad Gap That Drives Everything",desc:"Zooming into any shared edge: 5 tetrahedra consume 352.6\u00B0. The 7.36\u00B0 gap (red wedge) IS curvature. R \u2248 \u03B4/lP\u00B2. The stitching operator frantically nucleates new K=4 nodes to close these gaps — that is inflation. ns = 1 \u2212 \u221A3\u00B7\u03B4/(2\u03C0) \u2248 0.9646.",legend:'<div class="lt">The Regge Deficit</div><span class="mt">\u03B4 = 2\u03C0 \u2212 5\u00B7arccos(1/3)</span><br><span class="mt">\u03B4 \u2248 0.128 rad</span><br><br><span class="mt">R \u2248 \u03B4/l<sub>P</sub>\u00B2</span><br><span class="mt">\u039B<sub>eff</sub> = R/4</span><br><span class="mt">n<sub>s</sub> \u2248 0.96461</span><br>Planck: 0.9649\u00B10.0042 \u2713',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u25B6 <b style="color:#CC3311">K=4 Deficit \u2192 Expansion</b><br>\u00A0\u00A0 K=12 Vacuum'});
 
-steps.push({build:function(g){
-  for(var b=0;b<bs.length;b++)g.add(mkC(new THREE.Vector3(ns[bs[b][0]][0],0,ns[bs[b][0]][2]),new THREE.Vector3(ns[bs[b][1]][0],0,ns[bs[b][1]][2]),0.012,CK.lgrey,0.15));
-  for(var k=0;k<ns.length;k++)g.add(mkS(new THREE.Vector3(ns[k][0],0,ns[k][2]),0.04,CK.blue));
-  var cols=[CK.blue,CK.cyan,CK.teal,CK.orange,CK.wine,CK.yellow];
-  for(var t=0;t<triSets.length;t++){var ts=triSets[t];var ap=new THREE.Vector3(apices2[t][0],apices2[t][1],apices2[t][2]);var c=cols[t%cols.length];
-    g.add(mkS(ap,0.06,c));
-    for(var vi=0;vi<3;vi++){g.add(mkC(new THREE.Vector3(ns[ts[vi]][0],0,ns[ts[vi]][2]),ap,0.02,c,0.7));if(vi<2)g.add(mkT(new THREE.Vector3(ns[ts[vi]][0],0,ns[ts[vi]][2]),new THREE.Vector3(ns[ts[vi+1]][0],0,ns[ts[vi+1]][2]),ap,c,0.08));}
-    g.add(mkT(new THREE.Vector3(ns[ts[2]][0],0,ns[ts[2]][2]),new THREE.Vector3(ns[ts[0]][0],0,ns[ts[0]][2]),ap,c,0.08));
-  }
-  g.add(mkL("Adjacent tetrahedra share edges",new THREE.Vector3(0,liftH+0.5,0),"#333"));
-  g.add(mkL("from the original sheet",new THREE.Vector3(0,liftH+0.15,0),"#EE7733"));
-},phase:"lift",badge:"MULTI-LIFT",bc:"#663377",label:"Multiple Lifts: Tetrahedra Share Edges from the Sheet",
-desc:"As more triangles lift, adjacent tetrahedra share the original sheet edges. This is the critical link: the 2D sheet's edges become the shared hinges around which tetrahedral packing is measured.",
-legend:'<div class="leg-title">Shared Edges</div>Adjacent tetrahedra share edges from the original 2D sheet.<br><br>Around each shared edge, dihedral angles accumulate.<br><br><span class="math">\u03B8 = arccos(1/3) \u2248 70.53\u00B0</span><br><br>How many fit around 360\u00B0?'});
+// S4: K=12 FCC
+steps.push({b:function(g){var allN=[],rad=5;for(var ly=0;ly<7;ly++){var off=[[0,0],[L/2,LH/3],[L,2*LH/3]];var o=off[ly%3];for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;allN.push([q*L+r*L/2+o[0],ly*lH,r*LH+o[1]]);}}var N=allN.length;var cx=0,cy=0,cz=0;for(var i=0;i<N;i++){cx+=allN[i][0];cy+=allN[i][1];cz+=allN[i][2];}cx/=N;cy/=N;cz/=N;
+// Bonds + coordination
+var bdat=[],coords=new Int32Array(N);
+for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){var dx=allN[i][0]-allN[j][0],dy=allN[i][1]-allN[j][1],dz=allN[i][2]-allN[j][2];if(dx*dx+dy*dy+dz*dz<BR2){bdat.push(i,j);coords[i]++;coords[j]++;}}
+// Instanced nodes
+var bk={12:[],10:[],7:[],0:[]};for(var i=0;i<N;i++){var k=coords[i];bk[k>=12?12:k>=10?10:k>=7?7:0].push(i);}
+var sz={12:0.055,10:0.045,7:0.04,0:0.035};var kc={12:C.gn,10:C.b,7:C.or,0:C.rd};var dm=new THREE.Object3D();
+for(var key in bk){if(!bk[key].length)continue;var geo=new THREE.SphereGeometry(sz[+key],6,6);var mat=new THREE.MeshPhongMaterial({color:kc[+key]});var im=new THREE.InstancedMesh(geo,mat,bk[key].length);for(var j=0;j<bk[key].length;j++){dm.position.set(allN[bk[key][j]][0]-cx,allN[bk[key][j]][1]-cy,allN[bk[key][j]][2]-cz);dm.updateMatrix();im.setMatrixAt(j,dm.matrix);}im.instanceMatrix.needsUpdate=true;g.add(im);}
+// Bonds as lines
+var bp=new Float32Array(bdat.length*3),bc=new Float32Array(bdat.length*3);
+for(var b=0;b<bdat.length;b+=2){var bi=b/2;var i=bdat[b],j=bdat[b+1];bp[bi*6]=allN[i][0]-cx;bp[bi*6+1]=allN[i][1]-cy;bp[bi*6+2]=allN[i][2]-cz;bp[bi*6+3]=allN[j][0]-cx;bp[bi*6+4]=allN[j][1]-cy;bp[bi*6+5]=allN[j][2]-cz;var il=Math.abs(allN[i][1]-allN[j][1])>0.3;bc[bi*6]=il?0.67:0.53;bc[bi*6+1]=il?0.2:0.53;bc[bi*6+2]=il?0.47:0.53;bc[bi*6+3]=il?0.67:0.53;bc[bi*6+4]=il?0.2:0.53;bc[bi*6+5]=il?0.47:0.53;}
+var lg2=new THREE.BufferGeometry();lg2.setAttribute("position",new THREE.BufferAttribute(bp,3));lg2.setAttribute("color",new THREE.BufferAttribute(bc,3));g.add(new THREE.LineSegments(lg2,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.1})));
+var k12c=bk[12]?bk[12].length:0;g.add(mL("K=12: "+k12c+"/"+N+" ("+(100*k12c/N).toFixed(0)+"%)",new THREE.Vector3(0,4.5,0),"#22AA44"));g.add(mL("\u03B4 = 0  |  R = 0  |  Minkowski Space",new THREE.Vector3(0,4.1,0),"#333"));
+},ph:"k12",badge:"K = 12  POST-INFLATION VACUUM",bc:"#22AA44",label:"Phase III: The K=12 FCC Lattice — Our Universe's Vacuum",desc:"Inflation is over. The chaotic K=4 foam has crystallized into ordered FCC layers with K=12. Deficit angles vanish (\u03B4=0), curvature vanishes (R=0): Minkowski space. Green = K=12 bulk; red/orange = boundary shell. The latent heat \u0394Q = 4\u03B5 reheated the universe to T ~ 10\u00B9\u2075 GeV.",legend:'<div class="lt">Phase III: K = 12 FCC</div>Ordered. Flat layers. ABC stacking.<br><span class="mt">\u03B4 = 0</span> (no deficit)<br><span class="mt">R = 0</span> (Minkowski)<br><br>6 in-plane + 3 above + 3 below = 12<br><br><span class="mt">\u0394Q = 4\u03B5 \u2192 T ~ 10<sup>15</sup> GeV</span>',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u25B6 <b style="color:#22AA44">K=12 Vacuum (Now)</b>'});
 
-// S4: Zoom to shared edge + dihedral
-steps.push({build:function(g){
-  var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;
-  var v1=new THREE.Vector3(0,0,r3),a2=DIHEDRAL;var v2=new THREE.Vector3(0,Math.sin(a2)*r3,Math.cos(a2)*r3);
-  g.add(mkC(eA,eB,0.05,CK.orange,1));g.add(mkS(eA,0.08,CK.orange));g.add(mkS(eB,0.08,CK.orange));
-  g.add(mkS(v1,0.07,CK.blue));g.add(mkS(v2,0.07,CK.cyan));
-  g.add(mkC(eA,v1,0.03,CK.blue,0.8));g.add(mkC(eB,v1,0.03,CK.blue,0.8));
-  g.add(mkC(eA,v2,0.03,CK.cyan,0.8));g.add(mkC(eB,v2,0.03,CK.cyan,0.8));
-  g.add(mkT(eA,eB,v1,CK.blue,0.25));g.add(mkT(eA,eB,v2,CK.cyan,0.25));
-  g.add(mkA(new THREE.Vector3(0,0,0),new THREE.Vector3(1,0,0),new THREE.Vector3(0,0,1),DIHEDRAL,0.7,CK.red,40));
-  var am=new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(1,0,0),DIHEDRAL/2).multiplyScalar(1.0);
-  g.add(mkL("\u03B8 = 70.53\u00B0",am,"#CC3311"));g.add(mkL("Shared edge (from the sheet)",new THREE.Vector3(0,-0.35,0),"#EE7733"));
-},phase:"pack",badge:"DIHEDRAL",bc:"#996600",label:"Zoom In: The Dihedral Angle at a Shared Edge",
-desc:"Zooming into a single shared edge (orange) \u2014 originally an edge of the 2D sheet. Two tetrahedra meet here. The angle between their faces is \u03B8 = arccos(1/3) \u2248 70.53\u00B0. This is NOT a rational fraction of 360\u00B0.",
-legend:'<div class="leg-title">The Dihedral Angle</div><span class="math">\u03B8 = arccos(1/3) \u2248 70.528\u00B0</span><br><span class="math">\u03B8 \u2248 1.231 rad</span><br><br>360\u00B0 / 70.53\u00B0 = 5.104...<br><br>NOT an integer \u2192 geometric frustration.'});
-
-// S5: Five tetrahedra
-steps.push({build:function(g){
-  var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;
-  g.add(mkC(eA,eB,0.05,CK.red,1));g.add(mkS(eA,0.08,CK.red));g.add(mkS(eB,0.08,CK.red));
-  var cols=[CK.blue,CK.cyan,CK.teal,CK.orange,CK.wine];
-  for(var i=0;i<5;i++){var a=i*DIHEDRAL;var v=new THREE.Vector3(0,Math.sin(a)*r3,Math.cos(a)*r3);g.add(mkS(v,0.06,cols[i]));g.add(mkC(eA,v,0.02,cols[i],0.7));g.add(mkC(eB,v,0.02,cols[i],0.7));var a2n=(i+1)*DIHEDRAL;var v2=new THREE.Vector3(0,Math.sin(a2n)*r3,Math.cos(a2n)*r3);g.add(mkT(eA,v,v2,cols[i],0.15));g.add(mkT(eB,v,v2,cols[i],0.15));}
-  var aL=5*DIHEDRAL;var vL=new THREE.Vector3(0,Math.sin(aL)*r3,Math.cos(aL)*r3);g.add(mkS(vL,0.06,cols[0]));g.add(mkC(eA,vL,0.02,CK.grey,0.4));g.add(mkC(eB,vL,0.02,CK.grey,0.4));
-  g.add(mkL("5 \u00D7 70.53\u00B0 = 352.6\u00B0",new THREE.Vector3(0,2.2,0),"#333"));
-  for(var i=0;i<5;i++){var am=(i+0.5)*DIHEDRAL;g.add(mkL(""+(i+1),new THREE.Vector3(0,Math.sin(am)*1.0,Math.cos(am)*1.0),"#555"));}
-},phase:"pack",badge:"5 TETRAHEDRA",bc:"#996600",label:"Five Tetrahedra Around the Shared Edge",
-desc:"Five regular tetrahedra pack around the shared edge, consuming 352.64\u00B0. Six would overshoot (423\u00B0). Five is the maximum \u2014 but 352.64\u00B0 \u2260 360\u00B0. There is an irreducible gap.",
-legend:'<div class="leg-title">Maximum Packing</div><span class="math">5 \u00D7 70.528\u00B0 = 352.64\u00B0</span><br><span class="math">6 \u00D7 70.528\u00B0 = 423.17\u00B0</span> (too many!)<br><br>Five is the max. But 352.64 \u2260 360.<br><br>Irreducible <b>7.36\u00B0 gap</b>.'});
-
-// S6: The gap
-steps.push({build:function(g){
-  var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;
-  g.add(mkC(eA,eB,0.04,CK.grey,0.6));g.add(mkS(eA,0.06,CK.grey));g.add(mkS(eB,0.06,CK.grey));
-  for(var i=0;i<5;i++){var a=i*DIHEDRAL;var v=new THREE.Vector3(0,Math.sin(a)*r3,Math.cos(a)*r3);g.add(mkS(v,0.04,CK.lgrey));g.add(mkC(eA,v,0.012,CK.lgrey,0.3));g.add(mkC(eB,v,0.012,CK.lgrey,0.3));}
-  var gS=5*DIHEDRAL,gM=(gS+2*Math.PI)/2,seg=20;
-  for(var i=0;i<seg;i++){var a1=gS+(i/seg)*DEFICIT,a2=gS+((i+1)/seg)*DEFICIT;var v1=new THREE.Vector3(0,Math.sin(a1)*r3,Math.cos(a1)*r3);var v2=new THREE.Vector3(0,Math.sin(a2)*r3,Math.cos(a2)*r3);g.add(mkT(eA,v1,v2,CK.red,0.5));g.add(mkT(eB,v1,v2,CK.red,0.5));}
-  var vGA=new THREE.Vector3(0,Math.sin(gS)*r3,Math.cos(gS)*r3),vGB=new THREE.Vector3(0,Math.sin(2*Math.PI)*r3,Math.cos(2*Math.PI)*r3);
-  g.add(mkC(eA,vGA,0.035,CK.red,1));g.add(mkC(eB,vGA,0.035,CK.red,1));g.add(mkC(eA,vGB,0.035,CK.red,1));g.add(mkC(eB,vGB,0.035,CK.red,1));g.add(mkS(vGA,0.06,CK.red));g.add(mkS(vGB,0.06,CK.red));
-  var arcDir=new THREE.Vector3(0,Math.sin(gS),Math.cos(gS)).normalize();g.add(mkA(new THREE.Vector3(0,0,0),new THREE.Vector3(1,0,0),arcDir,DEFICIT,1.1,CK.red,30));
-  var lp=new THREE.Vector3(0,Math.sin(gM)*1.6,Math.cos(gM)*1.6);
-  g.add(mkL("THE REGGE DEFICIT",new THREE.Vector3(lp.x,lp.y+0.35,lp.z),"#CC3311"));g.add(mkL("\u03B4 \u2248 7.36\u00B0 = 0.128 rad",lp,"#CC3311"));
-},phase:"gap",badge:"THE GAP",bc:"#CC3311",label:"The Regge Deficit Angle: \u03B4 = 2\u03C0 \u2212 5\u03B8 \u2248 0.128 rad",
-desc:"The red wedge is the deficit angle \u2014 an irreducible 7.36\u00B0 gap that cannot be closed by any local deformation. In Regge calculus, this IS curvature. Every shared edge in the K=4 foam carries this exact positive curvature.",
-legend:'<div class="leg-title">The Deficit Angle</div><span class="math">\u03B4 = 2\u03C0 \u2212 5\u00B7arccos(1/3)</span><br><span class="math">\u03B4 \u2248 7.356\u00B0 \u2248 0.128 rad</span><br><br>Topological invariant.<br>Cannot be removed locally.<br><br>Source of positive curvature \u2192 inflation.'});
-
-// S7: Inflation
-steps.push({build:function(g){
-  var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;
-  g.add(mkC(eA,eB,0.04,CK.grey,0.5));g.add(mkS(eA,0.06,CK.grey));g.add(mkS(eB,0.06,CK.grey));
-  for(var i=0;i<5;i++){var a=i*DIHEDRAL;var v=new THREE.Vector3(0,Math.sin(a)*r3,Math.cos(a)*r3);g.add(mkS(v,0.03,CK.lgrey));g.add(mkC(eA,v,0.01,CK.lgrey,0.2));g.add(mkC(eB,v,0.01,CK.lgrey,0.2));}
-  var gS=5*DIHEDRAL,gM=(gS+2*Math.PI)/2,seg=20;
-  for(var i=0;i<seg;i++){var a1=gS+(i/seg)*DEFICIT,a2=gS+((i+1)/seg)*DEFICIT;var v1=new THREE.Vector3(0,Math.sin(a1)*r3,Math.cos(a1)*r3);var v2=new THREE.Vector3(0,Math.sin(a2)*r3,Math.cos(a2)*r3);g.add(mkT(eA,v1,v2,CK.red,0.4));g.add(mkT(eB,v1,v2,CK.red,0.4));}
-  for(var i=0;i<3;i++){var a=(gS+(i+0.5)*(DEFICIT/3));var inn=new THREE.Vector3(0,Math.sin(a)*r3*0.5,Math.cos(a)*r3*0.5);var out=new THREE.Vector3(0,Math.sin(a)*r3*1.4,Math.cos(a)*r3*1.4);g.add(mkC(inn,out,0.025,CK.yellow,0.9));var tip=new THREE.Vector3(0,Math.sin(a)*r3*1.55,Math.cos(a)*r3*1.55);g.add(mkC(out,tip,0.05,CK.yellow,0.9));}
-  g.add(mkL("INFLATION",new THREE.Vector3(0,Math.sin(gM)*2.2,Math.cos(gM)*2.2),"#CC9900"));
-  g.add(mkL("R \u2248 0.128 / lP\u00B2",new THREE.Vector3(2.3,1.5,0),"#0077BB"));
-  g.add(mkL("\u039Beff \u2248 0.032 / lP\u00B2",new THREE.Vector3(2.3,1.1,0),"#0077BB"));
-  g.add(mkL("a(t) \u221D exp(H\u00B7t)",new THREE.Vector3(2.3,0.7,0),"#0077BB"));
-  g.add(mkL("ns \u2248 0.96461",new THREE.Vector3(2.3,0.3,0),"#009988"));
-},phase:"gap",badge:"INFLATION",bc:"#CC3311",label:"Geometric Inflation: From the Gap to De Sitter Expansion",
-desc:"The 0.128 rad gap generates constant positive curvature. The stitching operator frantically nucleates new nodes to close the gaps \u2014 that IS inflation. The spectral index ns = 1 \u2212 \u221A3\u00B7\u03B4/(2\u03C0) \u2248 0.9646 matches Planck.",
-legend:'<div class="leg-title">Geometric Inflation</div><span class="math">R \u2248 \u03B4/l<sub>P</sub>\u00B2 \u2248 0.128/l<sub>P</sub>\u00B2</span><br><span class="math">\u039B<sub>eff</sub> = R/4 \u2248 0.032/l<sub>P</sub>\u00B2</span><br><span class="math">a(t) \u221D e<sup>H\u00B7t</sup></span><br><br>Spectral index:<br><span class="math">1\u2212n<sub>s</sub> = \u221A3\u00B7\u03B4/(2\u03C0)</span><br><span class="math">n<sub>s</sub> \u2248 0.96461</span><br>Planck: 0.9649 \u00B1 0.0042 \u2713'});
-})();
-
-// Render
-var snapIdx=0,playing=false,playTimer=null;
-var slider=document.querySelector("#slider input");slider.max=steps.length-1;
-function render(idx){snapIdx=Math.max(0,Math.min(idx,steps.length-1));slider.value=snapIdx;
-  while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}
-  var s=steps[snapIdx];s.build(group);
-  document.getElementById("header").className="phase-"+s.phase;
-  document.getElementById("phase-badge").textContent=s.badge;document.getElementById("phase-badge").style.background=s.bc;
-  document.getElementById("snap-label").textContent=s.label;document.getElementById("legend").innerHTML=s.legend;document.getElementById("desc").textContent=s.desc;
-  document.getElementById("frame-ct").textContent=(snapIdx+1)+"/"+steps.length;slider.style.accentColor=s.bc;
-}
-function stopPlay(){playing=false;if(playTimer)clearInterval(playTimer);playTimer=null;document.getElementById("b-play").textContent="\u25B6 Play";document.getElementById("b-play").classList.remove("on");}
-window.togglePlay=function(){if(playing){stopPlay();return;}playing=true;document.getElementById("b-play").textContent="\u23F8 Pause";document.getElementById("b-play").classList.add("on");playTimer=setInterval(function(){if(snapIdx>=steps.length-1){stopPlay();return;}render(snapIdx+1);},3500);};
-window.goStart=function(){stopPlay();render(0);};window.goPrev=function(){stopPlay();render(snapIdx-1);};window.goNext=function(){stopPlay();render(snapIdx+1);};window.goEnd=function(){stopPlay();render(steps.length-1);};window.goTo=function(v){stopPlay();render(v);};
-window.toggleRot=function(){autoRot=!autoRot;var b=document.getElementById("b-rot");b.textContent="Rot:"+(autoRot?"ON":"OFF");b.classList.toggle("on",autoRot);};
-window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goNext();else if(e.key==="ArrowLeft")goPrev();else if(e.key===" "){e.preventDefault();togglePlay();}});
-render(0);
+// RENDER
+var si3=0,pl2=false,pt2=null;var sli2=document.querySelector("#sld input");sli2.max=steps.length-1;
+function rn2(idx){si3=Math.max(0,Math.min(idx,steps.length-1));sli2.value=si3;while(G.children.length){var c=G.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}G.remove(c);}var s=steps[si3];s.b(G);document.getElementById("hd").className=s.ph==="k6"?"pk6":s.ph==="k4"?"pk4":"pk12";document.getElementById("pb").textContent=s.badge;document.getElementById("pb").style.background=s.bc;document.getElementById("sl2").textContent=s.label;document.getElementById("lg").innerHTML=s.legend;document.getElementById("dc").textContent=s.desc;document.getElementById("tl").innerHTML=s.tl;document.getElementById("fc").textContent=(si3+1)+"/"+steps.length;sli2.style.accentColor=s.bc;}
+function stp2(){pl2=false;if(pt2)clearInterval(pt2);pt2=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togP=function(){if(pl2){stp2();return;}pl2=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");pt2=setInterval(function(){if(si3>=steps.length-1){stp2();return;}rn2(si3+1);},5000);};
+window.goS=function(){stp2();rn2(0);};window.goP=function(){stp2();rn2(si3-1);};window.goN=function(){stp2();rn2(si3+1);};window.goE=function(){stp2();rn2(steps.length-1);};window.goTo=function(v){stp2();rn2(v);};
+window.togR=function(){ar2=!ar2;var b=document.getElementById("br");b.textContent="Rot:"+(ar2?"ON":"OFF");b.classList.toggle("on",ar2);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togP();}});
+rn2(0);
 })();
 </script>
 </body>
