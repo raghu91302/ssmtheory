@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: Tetrahedral Lift Geometry &amp; Regge Deficit Angle</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+#header{padding:8px 14px;background:#f8f8f8;border-bottom:1px solid #ddd;}
+#header h1{font-size:14px;color:#222;font-weight:700;}
+#header p{font-size:11px;color:#666;margin-top:2px;}
+#viewport{flex:1;position:relative;cursor:grab;}
+#viewport:active{cursor:grabbing;}
+#legend{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.96);padding:10px 14px;border-radius:7px;font-size:11px;color:#333;border:1px solid #ddd;line-height:1.8;pointer-events:none;max-width:260px;}
+#legend .title{font-weight:700;font-size:12px;margin-bottom:4px;}
+#legend .math{font-family:'Courier New',monospace;color:#0077BB;font-size:10.5px;}
+#info{position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,0.96);padding:10px 14px;border-radius:7px;font-size:11.5px;color:#333;border:1px solid #ddd;max-width:400px;line-height:1.6;pointer-events:none;}
+#controls{padding:8px 14px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.btn{padding:6px 12px;border:1px solid #ccc;border-radius:5px;background:#fff;color:#555;cursor:pointer;font-size:11.5px;font-family:inherit;}
+.btn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+.btn:hover{border-color:#999;}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Tetrahedral Lift Geometry &amp; the Regge Deficit Angle</h1>
+  <p id="mode-desc">Explore the geometric origin of cosmic inflation: the 0.128 rad gap that drives De Sitter expansion</p>
+</div>
+
+<div id="viewport">
+  <div id="legend"></div>
+  <div id="info"></div>
+</div>
+
+<div id="controls">
+  <button class="btn on" id="b0" onclick="setMode(0)">1. The Lift</button>
+  <button class="btn" id="b1" onclick="setMode(1)">2. Dihedral Angle</button>
+  <button class="btn" id="b2" onclick="setMode(2)">3. Five Tetrahedra</button>
+  <button class="btn" id="b3" onclick="setMode(3)">4. The Deficit Gap</button>
+  <button class="btn" id="b4" onclick="setMode(4)">5. Inflation Driver</button>
+  <span style="flex-grow:1"></span>
+  <button class="btn on" id="b-rot" onclick="toggleRot()">Rotate: ON</button>
+  <button class="btn" id="b-labels" onclick="toggleLabels()">Labels: ON</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+const L = 2.0;
+const h = Math.sqrt(2/3) * L;
+const Rex = L / Math.sqrt(3);
+const DIHEDRAL = Math.acos(1/3);
+const DEFICIT = 2*Math.PI - 5*DIHEDRAL;
+
+// Colors (colorblind safe)
+const C = {
+  blue: 0x0077BB,
+  cyan: 0x33BBEE,
+  orange: 0xEE7733,
+  red: 0xCC3311,
+  teal: 0x009988,
+  wine: 0xAA3377,
+  grey: 0x888888,
+  lightgrey: 0xcccccc,
+  white: 0xffffff,
+  yellow: 0xEECC00,
+};
+
+// Scene
+const vp = document.getElementById("viewport");
+const W = vp.clientWidth, H = vp.clientHeight;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+const camera = new THREE.PerspectiveCamera(40, W/H, 0.1, 200);
+camera.position.set(0, 2.5, 7);
+camera.lookAt(0, 0.5, 0);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+vp.insertBefore(renderer.domElement, vp.firstChild);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl1 = new THREE.DirectionalLight(0xffffff, 0.5); dl1.position.set(5,8,5); scene.add(dl1);
+const dl2 = new THREE.DirectionalLight(0x8888cc, 0.2); dl2.position.set(-4,-2,-5); scene.add(dl2);
+
+const group = new THREE.Group();
+scene.add(group);
+
+// Rotation
+let rot = {x: 0.3, y: -0.4};
+let mDown = false, mx = 0, my = 0, autoRot = true;
+const cv = renderer.domElement;
+cv.addEventListener("mousedown", e=>{mDown=true;mx=e.clientX;my=e.clientY;});
+cv.addEventListener("touchstart", e=>{mDown=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup", ()=>{mDown=false;});
+window.addEventListener("touchend", ()=>{mDown=false;});
+window.addEventListener("mousemove", e=>{if(!mDown)return;rot.y+=(e.clientX-mx)*0.006;rot.x+=(e.clientY-my)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove", e=>{if(!mDown)return;const t=e.touches[0];rot.y+=(t.clientX-mx)*0.006;rot.x+=(t.clientY-my)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
+cv.addEventListener("wheel", e=>{camera.position.z=Math.max(3,Math.min(20,camera.position.z+e.deltaY*0.01));e.preventDefault();},{passive:false});
+window.addEventListener("resize", ()=>{const w=vp.clientWidth,hh=vp.clientHeight;camera.aspect=w/hh;camera.updateProjectionMatrix();renderer.setSize(w,hh);});
+
+let showLabels = true;
+const spriteGroup = new THREE.Group();
+group.add(spriteGroup);
+
+(function anim(){
+  requestAnimationFrame(anim);
+  if(autoRot && !mDown) rot.y += 0.002;
+  group.rotation.x = rot.x;
+  group.rotation.y = rot.y;
+  renderer.render(scene, camera);
+})();
+
+// Helpers
+function makeSphere(pos, r, color) {
+  const g = new THREE.SphereGeometry(r, 12, 12);
+  const m = new THREE.MeshPhongMaterial({color});
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.copy(pos);
+  return mesh;
+}
+
+function makeLine(p1, p2, color, width) {
+  const g = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+  const m = new THREE.LineBasicMaterial({color, linewidth: width||1});
+  return new THREE.Line(g, m);
+}
+
+function makeCyl(p1, p2, r, color, opacity) {
+  const dir = new THREE.Vector3().subVectors(p2, p1);
+  const len = dir.length();
+  const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+  const g = new THREE.CylinderGeometry(r, r, len, 8);
+  const m = new THREE.MeshPhongMaterial({color, transparent: opacity<1, opacity});
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.copy(mid);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.normalize());
+  return mesh;
+}
+
+function makeTriFace(v1, v2, v3, color, opacity) {
+  const g = new THREE.BufferGeometry();
+  const verts = new Float32Array([v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, v3.x,v3.y,v3.z]);
+  g.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  g.computeVertexNormals();
+  const m = new THREE.MeshPhongMaterial({color, transparent:true, opacity, side: THREE.DoubleSide});
+  return new THREE.Mesh(g, m);
+}
+
+function makeLabel(text, pos, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 28px -apple-system, sans-serif';
+  ctx.fillStyle = color || '#333';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 40);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({map: tex, transparent: true});
+  const sprite = new THREE.Sprite(mat);
+  sprite.position.copy(pos);
+  sprite.scale.set(1.2, 0.3, 1);
+  return sprite;
+}
+
+function makeArc(center, normal, startDir, angle, radius, color, segments) {
+  segments = segments || 32;
+  const pts = [];
+  const axis = normal.clone().normalize();
+  for (let i = 0; i <= segments; i++) {
+    const a = (i/segments) * angle;
+    const v = startDir.clone().applyAxisAngle(axis, a).multiplyScalar(radius).add(center);
+    pts.push(v);
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(g, new THREE.LineBasicMaterial({color, linewidth: 2}));
+}
+
+// ====== BASE TRIANGLE ======
+// Equilateral triangle in XZ plane, centered at origin
+const s = L;
+const A = new THREE.Vector3(-s/2, 0, -s*Math.sqrt(3)/6);
+const B = new THREE.Vector3(s/2, 0, -s*Math.sqrt(3)/6);
+const Cv = new THREE.Vector3(0, 0, s*Math.sqrt(3)/3);
+// Apex (lifted point)
+const centroid = new THREE.Vector3().addVectors(A, B).add(Cv).multiplyScalar(1/3);
+const D = new THREE.Vector3(centroid.x, h, centroid.z);
+
+// For 5-tet packing: shared edge = A-B
+// Tetrahedra rotate around edge AB
+function makeTetAround(edgeA, edgeB, angle) {
+  // The third vertex of base triangle rotates around edge AB
+  const edgeDir = new THREE.Vector3().subVectors(edgeB, edgeA).normalize();
+  const edgeMid = new THREE.Vector3().addVectors(edgeA, edgeB).multiplyScalar(0.5);
+
+  // Perpendicular in the base plane (pointing away from edge midpoint toward C)
+  const perpBase = new THREE.Vector3().subVectors(Cv, edgeMid).normalize();
+  // Cross to get the "up" direction relative to the edge
+  const up = new THREE.Vector3().crossVectors(edgeDir, perpBase).normalize();
+
+  // The apex for each tetrahedron
+  // Distance from edge midpoint to apex = sqrt(L^2 - (L/2)^2) = L*sqrt(3)/2
+  // But for a tetrahedron sharing edge AB, the opposite edge midpoint is at distance sqrt(L^2 - L^2/4) from edge mid
+  // Actually: the circumcenter-to-apex in the face perpendicular to the edge
+  const faceH = L * Math.sqrt(3) / 2; // height of equilateral triangle
+  const r = faceH * 2/3; // distance from edge mid to opposite vertex in face = (2/3)*faceH... no
+
+  // Simpler: for a regular tetrahedron with edge AB, the other two vertices C',D' are such that
+  // all edges = L. The midpoint of AB is M. |MC'| = |MD'| = sqrt(L^2 - L^2/4) = L*sqrt(3)/2
+  // Actually no. For a regular tet with vertices P1,P2,P3,P4 all at distance L:
+  // If we fix edge P1P2 along x-axis, the other two vertices are at angles around that edge.
+
+  // Let's just compute directly.
+  // Edge AB along x. Midpoint at origin for simplicity.
+  // A = (-L/2, 0, 0), B = (L/2, 0, 0)
+  // Third vertex at distance L from both A and B:
+  // x=0, y^2+z^2 = L^2 - L^2/4 = 3L^2/4, so r = L*sqrt(3)/2
+  // Fourth vertex also at r from edge, at dihedral angle from third
+
+  const r3 = L * Math.sqrt(3) / 2;
+
+  // The third vertex direction from edge midpoint, rotated by 'angle'
+  const c3 = new THREE.Vector3()
+    .addScaledVector(perpBase, Math.cos(angle) * r3)
+    .addScaledVector(up, Math.sin(angle) * r3)
+    .add(edgeMid);
+
+  // Fourth vertex at dihedral angle from third
+  const a4 = angle + DIHEDRAL;
+  const c4 = new THREE.Vector3()
+    .addScaledVector(perpBase, Math.cos(a4) * r3)
+    .addScaledVector(up, Math.sin(a4) * r3)
+    .add(edgeMid);
+
+  return {v1: edgeA.clone(), v2: edgeB.clone(), v3: c3, v4: c4};
+}
+
+// ====== MODE DEFINITIONS ======
+let currentMode = 0;
+
+const modes = [
+  { // 0: Single lift
+    name: "The 2D→3D Lift",
+    legend: `<div class="title">The Lift Operator</div>
+A new vertex is projected from the circumcenter of an equilateral triangle at height h.<br><br>
+<div class="math">h = √(L² − L²/3) = √(2/3)·L</div>
+<div class="math">h ≈ 0.8165 L</div><br>
+<div class="math">R<sub>ex</sub> = L/√3 ≈ 0.577 L</div><br>
+All four resulting edges maintain the fundamental length L.`,
+    info: "This is the minimal geometric operation that creates 3D volume from a 2D sheet. The lift height is fixed by the constraint that all tetrahedral edges equal L.",
+  },
+  { // 1: Dihedral angle
+    name: "The Dihedral Angle",
+    legend: `<div class="title">Dihedral Angle θ</div>
+The angle between two faces of a regular tetrahedron sharing an edge:<br><br>
+<div class="math">θ = arccos(1/3) ≈ 70.528°</div>
+<div class="math">θ ≈ 1.231 rad</div><br>
+This is the fundamental angular quantum of 3D discrete geometry.`,
+    info: "The dihedral angle determines how tetrahedra can pack around a shared edge. It is NOT a rational fraction of 360°, which creates geometric frustration.",
+  },
+  { // 2: Five tetrahedra
+    name: "Five Tetrahedra Around an Edge",
+    legend: `<div class="title">Packing 5 Tetrahedra</div>
+Five regular tetrahedra share a common edge:<br><br>
+<div class="math">5 × 70.528° = 352.64°</div>
+<div class="math">5θ = 6.155 rad < 2π</div><br>
+The five tetrahedra consume 352.64° of the available 360°, leaving a <b>7.36° gap</b>.`,
+    info: "Five tetrahedra is the maximum that fits. Six would require 423°, overshooting by 63°. The network is stuck with this irreducible geometric frustration.",
+  },
+  { // 3: Deficit angle
+    name: "The Regge Deficit Angle",
+    legend: `<div class="title">Deficit Angle δ</div>
+The angular gap that cannot be closed:<br><br>
+<div class="math">δ = 2π − 5θ = 360° − 352.64°</div>
+<div class="math">δ ≈ 7.356° ≈ 0.128 rad</div><br>
+This is a <b>topological invariant</b> — it cannot be removed by local deformation. It is the source of spacetime curvature.`,
+    info: "In Regge calculus, this deficit angle IS curvature. Every hinge (shared edge) in the tetrahedral foam carries exactly this much positive scalar curvature.",
+  },
+  { // 4: Inflation
+    name: "The Inflation Driver",
+    legend: `<div class="title">From Gap to Expansion</div>
+The deficit angle generates constant positive curvature:<br><br>
+<div class="math">R ≈ δ/l²<sub>P</sub> ≈ 0.128/l²<sub>P</sub></div><br>
+This drives De Sitter expansion:<br>
+<div class="math">Λ<sub>eff</sub> = R/4 ≈ 0.032/l²<sub>P</sub></div>
+<div class="math">a(t) ∝ e<sup>H·t</sup></div><br>
+And fixes the spectral index:<br>
+<div class="math">1−n<sub>s</sub> = √3·δ/(2π)</div>
+<div class="math">n<sub>s</sub> ≈ 0.96461</div>`,
+    info: "The stitching operator frantically nucleates new K=4 nodes trying to close the 0.128 rad gaps. This IS inflation — not driven by a scalar field, but by irreducible geometric frustration.",
+  },
+];
+
+function clearGroup() {
+  while(group.children.length > 1) { // keep spriteGroup
+    const c = group.children[group.children.length-1];
+    if (c === spriteGroup) break;
+    if(c.geometry) c.geometry.dispose();
+    if(c.material) {if(Array.isArray(c.material))c.material.forEach(m=>m.dispose());else c.material.dispose();}
+    group.remove(c);
+  }
+  while(spriteGroup.children.length) spriteGroup.remove(spriteGroup.children[0]);
+}
+
+function buildMode0() {
+  // Base triangle (in XZ plane)
+  group.add(makeTriFace(A, B, Cv, C.cyan, 0.3));
+  group.add(makeCyl(A, B, 0.03, C.blue, 1));
+  group.add(makeCyl(B, Cv, 0.03, C.blue, 1));
+  group.add(makeCyl(Cv, A, 0.03, C.blue, 1));
+
+  // Vertices
+  group.add(makeSphere(A, 0.07, C.blue));
+  group.add(makeSphere(B, 0.07, C.blue));
+  group.add(makeSphere(Cv, 0.07, C.blue));
+
+  // Lifted vertex
+  group.add(makeSphere(D, 0.09, C.orange));
+
+  // Edges to apex
+  group.add(makeCyl(A, D, 0.03, C.orange, 0.8));
+  group.add(makeCyl(B, D, 0.03, C.orange, 0.8));
+  group.add(makeCyl(Cv, D, 0.03, C.orange, 0.8));
+
+  // Faces (transparent)
+  group.add(makeTriFace(A, B, D, C.orange, 0.15));
+  group.add(makeTriFace(B, Cv, D, C.orange, 0.15));
+  group.add(makeTriFace(Cv, A, D, C.orange, 0.15));
+
+  // Height line (dashed)
+  group.add(makeCyl(centroid, D, 0.015, C.red, 0.9));
+  group.add(makeSphere(centroid, 0.04, C.red));
+
+  // Rex line
+  group.add(makeCyl(centroid, A, 0.015, C.teal, 0.7));
+
+  // Labels
+  if (showLabels) {
+    spriteGroup.add(makeLabel("h = √(2/3)·L", new THREE.Vector3(centroid.x+0.6, h/2, centroid.z), '#CC3311'));
+    spriteGroup.add(makeLabel("≈ 0.817 L", new THREE.Vector3(centroid.x+0.6, h/2-0.3, centroid.z), '#CC3311'));
+    spriteGroup.add(makeLabel("Rex = L/√3", new THREE.Vector3((centroid.x+A.x)/2-0.5, 0.2, (centroid.z+A.z)/2), '#009988'));
+    spriteGroup.add(makeLabel("L", new THREE.Vector3((A.x+B.x)/2, -0.2, (A.z+B.z)/2), '#0077BB'));
+    spriteGroup.add(makeLabel("L", new THREE.Vector3((A.x+D.x)/2-0.4, (A.y+D.y)/2, (A.z+D.z)/2), '#EE7733'));
+    spriteGroup.add(makeLabel("Apex", new THREE.Vector3(D.x+0.4, D.y+0.15, D.z), '#EE7733'));
+  }
+}
+
+function buildMode1() {
+  // Show one tetrahedron with the dihedral angle highlighted
+  group.add(makeSphere(A, 0.07, C.blue));
+  group.add(makeSphere(B, 0.07, C.blue));
+  group.add(makeSphere(Cv, 0.07, C.blue));
+  group.add(makeSphere(D, 0.07, C.blue));
+
+  group.add(makeCyl(A, B, 0.025, C.blue, 1));
+  group.add(makeCyl(B, Cv, 0.025, C.blue, 1));
+  group.add(makeCyl(Cv, A, 0.025, C.blue, 1));
+  group.add(makeCyl(A, D, 0.025, C.blue, 1));
+  group.add(makeCyl(B, D, 0.025, C.blue, 1));
+  group.add(makeCyl(Cv, D, 0.025, C.blue, 1));
+
+  // Highlight the shared edge AB in orange
+  group.add(makeCyl(A, B, 0.05, C.orange, 1));
+
+  // Two faces sharing edge AB
+  group.add(makeTriFace(A, B, Cv, C.cyan, 0.35));  // bottom face
+  group.add(makeTriFace(A, B, D, C.orange, 0.35));  // side face
+
+  // Draw the dihedral angle arc
+  const edgeMid = new THREE.Vector3().addVectors(A, B).multiplyScalar(0.5);
+  const edgeDir = new THREE.Vector3().subVectors(B, A).normalize();
+  const toCv = new THREE.Vector3().subVectors(Cv, edgeMid).normalize();
+  const arcR = 0.6;
+  const arc = makeArc(edgeMid, edgeDir, toCv, DIHEDRAL, arcR, C.red, 40);
+  group.add(arc);
+
+  if (showLabels) {
+    const arcMid = toCv.clone().applyAxisAngle(edgeDir, DIHEDRAL/2).multiplyScalar(arcR+0.3).add(edgeMid);
+    spriteGroup.add(makeLabel("θ = 70.53°", arcMid, '#CC3311'));
+    spriteGroup.add(makeLabel("Shared edge", new THREE.Vector3(0, -0.25, A.z-0.1), '#EE7733'));
+  }
+}
+
+function buildMode2() {
+  // Five tetrahedra packed around edge AB
+  const edgeA = new THREE.Vector3(-L/2, 0, 0);
+  const edgeB = new THREE.Vector3(L/2, 0, 0);
+  const edgeDir = new THREE.Vector3(1, 0, 0);
+  const edgeMid = new THREE.Vector3(0, 0, 0);
+  const r3 = L * Math.sqrt(3) / 2;
+
+  // Starting direction (perpendicular to edge, in YZ plane)
+  const startDir = new THREE.Vector3(0, 0, 1);
+  const upDir = new THREE.Vector3(0, 1, 0);
+
+  group.add(makeCyl(edgeA, edgeB, 0.05, C.red, 1));
+  group.add(makeSphere(edgeA, 0.08, C.red));
+  group.add(makeSphere(edgeB, 0.08, C.red));
+
+  const colors = [C.blue, C.cyan, C.teal, C.orange, C.wine];
+
+  for (let i = 0; i < 5; i++) {
+    const a1 = i * DIHEDRAL;
+    const a2 = a1 + DIHEDRAL;
+
+    const v3 = new THREE.Vector3(0, Math.sin(a1)*r3, Math.cos(a1)*r3);
+    const v4 = new THREE.Vector3(0, Math.sin(a2)*r3, Math.cos(a2)*r3);
+
+    group.add(makeSphere(v3, 0.06, colors[i]));
+
+    // Edges from shared edge to outer vertices
+    group.add(makeCyl(edgeA, v3, 0.02, colors[i], 0.8));
+    group.add(makeCyl(edgeB, v3, 0.02, colors[i], 0.8));
+
+    // Face between consecutive outer vertices and shared edge
+    group.add(makeTriFace(edgeA, edgeB, v3, colors[i], 0.2));
+    group.add(makeTriFace(edgeA, v3, v4, colors[i], 0.12));
+    group.add(makeTriFace(edgeB, v3, v4, colors[i], 0.12));
+  }
+
+  // Last vertex (5th tet's far vertex)
+  const aLast = 5 * DIHEDRAL;
+  const vLast = new THREE.Vector3(0, Math.sin(aLast)*r3, Math.cos(aLast)*r3);
+  group.add(makeSphere(vLast, 0.06, colors[0]));
+  group.add(makeCyl(edgeA, vLast, 0.02, C.grey, 0.5));
+  group.add(makeCyl(edgeB, vLast, 0.02, C.grey, 0.5));
+
+  if (showLabels) {
+    spriteGroup.add(makeLabel("Shared Edge", new THREE.Vector3(0, -0.3, 0), '#CC3311'));
+    spriteGroup.add(makeLabel("5 × 70.53° = 352.6°", new THREE.Vector3(0, 2.2, 0), '#333'));
+    for (let i = 0; i < 5; i++) {
+      const a = (i + 0.5) * DIHEDRAL;
+      const lp = new THREE.Vector3(0, Math.sin(a)*1.0, Math.cos(a)*1.0);
+      spriteGroup.add(makeLabel((i+1).toString(), lp, '#555'));
+    }
+  }
+}
+
+function buildMode3() {
+  // Same as mode 2 but highlight the GAP
+  const edgeA = new THREE.Vector3(-L/2, 0, 0);
+  const edgeB = new THREE.Vector3(L/2, 0, 0);
+  const r3 = L * Math.sqrt(3) / 2;
+
+  group.add(makeCyl(edgeA, edgeB, 0.04, C.grey, 0.8));
+  group.add(makeSphere(edgeA, 0.07, C.grey));
+  group.add(makeSphere(edgeB, 0.07, C.grey));
+
+  // Five tetrahedra (dimmed)
+  for (let i = 0; i < 5; i++) {
+    const a1 = i * DIHEDRAL;
+    const v3 = new THREE.Vector3(0, Math.sin(a1)*r3, Math.cos(a1)*r3);
+    group.add(makeSphere(v3, 0.05, C.lightgrey));
+    group.add(makeCyl(edgeA, v3, 0.015, C.lightgrey, 0.4));
+    group.add(makeCyl(edgeB, v3, 0.015, C.lightgrey, 0.4));
+  }
+
+  // The gap
+  const gapStart = 5 * DIHEDRAL;
+  const gapEnd = 2 * Math.PI;
+  const gapMid = (gapStart + gapEnd) / 2;
+
+  // Draw the gap as a bright wedge
+  const segments = 20;
+  for (let i = 0; i < segments; i++) {
+    const a1 = gapStart + (i/segments) * DEFICIT;
+    const a2 = gapStart + ((i+1)/segments) * DEFICIT;
+    const v1 = new THREE.Vector3(0, Math.sin(a1)*r3, Math.cos(a1)*r3);
+    const v2 = new THREE.Vector3(0, Math.sin(a2)*r3, Math.cos(a2)*r3);
+    group.add(makeTriFace(edgeA, v1, v2, C.red, 0.5));
+    group.add(makeTriFace(edgeB, v1, v2, C.red, 0.5));
+  }
+
+  // Gap boundary edges
+  const vGapA = new THREE.Vector3(0, Math.sin(gapStart)*r3, Math.cos(gapStart)*r3);
+  const vGapB = new THREE.Vector3(0, Math.sin(gapEnd)*r3, Math.cos(gapEnd)*r3);
+  group.add(makeCyl(edgeA, vGapA, 0.035, C.red, 1));
+  group.add(makeCyl(edgeB, vGapA, 0.035, C.red, 1));
+  group.add(makeCyl(edgeA, vGapB, 0.035, C.red, 1));
+  group.add(makeCyl(edgeB, vGapB, 0.035, C.red, 1));
+  group.add(makeSphere(vGapA, 0.06, C.red));
+  group.add(makeSphere(vGapB, 0.06, C.red));
+
+  // Arc showing the deficit angle
+  const arcDir = new THREE.Vector3(0, Math.sin(gapStart), Math.cos(gapStart)).normalize();
+  const arc = makeArc(new THREE.Vector3(0,0,0), new THREE.Vector3(1,0,0), arcDir, DEFICIT, 1.0, C.red, 30);
+  group.add(arc);
+
+  if (showLabels) {
+    const lpos = new THREE.Vector3(0, Math.sin(gapMid)*1.5, Math.cos(gapMid)*1.5);
+    spriteGroup.add(makeLabel("δ ≈ 7.36°", lpos, '#CC3311'));
+    spriteGroup.add(makeLabel("= 0.128 rad", new THREE.Vector3(lpos.x, lpos.y-0.3, lpos.z), '#CC3311'));
+    spriteGroup.add(makeLabel("THE GAP", new THREE.Vector3(lpos.x, lpos.y+0.3, lpos.z), '#CC3311'));
+  }
+}
+
+function buildMode4() {
+  // Show the gap with arrows indicating the "spring force"
+  buildMode3();
+
+  // Add spring-like arrows pushing outward from the gap
+  const gapStart = 5 * DIHEDRAL;
+  const gapMid = gapStart + DEFICIT/2;
+  const r3 = L * Math.sqrt(3) / 2;
+
+  // Outward arrows from the gap
+  for (let i = 0; i < 3; i++) {
+    const a = gapStart + (i+0.5)*(DEFICIT/3);
+    const inner = new THREE.Vector3(0, Math.sin(a)*r3*0.6, Math.cos(a)*r3*0.6);
+    const outer = new THREE.Vector3(0, Math.sin(a)*r3*1.4, Math.cos(a)*r3*1.4);
+    group.add(makeCyl(inner, outer, 0.025, C.yellow, 0.9));
+    // Arrow head
+    const tip = new THREE.Vector3(0, Math.sin(a)*r3*1.5, Math.cos(a)*r3*1.5);
+    group.add(makeCyl(outer, tip, 0.05, C.yellow, 0.9));
+  }
+
+  // More labels
+  if (showLabels) {
+    const gapPos = new THREE.Vector3(0, Math.sin(gapMid)*2.2, Math.cos(gapMid)*2.2);
+    spriteGroup.add(makeLabel("→ EXPANSION", gapPos, '#CC9900'));
+    spriteGroup.add(makeLabel("ns ≈ 0.9646", new THREE.Vector3(0, -1.5, 2.0), '#0077BB'));
+    spriteGroup.add(makeLabel("Λeff ≈ 0.032/lP²", new THREE.Vector3(0, -1.9, 2.0), '#0077BB'));
+  }
+}
+
+const builders = [buildMode0, buildMode1, buildMode2, buildMode3, buildMode4];
+
+function setMode(m) {
+  currentMode = m;
+  clearGroup();
+  builders[m]();
+
+  // Update UI
+  for (let i = 0; i < 5; i++) {
+    document.getElementById('b'+i).className = i===m ? 'btn on' : 'btn';
+  }
+  document.getElementById('legend').innerHTML = modes[m].legend;
+  document.getElementById('info').textContent = modes[m].info;
+  document.getElementById('mode-desc').textContent = modes[m].name;
+}
+
+window.setMode = setMode;
+window.toggleRot = function() {
+  autoRot = !autoRot;
+  document.getElementById('b-rot').textContent = 'Rotate: ' + (autoRot?'ON':'OFF');
+  document.getElementById('b-rot').className = autoRot ? 'btn on' : 'btn';
+};
+window.toggleLabels = function() {
+  showLabels = !showLabels;
+  document.getElementById('b-labels').textContent = 'Labels: ' + (showLabels?'ON':'OFF');
+  document.getElementById('b-labels').className = showLabels ? 'btn on' : 'btn';
+  setMode(currentMode);
+};
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  if (e.key >= '1' && e.key <= '5') setMode(parseInt(e.key)-1);
+  if (e.key === 'ArrowRight') setMode(Math.min(4, currentMode+1));
+  if (e.key === 'ArrowLeft') setMode(Math.max(0, currentMode-1));
+});
+
+// Init
+setMode(0);
+})();
+</script>
+</body>
+</html>
