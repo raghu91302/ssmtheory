@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: K=12 FCC Emergence from 2D Holographic Stacking</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+#header{padding:7px 14px;border-bottom:1px solid #ddd;transition:background 0.4s;}
+#header.stitch{background:#e6f5f5;}
+#header.lift{background:#f3eeff;}
+#phase-badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;display:inline-block;margin-right:8px;}
+#phase-badge.stitch{background:#006666;}
+#phase-badge.lift{background:#663377;}
+#snap-label{font-size:13px;font-weight:700;color:#222;}
+#stats{font-size:10.5px;color:#555;margin-top:2px;font-family:monospace;}
+#viewport{flex:1;position:relative;cursor:grab;overflow:hidden;}
+#viewport:active{cursor:grabbing;}
+#viewport canvas{display:block;}
+#legend{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.96);padding:8px 11px;border-radius:6px;font-size:10.5px;color:#333;border:1px solid #ddd;line-height:1.8;pointer-events:none;}
+#legend .title{font-weight:600;margin-bottom:2px;font-size:11px;}
+#legend .row{display:flex;align-items:center;gap:5px;}
+#legend .dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+#legend .dot.round{border-radius:50%;}
+#legend .line{width:12px;height:2px;flex-shrink:0;}
+#legend .sep{margin-top:4px;border-top:1px solid #eee;padding-top:4px;}
+#legend .hint{margin-top:4px;color:#aaa;font-size:9.5px;}
+#desc{position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:6px;font-size:11.5px;color:#333;border:1px solid #ddd;max-width:370px;line-height:1.6;pointer-events:none;}
+#desc-hist{margin-top:5px;font-size:10px;color:#777;display:flex;flex-wrap:wrap;gap:6px;}
+#controls{padding:7px 12px;background:#f8f8f8;border-top:1px solid #e0e0e0;display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+.btn{padding:5px 9px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;font-size:11.5px;font-family:inherit;font-weight:400;transition:all 0.15s;}
+.btn:hover{border-color:#aaa;}
+.btn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#slider{flex:1;margin:0 6px;}
+#slider input{width:100%;accent-color:#0077BB;}
+#frame-count{font-size:10.5px;color:#888;min-width:48px;text-align:right;}
+</style>
+</head>
+<body>
+
+<div id="header" class="stitch">
+  <div style="display:flex;align-items:center;">
+    <span id="phase-badge" class="stitch">STITCH (2D)</span>
+    <span id="snap-label">Building...</span>
+  </div>
+  <div id="stats"></div>
+</div>
+
+<div id="viewport">
+  <div id="legend">
+    <div class="title">Coordination (K)</div>
+    <div class="row"><div class="dot" style="background:#0077BB;"></div>K = 12 — FCC saturated</div>
+    <div class="row"><div class="dot" style="background:#33BBEE;"></div>K = 10–11 — sub-surface</div>
+    <div class="row"><div class="dot round" style="background:#EE7733;"></div>K = 7–9 — transition</div>
+    <div class="row"><div class="dot round" style="background:#CC3311;"></div>K ≤ 6 — boundary / 2D</div>
+    <div class="sep"></div>
+    <div class="row"><div class="line" style="background:#888;"></div>In-plane bond</div>
+    <div class="row"><div class="line" style="background:#AA3377;"></div>Inter-layer bond</div>
+    <div class="hint">Drag to rotate · Scroll to zoom</div>
+  </div>
+  <div id="desc"></div>
+</div>
+
+<div id="controls">
+  <button class="btn" id="b-start" onclick="goStart()">⏮</button>
+  <button class="btn" id="b-prev" onclick="goPrev()">◀</button>
+  <button class="btn" id="b-play" onclick="togglePlay()">▶ Play</button>
+  <button class="btn" id="b-next" onclick="goNext()">▶</button>
+  <button class="btn" id="b-end" onclick="goEnd()">⏭</button>
+  <div id="slider"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+  <span id="frame-count">0/0</span>
+  <button class="btn on" id="b-bonds" onclick="toggleBonds()">Bonds:ON</button>
+  <button class="btn on" id="b-rot" onclick="toggleRot()">Rot:ON</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+const L=1.0, LH=Math.sqrt(3)/2*L, LFT=Math.sqrt(2/3)*L, BR2=(L*1.05)**2;
+const CK={k12:0x0077BB,k10:0x33BBEE,k7:0xEE7733,k0:0xCC3311};
+function kCol(k){return k>=12?CK.k12:k>=10?CK.k10:k>=7?CK.k7:CK.k0;}
+
+// ========== BUILD SHEET STEPS ==========
+function buildSheet(){
+  const nodes=[],bonds=[],steps=[];
+  function aN(x,z){nodes.push([x,0,z]);return nodes.length-1;}
+  function aB(a,b){bonds.push([a,b]);}
+  function snap(label,desc,phase){
+    const coords=new Int32Array(nodes.length);
+    for(let i=0;i<nodes.length;i++){let k=0;for(const[a,b]of bonds){if(a===i||b===i)k++;}coords[i]=k;}
+    steps.push({px:new Float32Array(nodes.map(n=>n[0])),py:new Float32Array(nodes.map(n=>n[1])),pz:new Float32Array(nodes.map(n=>n[2])),bonds:new Int32Array(bonds.flat()),coords,n:nodes.length,label,desc,phase,nLayers:1});
+  }
+
+  aN(0,0);aN(L,0);aB(0,1);
+  snap("Bell Pair","Two nodes. One entanglement bond. The Stitch operator's seed — a single maximally entangled EPR pair.","stitch");
+  aN(L/2,LH);aB(0,2);aB(1,2);
+  snap("First Stitch → Triangle","The Stitch operator finds the equidistant point at √3/2·L. First triangular face — the fundamental tile of the 2D sheet.","stitch");
+  aN(-L/2,LH);aB(0,3);aB(2,3);
+  snap("Growing the Sheet","Each stitch extends the sheet laterally. Triangular faces tile the plane without gaps.","stitch");
+  aN(L/2,-LH);aB(0,4);aB(1,4);
+  snap("Sheet Expanding","The sheet grows in all directions from the seed triangle.","stitch");
+  aN(3*L/2,LH);aB(1,5);aB(2,5);aN(-L/2,-LH);aB(0,6);aB(3,6);aB(4,6);aN(3*L/2,-LH);aB(1,7);aB(4,7);aB(5,7);
+  snap("Hexagonal Ring","Central nodes approach K=6 — the maximum 2D coordination. The hexagonal pattern emerges.","stitch");
+
+  // Fill radius-2
+  const r2=[[-L,0],[2*L,0],[-L/2,2*LH],[L/2,2*LH],[3*L/2,2*LH],[-L,LH],[2*L,LH],[-L,-LH],[2*L,-LH],[-L/2,-2*LH],[L/2,-2*LH],[3*L/2,-2*LH]];
+  for(const[x,z]of r2){const idx=aN(x,z);for(let j=0;j<idx;j++){const dx=nodes[idx][0]-nodes[j][0],dz=nodes[idx][2]-nodes[j][2];if(dx*dx+dz*dz<BR2)aB(j,idx);}}
+  snap("Hexagonal Sheet (K=6)","Interior nodes have K=6 — the 2D maximum. Perfectly flat (σ_z = 0). To reach K=12, the network must project into the third dimension.","stitch");
+
+  // Extend radius 4
+  for(let q=-4;q<=4;q++)for(let r=-4;r<=4;r++){
+    if(Math.abs(q+r)>4)continue;
+    const x=q*L+r*L/2,z=r*LH;
+    let exists=false;for(const n of nodes)if((n[0]-x)**2+(n[2]-z)**2<0.01){exists=true;break;}
+    if(exists)continue;
+    const idx=aN(x,z);for(let j=0;j<idx;j++){const dx=nodes[idx][0]-nodes[j][0],dz=nodes[idx][2]-nodes[j][2];if(dx*dx+dz*dz<BR2)aB(j,idx);}
+  }
+  snap("Extended 2D Sheet","A large hexagonal sheet. All interior nodes locked at K=6. Perfectly flat. Entanglement-limited. The system is compelled to break into 3D.","stitch");
+  return steps;
+}
+
+// ========== BUILD FCC LAYERS ==========
+function hexL(z,type,rad){
+  const off=[[0,0],[L/2,LH/3],[L,2*LH/3]];
+  const[ox,oy]=off[type%3];const ns=[];
+  for(let q=-rad;q<=rad;q++)for(let r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;ns.push([q*L+r*L/2+ox,z,r*LH+oy]);}
+  return ns;
+}
+
+function buildFCC(){
+  const steps=[];
+  const descs={
+    2:"LIFT! The first out-of-plane projection (probability e⁻³ ≈ 5%). A second hexagonal layer at height √(2/3)·L with B-offset. Proximity bonding connects the layers. Nodes begin reaching K=9.",
+    3:"Three layers: A-B-C stacking. The middle layer's interior nodes achieve K=12 for the first time — 6 in-plane + 3 above + 3 below. The FCC cuboctahedron emerges.",
+    4:"Four layers. The blue K=12 core is growing. Under-coordinated nodes (orange/red) are confined to the boundary shell δ ≈ 2.7L.",
+    5:"Five layers. The bulk-to-surface ratio increases. K=12 saturation climbs toward f = 1 − 10.1/N^(1/3).",
+  };
+
+  for(let nL=2;nL<=13;nL++){
+    const all=[];
+    for(let i=0;i<nL;i++){const lay=hexL(i*LFT,i,6);for(const n of lay)all.push(n);}
+    const n=all.length;
+    const bl=[];
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const dx=all[i][0]-all[j][0],dy=all[i][1]-all[j][1],dz=all[i][2]-all[j][2];if(dx*dx+dy*dy+dz*dz<BR2)bl.push(i,j);}
+    const coords=new Int32Array(n);
+    for(let b=0;b<bl.length;b+=2){coords[bl[b]]++;coords[bl[b+1]]++;}
+    const px=new Float32Array(n),py=new Float32Array(n),pz=new Float32Array(n);
+    for(let i=0;i<n;i++){px[i]=all[i][0];py[i]=all[i][1];pz[i]=all[i][2];}
+    const label=nL===2?"First LIFT → 2 Layers":nL===3?"ABC Stack → K=12 Emerges!":nL+" Layers (N="+n+")";
+    const desc=descs[nL]||nL+" layers. The K=12 bulk dominates the interior. In the thermodynamic limit, all interior nodes saturate at K=12.";
+    steps.push({px,py,pz,bonds:new Int32Array(bl),coords,n,nLayers:nL,label,desc,phase:"lift"});
+  }
+  return steps;
+}
+
+// ========== THREE.JS SCENE ==========
+const vp=document.getElementById("viewport");
+const W=vp.clientWidth,H=vp.clientHeight;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+const camera=new THREE.PerspectiveCamera(45,W/H,0.1,500);camera.position.set(0,0,22);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+vp.insertBefore(renderer.domElement,vp.firstChild);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+const dl1=new THREE.DirectionalLight(0xffffff,0.5);dl1.position.set(5,10,6);scene.add(dl1);
+const dl2=new THREE.DirectionalLight(0x8888cc,0.2);dl2.position.set(-5,-3,-6);scene.add(dl2);
+
+const group=new THREE.Group();scene.add(group);
+
+// Mouse/touch
+const rot={x:0.5,y:-0.2};
+let mDown=false,mx=0,my=0,autoRot=true;
+
+renderer.domElement.addEventListener("mousedown",e=>{mDown=true;mx=e.clientX;my=e.clientY;});
+renderer.domElement.addEventListener("touchstart",e=>{mDown=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",()=>{mDown=false;});
+window.addEventListener("touchend",()=>{mDown=false;});
+window.addEventListener("mousemove",e=>{if(!mDown)return;rot.y+=(e.clientX-mx)*0.006;rot.x+=(e.clientY-my)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",e=>{if(!mDown)return;const t=e.touches[0];rot.y+=(t.clientX-mx)*0.006;rot.x+=(t.clientY-my)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
+renderer.domElement.addEventListener("wheel",e=>{camera.position.z=Math.max(5,Math.min(80,camera.position.z+e.deltaY*0.02));e.preventDefault();},{passive:false});
+window.addEventListener("resize",()=>{const w=vp.clientWidth,h=vp.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);});
+
+(function anim(){requestAnimationFrame(anim);if(autoRot&&!mDown)rot.y+=0.002;group.rotation.x=rot.x;group.rotation.y=rot.y;renderer.render(scene,camera);})();
+
+// ========== BUILD ALL SNAPSHOTS ==========
+const snaps=[...buildSheet(),...buildFCC()];
+let snapIdx=0, playing=false, showBonds=true, playTimer=null;
+
+const slider=document.querySelector("#slider input");
+slider.max=snaps.length-1;
+
+// ========== RENDER SNAPSHOT ==========
+function renderSnap(idx){
+  snapIdx=Math.max(0,Math.min(idx,snaps.length-1));
+  slider.value=snapIdx;
+
+  // Clear
+  while(group.children.length){const c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(m=>m.dispose());else c.material.dispose();}group.remove(c);}
+
+  const s=snaps[snapIdx];
+  const{px,py,pz,bonds,coords,n,label,desc,phase,nLayers}=s;
+
+  // UI
+  const hdr=document.getElementById("header");
+  hdr.className=phase==="stitch"?"stitch":"lift";
+  const badge=document.getElementById("phase-badge");
+  badge.className=phase==="stitch"?"stitch":"lift";
+  badge.textContent=phase==="stitch"?"STITCH (2D)":"LIFT (2D→3D)";
+  document.getElementById("snap-label").textContent=label;
+
+  // Stats
+  const hist={};
+  for(let i=0;i<n;i++){const k=coords[i];hist[k]=(hist[k]||0)+1;}
+  const kMean=n>0?coords.reduce((a,b)=>a+b,0)/n:0;
+  const k12=hist[12]||0;
+  const k10p=Object.entries(hist).filter(([k])=>+k>=10).reduce((s,[,c])=>s+c,0);
+  let st=`N=${n} | ${(bonds.length/2)|0} bonds | K̄=${kMean.toFixed(2)} | K=12: ${(100*k12/n).toFixed(1)}% (${k12}) | K≥10: ${(100*k10p/n).toFixed(1)}%`;
+  if(nLayers>1)st+=` | ${nLayers} layers`;
+  document.getElementById("stats").textContent=st;
+  document.getElementById("frame-count").textContent=`${snapIdx+1}/${snaps.length}`;
+
+  // Description
+  let dhtml=desc;
+  if(n>10){
+    dhtml+='<div style="margin-top:5px;font-size:10px;color:#777;display:flex;flex-wrap:wrap;gap:6px;">';
+    Object.entries(hist).sort((a,b)=>+b[0]-+a[0]).slice(0,6).forEach(([k,c])=>{
+      dhtml+=`<span><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#${kCol(+k).toString(16).padStart(6,"0")};margin-right:2px;vertical-align:middle;"></span>K=${k}:${c}</span>`;
+    });
+    dhtml+='</div>';
+  }
+  document.getElementById("desc").innerHTML=dhtml;
+
+  // Slider accent
+  slider.style.accentColor=phase==="stitch"?"#008888":"#7733dd";
+
+  // Centroid
+  let cx=0,cy=0,cz=0;
+  for(let i=0;i<n;i++){cx+=px[i];cy+=py[i];cz+=pz[i];}
+  cx/=n;cy/=n;cz/=n;
+
+  // Instanced nodes
+  const buckets={12:[],10:[],7:[],0:[]};
+  for(let i=0;i<n;i++){const k=coords[i];const bk=k>=12?12:k>=10?10:k>=7?7:0;buckets[bk].push(i);}
+
+  const sf=n<30?1.0:n<100?0.8:n<500?0.6:n<1500?0.45:0.35;
+  const sizes={12:0.18*sf,10:0.15*sf,7:0.13*sf,0:0.11*sf};
+  const seg=n>1000?6:10;
+  const dummy=new THREE.Object3D();
+
+  for(const[bk,indices]of Object.entries(buckets)){
+    if(!indices.length)continue;
+    const geo=new THREE.SphereGeometry(sizes[+bk],seg,seg);
+    const mat=new THREE.MeshPhongMaterial({color:kCol(+bk)});
+    const im=new THREE.InstancedMesh(geo,mat,indices.length);
+    for(let j=0;j<indices.length;j++){
+      const i=indices[j];
+      dummy.position.set(px[i]-cx,py[i]-cy,pz[i]-cz);
+      dummy.updateMatrix();
+      im.setMatrixAt(j,dummy.matrix);
+    }
+    im.instanceMatrix.needsUpdate=true;
+    group.add(im);
+  }
+
+  // Bonds
+  if(showBonds){
+    const nB=bonds.length/2;
+    const pos=new Float32Array(nB*6);
+    const col=new Float32Array(nB*6);
+    for(let b=0;b<nB;b++){
+      const i=bonds[b*2],j=bonds[b*2+1];
+      pos[b*6]=px[i]-cx;pos[b*6+1]=py[i]-cy;pos[b*6+2]=pz[i]-cz;
+      pos[b*6+3]=px[j]-cx;pos[b*6+4]=py[j]-cy;pos[b*6+5]=pz[j]-cz;
+      const dv=Math.abs(py[i]-py[j]);
+      if(dv>0.3){col[b*6]=0.67;col[b*6+1]=0.2;col[b*6+2]=0.47;col[b*6+3]=0.67;col[b*6+4]=0.2;col[b*6+5]=0.47;}
+      else{col[b*6]=0.53;col[b*6+1]=0.53;col[b*6+2]=0.53;col[b*6+3]=0.53;col[b*6+4]=0.53;col[b*6+5]=0.53;}
+    }
+    const lg=new THREE.BufferGeometry();
+    lg.setAttribute("position",new THREE.BufferAttribute(pos,3));
+    lg.setAttribute("color",new THREE.BufferAttribute(col,3));
+    const op=n>1500?0.08:n>500?0.15:0.3;
+    group.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:op})));
+  }
+}
+
+// ========== CONTROLS ==========
+function stopPlay(){playing=false;if(playTimer)clearInterval(playTimer);playTimer=null;document.getElementById("b-play").textContent="▶ Play";document.getElementById("b-play").classList.remove("on");}
+
+window.togglePlay=function(){
+  if(playing){stopPlay();return;}
+  playing=true;
+  document.getElementById("b-play").textContent="⏸ Pause";
+  document.getElementById("b-play").classList.add("on");
+  playTimer=setInterval(()=>{
+    if(snapIdx>=snaps.length-1){stopPlay();return;}
+    renderSnap(snapIdx+1);
+  },snaps[snapIdx]?.phase==="stitch"?1600:1200);
+};
+window.goStart=function(){stopPlay();renderSnap(0);};
+window.goPrev=function(){stopPlay();renderSnap(snapIdx-1);};
+window.goNext=function(){stopPlay();renderSnap(snapIdx+1);};
+window.goEnd=function(){stopPlay();renderSnap(snaps.length-1);};
+window.goTo=function(v){stopPlay();renderSnap(v);};
+
+window.toggleBonds=function(){
+  showBonds=!showBonds;
+  const b=document.getElementById("b-bonds");
+  b.textContent="Bonds:"+(showBonds?"ON":"OFF");
+  b.classList.toggle("on",showBonds);
+  renderSnap(snapIdx);
+};
+window.toggleRot=function(){
+  autoRot=!autoRot;
+  const b=document.getElementById("b-rot");
+  b.textContent="Rot:"+(autoRot?"ON":"OFF");
+  b.classList.toggle("on",autoRot);
+};
+
+// Keyboard
+window.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight")goNext();
+  else if(e.key==="ArrowLeft")goPrev();
+  else if(e.key===" "){e.preventDefault();togglePlay();}
+});
+
+// Start
+renderSnap(0);
+})();
+</script>
+</body>
+</html>
