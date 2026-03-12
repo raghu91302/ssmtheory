@@ -125,21 +125,65 @@ g.add(mL("INFLATION",new THREE.Vector3(0,-lH-0.4,0),"#CC3311"));
 // S3: Deficit zoom
 steps.push({b:function(g){var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;g.add(mC(eA,eB,0.05,C.rd,1));g.add(mS(eA,0.08,C.rd));g.add(mS(eB,0.08,C.rd));var cols=[C.b,C.cy,C.tl,C.or,C.wn];for(var i=0;i<5;i++){var a=i*DI;var v=new THREE.Vector3(0,Math.sin(a)*r3,Math.cos(a)*r3);g.add(mS(v,0.06,cols[i]));g.add(mC(eA,v,0.02,cols[i],0.7));g.add(mC(eB,v,0.02,cols[i],0.7));var a2=(i+1)*DI;var v2=new THREE.Vector3(0,Math.sin(a2)*r3,Math.cos(a2)*r3);g.add(mT(eA,v,v2,cols[i],0.15));g.add(mT(eB,v,v2,cols[i],0.15));}var gS=5*DI,gM=(gS+2*Math.PI)/2,seg=20;for(var i=0;i<seg;i++){var a1=gS+(i/seg)*DEF,a22=gS+((i+1)/seg)*DEF;var vv1=new THREE.Vector3(0,Math.sin(a1)*r3,Math.cos(a1)*r3);var vv2=new THREE.Vector3(0,Math.sin(a22)*r3,Math.cos(a22)*r3);g.add(mT(eA,vv1,vv2,C.rd,0.5));g.add(mT(eB,vv1,vv2,C.rd,0.5));}var vGA=new THREE.Vector3(0,Math.sin(gS)*r3,Math.cos(gS)*r3),vGB=new THREE.Vector3(0,r3,0);g.add(mC(eA,vGA,0.035,C.rd,1));g.add(mC(eB,vGA,0.035,C.rd,1));g.add(mC(eA,vGB,0.035,C.rd,1));g.add(mC(eB,vGB,0.035,C.rd,1));g.add(mS(vGA,0.06,C.rd));g.add(mS(vGB,0.06,C.rd));var aD=new THREE.Vector3(0,Math.sin(gS),Math.cos(gS)).normalize();g.add(mA(new THREE.Vector3(0,0,0),new THREE.Vector3(1,0,0),aD,DEF,1.1,C.rd));var lp=new THREE.Vector3(0,Math.sin(gM)*1.7,Math.cos(gM)*1.7);g.add(mL("\u03B4 \u2248 7.36\u00B0 = 0.128 rad",lp,"#CC3311"));g.add(mL("THE DEFICIT GAP",new THREE.Vector3(lp.x,lp.y+0.35,lp.z),"#CC3311"));for(var i=0;i<3;i++){var aa=gS+(i+0.5)*(DEF/3);var inn=new THREE.Vector3(0,Math.sin(aa)*r3*0.5,Math.cos(aa)*r3*0.5);var out=new THREE.Vector3(0,Math.sin(aa)*r3*1.5,Math.cos(aa)*r3*1.5);g.add(mC(inn,out,0.025,C.yl,0.9));var tip=new THREE.Vector3(0,Math.sin(aa)*r3*1.65,Math.cos(aa)*r3*1.65);g.add(mC(out,tip,0.05,C.yl,0.9));}g.add(mL("R \u2248 0.128/lP\u00B2",new THREE.Vector3(2.2,1.3,0),"#0077BB"));g.add(mL("ns \u2248 0.9646",new THREE.Vector3(2.2,0.9,0),"#009988"));g.add(mL("\u039Beff \u2248 0.032/lP\u00B2",new THREE.Vector3(2.2,0.5,0),"#0077BB"));},ph:"k4",badge:"THE DEFICIT \u2192 INFLATION",bc:"#CC3311",label:"Inside the Foam: The 0.128 rad Gap at Every Sheet Edge",desc:"Zooming into any shared edge from the original sheet: the lifted tetrahedra pack around it. 5 tetrahedra consume 352.6\u00B0. The 7.36\u00B0 gap (red wedge) IS curvature. R \u2248 \u03B4/lP\u00B2. The stitching operator frantically nucleates new K=4 nodes to close these gaps — that is inflation. ns = 1 \u2212 \u221A3\u00B7\u03B4/(2\u03C0) \u2248 0.9646.",legend:'<div class="lt">The Regge Deficit</div><span class="mt">\u03B4 = 2\u03C0 \u2212 5\u00B7arccos(1/3)</span><br><span class="mt">\u03B4 \u2248 0.128 rad</span><br><br><span class="mt">R \u2248 \u03B4/l<sub>P</sub>\u00B2</span><br><span class="mt">\u039B<sub>eff</sub> = R/4</span><br><span class="mt">n<sub>s</sub> \u2248 0.96461</span><br>Planck: 0.9649\u00B10.0042 \u2713',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u25B6 <b style="color:#CC3311">K=4 Deficit \u2192 Expansion</b><br>\u00A0\u00A0 K=12 Vacuum'});
 
-// S4: K=12 FCC
-steps.push({b:function(g){var allN=[],rad=5;for(var ly=0;ly<7;ly++){var off=[[0,0],[L/2,LH/3],[L,2*LH/3]];var o=off[ly%3];for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;allN.push([q*L+r*L/2+o[0],ly*lH,r*LH+o[1]]);}}var N=allN.length;var cx=0,cy=0,cz=0;for(var i=0;i<N;i++){cx+=allN[i][0];cy+=allN[i][1];cz+=allN[i][2];}cx/=N;cy/=N;cz/=N;
+// S4: K=12 FCC — small clean cluster showing cuboctahedral coordination
+steps.push({b:function(g){
+var allN=[],rad=2;
+// 3 ABC layers, small radius — same visual scale as K=6 sheet
+for(var ly=0;ly<3;ly++){var off=[[0,0],[L/2,LH/3],[L,2*LH/3]];var o=off[ly%3];
+for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;allN.push([q*L+r*L/2+o[0],ly*lH,r*LH+o[1]]);}}
+var N=allN.length;
 // Bonds + coordination
-var bdat=[],coords=new Int32Array(N);
-for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){var dx=allN[i][0]-allN[j][0],dy=allN[i][1]-allN[j][1],dz=allN[i][2]-allN[j][2];if(dx*dx+dy*dy+dz*dz<BR2){bdat.push(i,j);coords[i]++;coords[j]++;}}
-// Instanced nodes
-var bk={12:[],10:[],7:[],0:[]};for(var i=0;i<N;i++){var k=coords[i];bk[k>=12?12:k>=10?10:k>=7?7:0].push(i);}
-var sz={12:0.055,10:0.045,7:0.04,0:0.035};var kc={12:C.gn,10:C.b,7:C.or,0:C.rd};var dm=new THREE.Object3D();
-for(var key in bk){if(!bk[key].length)continue;var geo=new THREE.SphereGeometry(sz[+key],6,6);var mat=new THREE.MeshPhongMaterial({color:kc[+key]});var im=new THREE.InstancedMesh(geo,mat,bk[key].length);for(var j=0;j<bk[key].length;j++){dm.position.set(allN[bk[key][j]][0]-cx,allN[bk[key][j]][1]-cy,allN[bk[key][j]][2]-cz);dm.updateMatrix();im.setMatrixAt(j,dm.matrix);}im.instanceMatrix.needsUpdate=true;g.add(im);}
-// Bonds as lines
-var bp=new Float32Array(bdat.length*3),bc=new Float32Array(bdat.length*3);
-for(var b=0;b<bdat.length;b+=2){var bi=b/2;var i=bdat[b],j=bdat[b+1];bp[bi*6]=allN[i][0]-cx;bp[bi*6+1]=allN[i][1]-cy;bp[bi*6+2]=allN[i][2]-cz;bp[bi*6+3]=allN[j][0]-cx;bp[bi*6+4]=allN[j][1]-cy;bp[bi*6+5]=allN[j][2]-cz;var il=Math.abs(allN[i][1]-allN[j][1])>0.3;bc[bi*6]=il?0.67:0.53;bc[bi*6+1]=il?0.2:0.53;bc[bi*6+2]=il?0.47:0.53;bc[bi*6+3]=il?0.67:0.53;bc[bi*6+4]=il?0.2:0.53;bc[bi*6+5]=il?0.47:0.53;}
-var lg2=new THREE.BufferGeometry();lg2.setAttribute("position",new THREE.BufferAttribute(bp,3));lg2.setAttribute("color",new THREE.BufferAttribute(bc,3));g.add(new THREE.LineSegments(lg2,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.1})));
-var k12c=bk[12]?bk[12].length:0;g.add(mL("K=12: "+k12c+"/"+N+" ("+(100*k12c/N).toFixed(0)+"%)",new THREE.Vector3(0,4.5,0),"#22AA44"));g.add(mL("\u03B4 = 0  |  R = 0  |  Minkowski Space",new THREE.Vector3(0,4.1,0),"#333"));
-},ph:"k12",badge:"K = 12  POST-INFLATION VACUUM",bc:"#22AA44",label:"Phase III: The K=12 FCC Lattice — Our Universe's Vacuum",desc:"Inflation is over. The chaotic K=4 foam has crystallized into ordered FCC layers with K=12. Deficit angles vanish (\u03B4=0), curvature vanishes (R=0): Minkowski space. Green = K=12 bulk; red/orange = boundary shell. The latent heat \u0394Q = 4\u03B5 reheated the universe to T ~ 10\u00B9\u2075 GeV.",legend:'<div class="lt">Phase III: K = 12 FCC</div>Ordered. Flat layers. ABC stacking.<br><span class="mt">\u03B4 = 0</span> (no deficit)<br><span class="mt">R = 0</span> (Minkowski)<br><br>6 in-plane + 3 above + 3 below = 12<br><br><span class="mt">\u0394Q = 4\u03B5 \u2192 T ~ 10<sup>15</sup> GeV</span>',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u25B6 <b style="color:#22AA44">K=12 Vacuum (Now)</b>'});
+var bonds=[],coords=new Int32Array(N);
+for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){var dx=allN[i][0]-allN[j][0],dy=allN[i][1]-allN[j][1],dz=allN[i][2]-allN[j][2];if(dx*dx+dy*dy+dz*dz<BR2){bonds.push([i,j]);coords[i]++;coords[j]++;}}
+// Center
+var cx=0,cy=0,cz=0;for(var i=0;i<N;i++){cx+=allN[i][0];cy+=allN[i][1];cz+=allN[i][2];}cx/=N;cy/=N;cz/=N;
+// Find a central K=12 node to highlight
+var centerIdx=-1,bestD=1e9;
+for(var i=0;i<N;i++){if(coords[i]>=12){var dd=(allN[i][0]-cx)*(allN[i][0]-cx)+(allN[i][1]-cy)*(allN[i][1]-cy)+(allN[i][2]-cz)*(allN[i][2]-cz);if(dd<bestD){bestD=dd;centerIdx=i;}}}
+// Draw bonds — color-coded by type for the highlighted node
+for(var b=0;b<bonds.length;b++){var bi=bonds[b][0],bj=bonds[b][1];
+var p1=new THREE.Vector3(allN[bi][0]-cx,allN[bi][1]-cy,allN[bi][2]-cz);
+var p2=new THREE.Vector3(allN[bj][0]-cx,allN[bj][1]-cy,allN[bj][2]-cz);
+var involvesCenter=(bi===centerIdx||bj===centerIdx);
+if(involvesCenter){
+  // Classify: in-plane, above, or below
+  var otherIdx=(bi===centerIdx)?bj:bi;
+  var dyy=allN[otherIdx][1]-allN[centerIdx][1];
+  var bondCol,bondR,bondOp;
+  if(Math.abs(dyy)<0.1){bondCol=C.tl;bondR=0.04;bondOp=1.0;}  // in-plane = teal
+  else if(dyy>0){bondCol=C.or;bondR=0.04;bondOp=1.0;}         // above = orange
+  else{bondCol=C.b;bondR=0.04;bondOp=1.0;}                     // below = blue
+  g.add(mC(p1,p2,bondR,bondCol,bondOp));
+} else {
+  var dyb=Math.abs(allN[bi][1]-allN[bj][1]);
+  g.add(mC(p1,p2,0.015,dyb>0.3?C.wn:C.gr,0.25));
+}}
+// Draw nodes
+for(var i=0;i<N;i++){var p=new THREE.Vector3(allN[i][0]-cx,allN[i][1]-cy,allN[i][2]-cz);
+var k=coords[i];var isCenter=(i===centerIdx);
+if(isCenter){g.add(mS(p,0.12,C.yl));}
+else if(k>=12){g.add(mS(p,0.07,C.gn));}
+else if(k>=10){g.add(mS(p,0.06,C.b));}
+else{g.add(mS(p,0.05,C.rd));}}
+// Count bonds for highlighted node
+var inP=0,abv=0,blw=0;
+if(centerIdx>=0){for(var b=0;b<bonds.length;b++){var bi=bonds[b][0],bj=bonds[b][1];
+if(bi!==centerIdx&&bj!==centerIdx)continue;
+var oi=(bi===centerIdx)?bj:bi;var dyy=allN[oi][1]-allN[centerIdx][1];
+if(Math.abs(dyy)<0.1)inP++;else if(dyy>0)abv++;else blw++;}}
+// Labels
+var cP=new THREE.Vector3(allN[centerIdx][0]-cx,allN[centerIdx][1]-cy,allN[centerIdx][2]-cz);
+g.add(mL("Central node: K=12",new THREE.Vector3(cP.x,cP.y+0.5,cP.z),"#CC9900"));
+g.add(mL(inP+" in-plane (teal)",new THREE.Vector3(3.0,0.8,0),"#009988"));
+g.add(mL(abv+" above (orange)",new THREE.Vector3(3.0,0.4,0),"#EE7733"));
+g.add(mL(blw+" below (blue)",new THREE.Vector3(3.0,0.0,0),"#0077BB"));
+g.add(mL(inP+"+"+abv+"+"+blw+" = 12",new THREE.Vector3(3.0,-0.4,0),"#333"));
+// Layer labels
+g.add(mL("Layer C (above)",new THREE.Vector3(-3.0,lH+0.15,0),"#EE7733"));
+g.add(mL("Layer A (center)",new THREE.Vector3(-3.0,0.15,0),"#009988"));
+g.add(mL("Layer B (below)",new THREE.Vector3(-3.0,-lH+0.15,0),"#0077BB"));
+g.add(mL("\u03B4 = 0  |  R = 0  |  Flat",new THREE.Vector3(0,lH+0.8,0),"#22AA44"));
+},ph:"k12",badge:"K = 12  CUBOCTAHEDRON",bc:"#22AA44",label:"Phase III: The K=12 FCC Lattice \u2014 Cuboctahedral Coordination",desc:"The frustrated K=4 foam has crystallized into three ordered ABC-stacked layers. The highlighted node (yellow) achieves K=12: 6 in-plane bonds (teal) + 3 to the layer above (orange) + 3 to the layer below (blue). This is the cuboctahedral coordination of the FCC lattice. Deficit angles vanish (\u03B4=0), curvature vanishes (R=0): Minkowski space. The 2D\u21923D holographic projection is visible \u2014 each layer is a flat hexagonal sheet, stacked with ABC offset.",legend:'<div class="lt">Phase III: K = 12</div>3 ABC-stacked hexagonal layers.<br><br>Highlighted node (yellow):<br><span style="color:#009988">\u25CF 6 in-plane</span> (teal)<br><span style="color:#EE7733">\u25CF 3 above</span> (orange)<br><span style="color:#0077BB">\u25CF 3 below</span> (blue)<br><b>6 + 3 + 3 = 12</b><br><br><span class="mt">\u03B4 = 0, R = 0</span><br>Inflation ended. Minkowski vacuum.',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u25B6 <b style="color:#22AA44">K=12 Vacuum (Now)</b>'});
 
 // RENDER
 var si3=0,pl2=false,pt2=null;var sli2=document.querySelector("#sld input");sli2.max=steps.length-1;
