@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: The 13/12 Hubble Mechanism — Shielded vs Exposed Vacuum</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+#hd{padding:8px 14px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+#phase-badge{font-size:11px;font-weight:700;color:#fff;padding:3px 10px;border-radius:4px;letter-spacing:0.5px;}
+#snap-label{font-size:14px;font-weight:700;color:#222;}
+#vp{flex:1;position:relative;cursor:grab;display:flex;}
+#vp:active{cursor:grabbing;}
+.panel{flex:1;position:relative;border-right:1px solid #eee;}
+.panel:last-child{border-right:none;}
+.panel-label{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);padding:4px 14px;border-radius:5px;font-size:12px;font-weight:700;border:1px solid #ddd;pointer-events:none;z-index:2;white-space:nowrap;}
+.panel-label.early{color:#0077BB;border-color:#0077BB;}
+.panel-label.late{color:#CC3311;border-color:#CC3311;}
+#legend{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.96);padding:8px 16px;border-radius:7px;font-size:11px;color:#333;border:1px solid #ddd;pointer-events:none;text-align:center;line-height:1.7;max-width:600px;z-index:2;}
+.lg{font-weight:700;}
+.math{font-family:'Courier New',monospace;font-size:11px;}
+.tl{color:#009988;} .or{color:#EE7733;} .bl{color:#0077BB;} .rd{color:#CC3311;} .yl{color:#CC9900;} .gn{color:#22AA44;} .gy{color:#888;}
+#ct{padding:7px 12px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;}
+.btn{padding:6px 14px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.15s;}
+.btn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+.btn:hover{border-color:#999;}
+</style>
+</head>
+<body>
+<div id="hd">
+<span id="phase-badge" style="background:#0077BB;">EARLY → LATE</span>
+<span id="snap-label">The 13/12 Hubble Mechanism: Shielded vs Exposed Vacuum</span>
+</div>
+<div id="vp">
+<div class="panel" id="p-early">
+<div class="panel-label early">EARLY UNIVERSE — Shielded (ν = 12)</div>
+</div>
+<div class="panel" id="p-late">
+<div class="panel-label late">LATE UNIVERSE (Void) — Exposed (ν = 13)</div>
+</div>
+<div id="legend">
+<span class="lg bl">● Blue</span> = 6 in-plane bonds &nbsp;|&nbsp;
+<span class="lg or">● Orange</span> = 3 above &nbsp;|&nbsp;
+<span class="lg tl">● Teal</span> = 3 below &nbsp;|&nbsp;
+<span class="lg gy">● Grey</span> = locked central node &nbsp;|&nbsp;
+<span class="lg rd">● Red</span> = unlocked central node<br>
+<span class="math">H<sub>late</sub>/H<sub>early</sub> = ν<sub>late</sub>/ν<sub>early</sub> = 13/12 → 67.4 × 13/12 ≈ 73.02 km/s/Mpc</span>
+</div>
+</div>
+<div id="ct">
+<button class="btn on" id="br" onclick="togR()">Rotate: ON</button>
+<button class="btn" onclick="togLabels()">Labels: ON</button>
+<button class="btn" onclick="togBonds()">Bonds: ON</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var L=2.0,lH=Math.sqrt(2/3)*L;
+var C={b:0x0077BB,cy:0x33BBEE,or:0xEE7733,rd:0xCC3311,tl:0x009988,gy:0x999999,yl:0xEECC00,gn:0x22AA44,wh:0xffffff,dgy:0x444444};
+
+// Build cuboctahedron: 12 surface nodes + 1 central
+// FCC unit cell: central node at origin, 12 nearest neighbours
+var nn=[];
+// 6 in-plane (square face midpoints at distance L)
+var ip=[[1,1,0],[-1,-1,0],[1,-1,0],[-1,1,0],[1,0,1],[-1,0,-1]];
+// Actually, cuboctahedral coords: 12 vertices of cuboctahedron
+// All permutations of (±1, ±1, 0) scaled by L/√2
+var cuboVerts=[];
+var perms=[[0,1],[0,2],[1,2]];
+for(var p=0;p<3;p++){var a=perms[p][0],b=perms[p][1];
+for(var sa=-1;sa<=1;sa+=2)for(var sb=-1;sb<=1;sb+=2){
+var v=[0,0,0];v[a]=sa;v[b]=sb;cuboVerts.push(v);}}
+// Scale so distance from origin = L
+var sc=L/Math.sqrt(2);
+for(var i=0;i<cuboVerts.length;i++){cuboVerts[i][0]*=sc;cuboVerts[i][1]*=sc;cuboVerts[i][2]*=sc;}
+
+// Classify: in-plane (y≈0), above (y>0), below (y<0)
+// Rotate so that [111] is roughly up: use raw coords, classify by y
+function classify(v){
+  if(Math.abs(v[1])<0.01)return"in";
+  return v[1]>0?"above":"below";
+}
+// With cuboctahedron at origin, let's use a better classification
+// 6 in equatorial plane, 3 above, 3 below
+// Sort by y coordinate
+var sorted=[...cuboVerts].map(function(v,i){return{v:v,i:i};});
+sorted.sort(function(a,b){return a.v[1]-b.v[1];});
+// Bottom 3, middle 6, top 3
+var belowIdx=[],inIdx=[],aboveIdx=[];
+for(var i=0;i<3;i++)belowIdx.push(sorted[i].i);
+for(var i=3;i<9;i++)inIdx.push(sorted[i].i);
+for(var i=9;i<12;i++)aboveIdx.push(sorted[i].i);
+
+function setupScene(container,isLate){
+var W=container.clientWidth,H2=container.clientHeight;
+var scene=new THREE.Scene();scene.background=new THREE.Color(isLate?0xfff8f5:0xf5f8ff);
+var camera=new THREE.PerspectiveCamera(40,W/H2,0.1,100);
+camera.position.set(0,2.5,6);camera.lookAt(0,0,0);
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(W,H2);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+container.insertBefore(renderer.domElement,container.firstChild);
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-5,-3,-6);
+var group=new THREE.Group();scene.add(group);
+
+function mS(p,r,c){var g=new THREE.SphereGeometry(r,16,16);var m=new THREE.MeshPhongMaterial({color:c});var s=new THREE.Mesh(g,m);s.position.set(p[0],p[1],p[2]);return s;}
+function mC(p1,p2,r,c,op){var d=new THREE.Vector3(p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]);var l=d.length();if(l<0.001)return new THREE.Group();var mid=new THREE.Vector3((p1[0]+p2[0])/2,(p1[1]+p2[1])/2,(p1[2]+p2[2])/2);var g=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(g,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return s;}
+function mL(text,pos,color,size){var cv=document.createElement("canvas");cv.width=256;cv.height=64;var ctx=cv.getContext("2d");ctx.font="bold "+(size||24)+"px -apple-system,sans-serif";ctx.fillStyle=color||"#333";ctx.textAlign="center";ctx.fillText(text,128,40);var t=new THREE.CanvasTexture(cv);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.position.set(pos[0],pos[1],pos[2]);s.scale.set(1.2,0.3,1);return s;}
+
+// Central node
+var centralColor=isLate?C.rd:C.gy;
+var centralRadius=isLate?0.18:0.1;
+var centralOpacity=isLate?1.0:0.4;
+var cMat=new THREE.MeshPhongMaterial({color:centralColor,transparent:!isLate,opacity:centralOpacity});
+var cGeo=new THREE.SphereGeometry(centralRadius,16,16);
+var cMesh=new THREE.Mesh(cGeo,cMat);
+group.add(cMesh);
+
+// Pulsing glow for late-universe central node
+if(isLate){
+  var glowGeo=new THREE.SphereGeometry(0.3,16,16);
+  var glowMat=new THREE.MeshBasicMaterial({color:C.rd,transparent:true,opacity:0.15});
+  var glowMesh=new THREE.Mesh(glowGeo,glowMat);
+  group.add(glowMesh);
+}
+
+// Surface nodes
+var nodeLabels=[];
+for(var i=0;i<12;i++){
+  var v=cuboVerts[i];
+  var col;
+  if(inIdx.indexOf(i)>=0)col=C.b;
+  else if(aboveIdx.indexOf(i)>=0)col=C.or;
+  else col=C.tl;
+  group.add(mS(v,0.12,col));
+  // Bond to center
+  group.add(mC([0,0,0],v,0.025,col,0.6));
+}
+
+// Bonds between surface nodes (edges of cuboctahedron: connect if distance = L)
+var BR2=L*L*1.05;
+for(var i=0;i<12;i++)for(var j=i+1;j<12;j++){
+  var dx=cuboVerts[i][0]-cuboVerts[j][0],dy=cuboVerts[i][1]-cuboVerts[j][1],dz=cuboVerts[i][2]-cuboVerts[j][2];
+  var d2=dx*dx+dy*dy+dz*dz;
+  if(d2<BR2)group.add(mC(cuboVerts[i],cuboVerts[j],0.015,C.gy,0.25));
+}
+
+// Labels
+if(isLate){
+  group.add(mL("UNLOCKED",[-0.0,0.45,0],"#CC3311",20));
+  group.add(mL("ν = 13",[-0.0,-0.4,0],"#CC3311",22));
+  // Void indication: dashed circle
+  var voidGeo=new THREE.RingGeometry(2.8,2.85,64);
+  var voidMat=new THREE.MeshBasicMaterial({color:0xCC3311,transparent:true,opacity:0.3,side:THREE.DoubleSide});
+  var voidMesh=new THREE.Mesh(voidGeo,voidMat);
+  voidMesh.rotation.x=Math.PI/2;voidMesh.position.y=0;
+  group.add(voidMesh);
+  group.add(mL("COSMIC VOID",[0,-2.3,0],"#CC3311",18));
+} else {
+  group.add(mL("LOCKED",[0,0.4,0],"#888",18));
+  group.add(mL("ν = 12",[0,-0.35,0],"#0077BB",22));
+  // Compression shell indication
+  var shellGeo=new THREE.SphereGeometry(L/Math.sqrt(3),24,24);
+  var shellMat=new THREE.MeshBasicMaterial({color:0x0077BB,transparent:true,opacity:0.04,side:THREE.DoubleSide});
+  group.add(new THREE.Mesh(shellGeo,shellMat));
+  group.add(mL("L/√3 shell",[1.5,1.5,0],"#0077BB",16));
+}
+
+// Count label at top
+var countText=isLate?"12 + 1 = 13 channels":"12 channels (central blocked)";
+var countCol=isLate?"#CC3311":"#0077BB";
+group.add(mL(countText,[0,2.5,0],countCol,20));
+
+// H0 label
+var h0Text=isLate?"H₀ ≈ 73.0":"H₀ ≈ 67.4";
+group.add(mL(h0Text,[0,2.1,0],countCol,22));
+
+return{scene:scene,camera:camera,renderer:renderer,group:group,glow:isLate?glowMesh:null};
+}
+
+var pE=document.getElementById("p-early"),pL=document.getElementById("p-late");
+var sE=setupScene(pE,false),sL=setupScene(pL,true);
+
+var ar=true,rot={x:0.25,y:0},md=false,mx=0,my=0;
+document.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+document.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+document.addEventListener("mouseup",function(){md=false;});
+document.addEventListener("touchend",function(){md=false;});
+document.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.006;rot.x+=(e.clientY-my)*0.006;rot.x=Math.max(-1.2,Math.min(1.2,rot.x));mx=e.clientX;my=e.clientY;});
+document.addEventListener("touchmove",function(e){if(!md)return;var t=e.touches[0];rot.y+=(t.clientX-mx)*0.006;rot.x+=(t.clientY-my)*0.006;rot.x=Math.max(-1.2,Math.min(1.2,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
+
+var t=0;
+(function a(){requestAnimationFrame(a);t+=0.016;
+if(ar&&!md)rot.y+=0.003;
+sE.group.rotation.x=rot.x;sE.group.rotation.y=rot.y;
+sL.group.rotation.x=rot.x;sL.group.rotation.y=rot.y;
+if(sL.glow)sL.glow.material.opacity=0.1+0.08*Math.sin(t*3);
+sE.renderer.render(sE.scene,sE.camera);
+sL.renderer.render(sL.scene,sL.camera);
+})();
+
+window.addEventListener("resize",function(){
+var wE=pE.clientWidth,hE=pE.clientHeight;
+sE.camera.aspect=wE/hE;sE.camera.updateProjectionMatrix();sE.renderer.setSize(wE,hE);
+var wL=pL.clientWidth,hL=pL.clientHeight;
+sL.camera.aspect=wL/hL;sL.camera.updateProjectionMatrix();sL.renderer.setSize(wL,hL);
+});
+
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rotate: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+var showLabels=true,showBonds=true;
+window.togLabels=function(){showLabels=!showLabels;
+sE.group.children.forEach(function(c){if(c.isSprite)c.visible=showLabels;});
+sL.group.children.forEach(function(c){if(c.isSprite)c.visible=showLabels;});};
+window.togBonds=function(){showBonds=!showBonds;
+sE.group.children.forEach(function(c){if(c.isMesh&&c.geometry.type==="CylinderGeometry")c.visible=showBonds;});
+sL.group.children.forEach(function(c){if(c.isMesh&&c.geometry.type==="CylinderGeometry")c.visible=showBonds;});};
+})();
+</script>
+</body>
+</html>
