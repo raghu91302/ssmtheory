@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: Matter as Incomplete Crystallization — Quark Structure from FCC Geometry</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+#badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
+#title{font-size:13px;font-weight:700;color:#222;}
+#cv{flex:1;display:block;min-height:0;}
+#desc{position:absolute;bottom:46px;left:10px;max-width:400px;background:rgba(255,255,255,0.95);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.6;border:1px solid #ddd;pointer-events:none;}
+#desc b{color:#111;}
+.cb{color:#0077BB;}.cr{color:#CC3311;}.cg{color:#009988;}.co{color:#EE7733;}.cy{color:#996600;}.cp{color:#AA3377;}
+#eq{position:absolute;bottom:46px;right:10px;background:rgba(255,255,255,0.95);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sl{flex:1;max-width:300px;margin:0 8px;}
+#sl input{width:100%;}
+#fc{font-size:10px;color:#888;min-width:36px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="hd">
+<span id="badge" style="background:#009988;">FCC VOID</span>
+<div id="title">Loading...</div>
+</div>
+<div style="flex:1;position:relative;min-height:0;">
+<canvas id="cv"></canvas>
+<div id="desc"></div>
+<div id="eq"></div>
+</div>
+<div id="ct">
+<button class="btn" onclick="goS()">⏮</button>
+<button class="btn" onclick="goP()">◀</button>
+<button class="btn on" id="bp" onclick="togPlay()">▶ Play</button>
+<button class="btn" onclick="goN()">▶</button>
+<button class="btn" onclick="goE()">⏭</button>
+<div id="sl"><input type="range" min="0" max="6" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">1/7</span>
+<button class="btn on" id="br" onclick="togR()">Rot</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var canvas=document.getElementById("cv");
+var W,H2,scene,camera,renderer,group;
+var rot={x:0.3,y:0},md=false,mx=0,my=0,ar=true;
+
+function init(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;
+scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(45,W/H2,0.1,200);
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H2);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-4,-3,-5);
+group=new THREE.Group();scene.add(group);}
+init();
+
+canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
+window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.3,Math.min(1.3,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md)return;var t=e.touches[0];rot.y+=(t.clientX-mx)*0.005;rot.x+=(t.clientY-my)*0.005;rot.x=Math.max(-1.3,Math.min(1.3,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
+canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(2,Math.min(20,camera.position.z+e.deltaY*0.02));e.preventDefault();},{passive:false});
+window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;camera.aspect=W/H2;camera.updateProjectionMatrix();renderer.setSize(W,H2);});
+
+var CL={b:0x0077BB,or:0xEE7733,tl:0x009988,rd:0xCC3311,gn:0x22AA44,wn:0xAA3377,gy:0x999999,lgy:0xcccccc,yl:0xEECC00,wh:0xffffff};
+
+function mS(g,p,r,c,op){var geo=new THREE.SphereGeometry(r,14,14);var m=new THREE.MeshPhongMaterial({color:c,transparent:op!==undefined&&op<1,opacity:op!==undefined?op:1});var s=new THREE.Mesh(geo,m);s.position.set(p[0],p[1],p[2]);g.add(s);return s;}
+function mC(g,a,b,r,c,op){var d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]);var l=d.length();if(l<0.01)return;var mid=new THREE.Vector3((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);var geo=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op!==undefined&&op<1,opacity:op!==undefined?op:1});var s=new THREE.Mesh(geo,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(s);}
+function mL(g,t,p,c,sz){var cv2=document.createElement("canvas");cv2.width=512;cv2.height=96;var ctx=cv2.getContext("2d");ctx.font="bold "+(sz||32)+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,256,48);var tx=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(sz?sz*0.04:1.3,sz?sz*0.008:0.25,1);g.add(s);return s;}
+function mTri(g,v1,v2,v3,c,op){var geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1[0],v1[1],v1[2],v2[0],v2[1],v2[2],v3[0],v3[1],v3[2]]),3));geo.computeVertexNormals();g.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide})));}
+
+// Tetrahedral void vertices (scaled for visibility)
+var S=2.5; // scale
+var VA=[0,0,0],VB=[S/2,S/2,0],VC=[S/2,0,S/2],VD=[0,S/2,S/2];
+// Centre of void
+var CTR=[(VA[0]+VB[0]+VC[0]+VD[0])/4,(VA[1]+VB[1]+VC[1]+VD[1])/4,(VA[2]+VB[2]+VC[2]+VD[2])/4];
+// Offset everything so CTR is at origin
+var OX=CTR[0],OY=CTR[1],OZ=CTR[2];
+var A=[VA[0]-OX,VA[1]-OY,VA[2]-OZ];
+var B=[VB[0]-OX,VB[1]-OY,VB[2]-OZ];
+var Cv=[VC[0]-OX,VC[1]-OY,VC[2]-OZ];
+var D=[VD[0]-OX,VD[1]-OY,VD[2]-OZ];
+var O=[0,0,0]; // extra node at void centre
+
+// Cuboctahedral shell around each vertex (simplified: just show K=12 neighbors for one vertex)
+function cubocta(center,L2){
+  var sc2=L2/Math.sqrt(2);var v=[];
+  var pm=[[0,1],[0,2],[1,2]];
+  for(var p=0;p<3;p++){var a=pm[p][0],b=pm[p][1];
+  for(var sa=-1;sa<=1;sa+=2)for(var sb=-1;sb<=1;sb+=2){var vv=[0,0,0];vv[a]=sa*sc2;vv[b]=sb*sc2;
+  v.push([vv[0]+center[0],vv[1]+center[1],vv[2]+center[2]]);}}
+  return v;
+}
+
+// Skew edge pairs
+var skew=[[[A,B],[Cv,D]],[[A,Cv],[B,D]],[[A,D],[B,Cv]]];
+var skewColors=[CL.rd,CL.b,CL.gn];
+
+var steps=[];
+
+// S0: Empty FCC void
+steps.push({cam:[0,0.5,7],bg:0xffffff,badge:"THE VOID",bc:"#009988",
+title:"The Tetrahedral Void Inside the K=12 FCC Lattice",
+build:function(g){
+  // 4 bounding vertices
+  mS(g,A,0.12,CL.tl,1); mS(g,B,0.12,CL.tl,1); mS(g,Cv,0.12,CL.tl,1); mS(g,D,0.12,CL.tl,1);
+  // 6 edges of tetrahedron
+  var vs=[A,B,Cv,D];
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,vs[i],vs[j],0.02,CL.tl,0.4);
+  // Transparent faces
+  mTri(g,A,B,Cv,CL.tl,0.06); mTri(g,A,B,D,CL.tl,0.06);
+  mTri(g,A,Cv,D,CL.tl,0.06); mTri(g,B,Cv,D,CL.tl,0.06);
+  // Labels
+  mL(g,"A (corner)",[A[0]-0.4,A[1]-0.3,A[2]],"#009988",22);
+  mL(g,"B (face-ctr)",[B[0]+0.5,B[1]+0.2,B[2]],"#009988",20);
+  mL(g,"C (face-ctr)",[Cv[0]+0.5,Cv[1]-0.2,Cv[2]],"#009988",20);
+  mL(g,"D (face-ctr)",[D[0]-0.5,D[1]+0.3,D[2]],"#009988",20);
+  mL(g,"Tetrahedral void",[0,1.5,0],"#009988",28);
+  mL(g,"(empty \u2014 no extra node yet)",[0,1.15,0],"#888888",22);
+  // Faint void centre marker
+  mS(g,O,0.04,CL.gy,0.3);
+},
+desc:'<b>The empty tetrahedral void.</b> The FCC unit cell contains 8 of these. Four bounding vertices (<span class="cg">teal</span>) form a regular tetrahedron. Edge length = nearest-neighbour distance. The void centre is empty \u2014 for now.',
+eq:''});
+
+// S1: Extra node appears
+steps.push({cam:[0,0.5,7],bg:0xffffff,badge:"THE EXTRA NODE",bc:"#CC3311",
+title:"A K=4 Remnant Gets Trapped \u2014 Matter Is Born",
+build:function(g){
+  // Bounding vertices (dimmed)
+  mS(g,A,0.12,CL.tl,0.7); mS(g,B,0.12,CL.tl,0.7); mS(g,Cv,0.12,CL.tl,0.7); mS(g,D,0.12,CL.tl,0.7);
+  var vs=[A,B,Cv,D];
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,vs[i],vs[j],0.015,CL.tl,0.2);
+  // THE EXTRA NODE
+  mS(g,O,0.2,CL.rd,1);
+  // Glow
+  var gg=new THREE.SphereGeometry(0.3,16,16);
+  var gm=new THREE.MeshBasicMaterial({color:CL.rd,transparent:true,opacity:0.15});
+  var glow=new THREE.Mesh(gg,gm);g.add(glow);
+  g.userData.glows=[glow];
+  // 4 bonds from extra node to bounding vertices
+  for(var i=0;i<4;i++)mC(g,O,vs[i],0.04,CL.rd,0.8);
+  // Labels
+  mL(g,"EXTRA NODE",[0,0.55,0],"#CC3311",28);
+  mL(g,"K = 4 remnant",[0,-0.5,0],"#CC3311",22);
+  mL(g,"4 bonds \u2192 local K=4",[0,-0.85,0],"#888888",20);
+  mL(g,"inside K=12 bulk",[0,-1.15,0],"#888888",20);
+},
+desc:'<b>The extra node.</b> During the K=4 \u2192 K=12 phase transition, this node failed to crystallize. It remains trapped in the void, bonded to all 4 bounding vertices. This creates a local <span class="cr">K=4 tetrahedron</span> inside the K=12 bulk. <b>This is matter.</b>',
+eq:'K<sub>local</sub> = 4\nK<sub>bulk</sub> = 12'});
+
+// S2: 1+3 splitting and charges
+steps.push({cam:[0,0.5,7],bg:0xffffff,badge:"FRACTIONAL CHARGES",bc:"#EE7733",
+title:"The 1+3 Splitting: Quark Charges from Bond Asymmetry",
+build:function(g){
+  // Corner vertex A (d-quark) - GREEN distinct
+  mS(g,A,0.16,CL.gn,1);
+  // Face-centre vertices B,C,D (u-quarks) - ORANGE
+  mS(g,B,0.16,CL.or,1); mS(g,Cv,0.16,CL.or,1); mS(g,D,0.16,CL.or,1);
+  // Extra node
+  mS(g,O,0.15,CL.rd,1);
+  // Bonds from O
+  mC(g,O,A,0.03,CL.gn,0.8);
+  mC(g,O,B,0.03,CL.or,0.8); mC(g,O,Cv,0.03,CL.or,0.8); mC(g,O,D,0.03,CL.or,0.8);
+  // Internal bonds between bounding vertices
+  // A to B,C,D (corner to face-centres)
+  mC(g,A,B,0.02,CL.gy,0.3); mC(g,A,Cv,0.02,CL.gy,0.3); mC(g,A,D,0.02,CL.gy,0.3);
+  // B-C, B-D, C-D (face-centre to face-centre)
+  mC(g,B,Cv,0.02,CL.or,0.4); mC(g,B,D,0.02,CL.or,0.4); mC(g,Cv,D,0.02,CL.or,0.4);
+  // Labels
+  mL(g,"d-quark (\u22121/3)",[A[0]-0.6,A[1]-0.35,A[2]],"#22AA44",24);
+  mL(g,"u-quark (+2/3)",[B[0]+0.7,B[1]+0.15,B[2]],"#EE7733",22);
+  mL(g,"u-quark (+2/3)",[Cv[0]+0.7,Cv[1]-0.15,Cv[2]],"#EE7733",22);
+  mL(g,"u-quark (+2/3)",[D[0]-0.7,D[1]+0.25,D[2]],"#EE7733",22);
+  mL(g,"1 corner",[A[0]-0.3,A[1]-0.65,A[2]],"#888888",16);
+  mL(g,"3 face-centres",[B[0]+0.7,B[1]-0.15,B[2]],"#888888",16);
+  mL(g,"PROTON: uud",[0,1.6,0],"#333333",30);
+  mL(g,"net charge: +2/3 +2/3 \u22121/3 = +1",[0,1.2,0],"#333333",22);
+},
+desc:'<b>The 1+3 splitting.</b> The FCC cubic symmetry breaks the 4 vertices into 1 <span class="cg">corner</span> (A) and 3 <span class="co">face-centres</span> (B,C,D). Corner: all 3 internal bonds are equivalent \u2192 charge fraction <b>\u22121/3</b> (d-quark). Face-centre: 1 distinct + 2 equivalent bonds \u2192 asymmetry <b>+2/3</b> (u-quark).',
+eq:'Corner: 3/3 \u2192 \u22121/3 (d)\nFace-ctr: 2/3 \u2192 +2/3 (u)\n\nProton = uud = +1'});
+
+// S3: Three colors from skew edges
+steps.push({cam:[0,0.5,7],bg:0xffffff,badge:"THREE COLORS",bc:"#AA3377",
+title:"Three Color Charges from Three Skew-Edge Pairs",
+build:function(g){
+  // Vertices (dimmed)
+  mS(g,A,0.1,CL.gy,0.5); mS(g,B,0.1,CL.gy,0.5); mS(g,Cv,0.1,CL.gy,0.5); mS(g,D,0.1,CL.gy,0.5);
+  mS(g,O,0.12,CL.rd,0.7);
+  // Three skew edge pairs in three colors
+  for(var i=0;i<3;i++){
+    var p=skew[i]; var c=skewColors[i];
+    mC(g,p[0][0],p[0][1],0.045,c,0.9);
+    mC(g,p[1][0],p[1][1],0.045,c,0.9);
+  }
+  // Labels for pairs
+  var mids=[];
+  for(var i=0;i<3;i++){
+    var p=skew[i];
+    var m1=[(p[0][0][0]+p[0][1][0])/2,(p[0][0][1]+p[0][1][1])/2+0.25,(p[0][0][2]+p[0][1][2])/2];
+    mids.push(m1);
+  }
+  mL(g,"Color 1 (red)",[mids[0][0]+0.5,mids[0][1],mids[0][2]],"#CC3311",20);
+  mL(g,"Color 2 (blue)",[mids[1][0]-0.6,mids[1][1]+0.3,mids[1][2]],"#0077BB",20);
+  mL(g,"Color 3 (green)",[mids[2][0]-0.3,mids[2][1]-0.5,mids[2][2]],"#22AA44",20);
+  mL(g,"3 skew-edge pairs = 3 colors",[0,1.6,0],"#AA3377",26);
+  mL(g,"C(4,2)/2 = 3",[0,1.2,0],"#888888",22);
+  mL(g,"No 4th pair exists",[0,0.85,0],"#888888",20);
+},
+desc:'<b>Three colors.</b> The tetrahedron has 6 edges forming exactly <b>3 pairs of opposite (skew) edges</b> that share no vertices. Each pair carries one unit of internal flux. <span class="cr">Red</span> = AB/CD. <span class="cb">Blue</span> = AC/BD. <span class="cg">Green</span> = AD/BC. No 4th pair exists \u2014 this is a combinatorial theorem, not a postulate.',
+eq:'C(4,2)/2 = 6/2 = 3\n\n3 skew pairs \u2192 3 colors\nc = 3 (trefoil crossing #)'});
+
+// S4: Confinement — metric wall
+steps.push({cam:[0,0.5,8],bg:0xffffff,badge:"CONFINEMENT",bc:"#0077BB",
+title:"Color Confinement from the Metric Wall",
+build:function(g){
+  // Bounding vertices with external bonds (showing K=12 shell)
+  var vs=[A,B,Cv,D];
+  for(var i=0;i<4;i++){
+    mS(g,vs[i],0.1,CL.b,0.8);
+    // Show a few external bonds per vertex
+    var cubo=cubocta(vs[i],S*0.5);
+    for(var j=0;j<cubo.length;j++){
+      // Only show bonds that don't go to other tet vertices
+      var isInternal=false;
+      for(var k=0;k<4;k++){if(k===i)continue;
+        var dd=Math.sqrt(Math.pow(cubo[j][0]-vs[k][0],2)+Math.pow(cubo[j][1]-vs[k][1],2)+Math.pow(cubo[j][2]-vs[k][2],2));
+        if(dd<0.2)isInternal=true;}
+      if(!isInternal){
+        mC(g,vs[i],cubo[j],0.008,CL.lgy,0.15);
+        mS(g,cubo[j],0.03,CL.lgy,0.3);
+      }
+    }
+  }
+  // Internal bonds (confining)
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,vs[i],vs[j],0.025,CL.b,0.5);
+  // Extra node
+  mS(g,O,0.18,CL.rd,1);
+  for(var i=0;i<4;i++)mC(g,O,vs[i],0.035,CL.rd,0.7);
+  // Metric wall sphere
+  var wallR=S/(2*Math.sqrt(2)*Math.sqrt(3));
+  // Actually the distance from centre to each face of tet
+  // For a regular tet with edge a, inradius = a/(2*sqrt(6)) * 2 = a*sqrt(6)/12... 
+  // Use distance from O to nearest face
+  var shellGeo=new THREE.SphereGeometry(wallR*2.5,20,20);
+  var shellMat=new THREE.MeshBasicMaterial({color:0x0077BB,transparent:true,opacity:0.05,side:THREE.DoubleSide});
+  g.add(new THREE.Mesh(shellGeo,shellMat));
+  mL(g,"9 external bonds",[2.0,1.8,0],"#999999",18);
+  mL(g,"per vertex hold",[2.0,1.5,0],"#999999",18);
+  mL(g,"it in place",[2.0,1.2,0],"#999999",18);
+  mL(g,"L/\u221A3 metric wall",[0,1.8,0],"#0077BB",26);
+  mL(g,"V(r) = \u03C3 r",[0,1.4,0],"#0077BB",24);
+  mL(g,"Pull the node \u2192 linear restoring force",[0,-1.8,0],"#333333",20);
+},
+desc:'<b>Confinement.</b> Each bounding vertex has <b>9 external bonds</b> anchoring it to the K=12 bulk. The extra node sits behind the <span class="cb">L/\u221A3 metric wall</span>. Pulling it out requires stretching bonds against 9\u00D74 = 36 restoring forces \u2192 energy grows linearly: <b>V(r) = \u03C3r</b>. If a bond snaps, a new node nucleates \u2192 string breaking.',
+eq:'V(r) = \u03C3 r\n(linear confinement)\n\nSnap bond \u2192 new q\u0304q pair\n(string breaking)'});
+
+// S5: Non-bipartite faces — EM invisibility
+steps.push({cam:[0,0.5,7],bg:0xffffff,badge:"EM INVISIBILITY",bc:"#EE7733",
+title:"Internal Bonds Are Electromagnetically Invisible",
+build:function(g){
+  var vs=[A,B,Cv,D];
+  // Vertices
+  for(var i=0;i<4;i++)mS(g,vs[i],0.1,CL.or,0.8);
+  mS(g,O,0.15,CL.rd,1);
+  // Internal bonds through TRIANGULAR (non-bipartite) faces — shown thick, marked
+  for(var i=0;i<4;i++)mC(g,O,vs[i],0.04,CL.or,0.6);
+  // Triangular faces highlighted
+  mTri(g,A,B,Cv,CL.or,0.15); mTri(g,A,B,D,CL.or,0.15);
+  mTri(g,A,Cv,D,CL.or,0.15); mTri(g,B,Cv,D,CL.or,0.15);
+  mL(g,"Triangular faces",[0,1.7,0],"#EE7733",26);
+  mL(g,"(non-bipartite, odd cycle C\u2083)",[0,1.3,0],"#EE7733",20);
+  mL(g,"Cannot support EM oscillations",[0,0.95,0],"#888888",20);
+  mL(g,"\u2192 internal bonds invisible to photons",[0,-1.6,0],"#333333",20);
+  mL(g,"\u2192 only net baryon charge is observable",[0,-1.95,0],"#333333",20);
+},
+desc:'<b>EM invisibility.</b> The internal bonds pass through <span class="co">triangular faces</span> of the cuboctahedral shell. Triangles have odd cycles (C\u2083) \u2014 they are <b>non-bipartite</b>. EM coupling requires bipartite (square) faces for charge-screening oscillations. Photons cannot resolve individual quark charges \u2014 only the net composite charge.',
+eq:'Triangular face: C\u2083\n(non-bipartite)\n\u2192 EM flux blocked\n\nSquare face: C\u2084\n(bipartite)\n\u2192 EM flux propagates'});
+
+// S6: Proton mass
+steps.push({cam:[0,0,6],bg:0xfafafa,badge:"THE MASS",bc:"#996600",
+title:"The Proton Mass: 1836 From Pure Geometry",
+build:function(g){
+  mL(g,"(K + 1)",[0,2.2,0],"#CC3311",44);
+  mL(g,"\u00D7 K\u00B2",[0,1.6,0],"#333333",40);
+  mL(g,"\u2212 c \u00D7 K",[0,1.0,0],"#0077BB",40);
+  mL(g,"= 13 \u00D7 144 \u2212 3 \u00D7 12",[0,0.2,0],"#333333",34);
+  mL(g,"= 1872 \u2212 36",[0,-0.4,0],"#333333",34);
+  mL(g,"= 1836",[0,-1.2,0],"#996600",56);
+  mL(g,"m\u209A / m\u2091",[0,-1.8,0],"#888888",28);
+  mL(g,"Observed: 1836.153 (0.008% match)",[0,-2.3,0],"#22AA44",22);
+  mL(g,"Zero free parameters",[0,-2.7,0],"#888888",18);
+},
+desc:'<b>The proton mass.</b> 13 structural nodes (4\u00D73 bonds + 1 centre = K+1), each disrupting K\u00B2=144 second neighbours, minus 3 skew-edge crossings \u00D7 K shared bonds. Pure integer arithmetic from the tetrahedral void geometry.',
+eq:'<b style="color:#996600;font-size:15px;">1836</b> m<sub>e</sub>\n\nObserved: 1836.153\nMatch: 0.008%'});
+
+// RENDER
+var si=0,playing=false,pt=null;
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}group.userData.glows=[];}
+function render(idx){si=Math.max(0,Math.min(idx,steps.length-1));sli.value=si;clearG();
+var s=steps[si];s.build(group);
+camera.position.set(s.cam[0],s.cam[1],s.cam[2]);camera.lookAt(0,0,0);
+scene.background=new THREE.Color(s.bg);
+document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
+document.getElementById("title").textContent=s.title;
+document.getElementById("desc").innerHTML=s.desc;
+document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
+document.getElementById("eq").style.display=s.eq?'block':'none';
+document.getElementById("fc").textContent=(si+1)+"/"+steps.length;}
+
+var t=0;
+(function anim(){requestAnimationFrame(anim);t+=0.016;
+if(ar&&!md)rot.y+=0.003;
+group.rotation.x=rot.x;group.rotation.y=rot.y;
+if(group.userData.glows)group.userData.glows.forEach(function(gl){gl.material.opacity=0.1+0.08*Math.sin(t*3);gl.scale.setScalar(1+0.08*Math.sin(t*3));});
+renderer.render(scene,camera);})();
+
+function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(si>=steps.length-1){stp();return;}render(si+1);pt=setTimeout(nx,5000);}pt=setTimeout(nx,4000);};
+window.goS=function(){stp();render(0);};window.goP=function(){stp();render(si-1);};
+window.goN=function(){stp();render(si+1);};window.goE=function(){stp();render(steps.length-1);};
+window.goTo=function(v){stp();render(v);};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
+render(0);
+})();
+</script>
+</body>
+</html>
