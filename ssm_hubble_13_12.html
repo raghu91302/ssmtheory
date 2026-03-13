@@ -3,187 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SSM: The 13/12 Hubble Mechanism — Shielded vs Exposed Vacuum</title>
+<title>SSM: The 13/12 Hubble Mechanism</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
-#hd{padding:8px 14px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-#phase-badge{font-size:11px;font-weight:700;color:#fff;padding:3px 10px;border-radius:4px;letter-spacing:0.5px;}
-#snap-label{font-size:14px;font-weight:700;color:#222;}
-#vp{flex:1;position:relative;cursor:grab;display:flex;}
-#vp:active{cursor:grabbing;}
-.panel{flex:1;position:relative;border-right:1px solid #eee;}
-.panel:last-child{border-right:none;}
-.panel-label{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);padding:4px 14px;border-radius:5px;font-size:12px;font-weight:700;border:1px solid #ddd;pointer-events:none;z-index:2;white-space:nowrap;}
-.panel-label.early{color:#0077BB;border-color:#0077BB;}
-.panel-label.late{color:#CC3311;border-color:#CC3311;}
-#legend{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.96);padding:8px 16px;border-radius:7px;font-size:11px;color:#333;border:1px solid #ddd;pointer-events:none;text-align:center;line-height:1.7;max-width:600px;z-index:2;}
-.lg{font-weight:700;}
-.math{font-family:'Courier New',monospace;font-size:11px;}
-.tl{color:#009988;} .or{color:#EE7733;} .bl{color:#0077BB;} .rd{color:#CC3311;} .yl{color:#CC9900;} .gn{color:#22AA44;} .gy{color:#888;}
-#ct{padding:7px 12px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;}
-.btn{padding:6px 14px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.15s;}
-.btn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
-.btn:hover{border-color:#999;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:6px 12px;border-bottom:1px solid #ddd;background:#f9f9f9;flex-shrink:0;}
+#hd-title{font-size:13px;font-weight:700;color:#222;}
+#hd-sub{font-size:11px;color:#666;margin-top:1px;}
+#panels{flex:1;display:flex;min-height:0;}
+.pnl{flex:1;position:relative;overflow:hidden;}
+.pnl+.pnl{border-left:2px solid #ccc;}
+.pnl canvas{display:block;width:100%!important;height:100%!important;}
+.ptag{position:absolute;top:6px;left:50%;transform:translateX(-50%);padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.3px;z-index:2;pointer-events:none;white-space:nowrap;}
+.ptag.early{background:#e8f0ff;color:#0066aa;border:1px solid #0077BB;}
+.ptag.late{background:#fff0ec;color:#bb2200;border:1px solid #CC3311;}
+#foot{flex-shrink:0;padding:5px 10px;background:#f9f9f9;border-top:1px solid #ddd;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 14px;font-size:10.5px;color:#444;line-height:1.5;}
+#foot .math{font-family:'Courier New',monospace;font-weight:700;color:#222;font-size:11px;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;vertical-align:middle;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
 </style>
 </head>
 <body>
+<div id="wrap">
 <div id="hd">
-<span id="phase-badge" style="background:#0077BB;">EARLY → LATE</span>
-<span id="snap-label">The 13/12 Hubble Mechanism: Shielded vs Exposed Vacuum</span>
+<div id="hd-title">The 13/12 Hubble Mechanism: Shielded vs Exposed Vacuum</div>
+<div id="hd-sub">Cuboctahedral unit cell — drag to rotate, scroll to zoom</div>
 </div>
-<div id="vp">
-<div class="panel" id="p-early">
-<div class="panel-label early">EARLY UNIVERSE — Shielded (ν = 12)</div>
+<div id="panels">
+<div class="pnl" id="pE"><div class="ptag early">EARLY UNIVERSE — Shielded (ν = 12) — H₀ ≈ 67.4</div></div>
+<div class="pnl" id="pL"><div class="ptag late">LATE UNIVERSE (Void) — Exposed (ν = 13) — H₀ ≈ 73.0</div></div>
 </div>
-<div class="panel" id="p-late">
-<div class="panel-label late">LATE UNIVERSE (Void) — Exposed (ν = 13)</div>
+<div id="foot">
+<span><span class="dot" style="background:#0077BB;"></span>6 in-plane</span>
+<span><span class="dot" style="background:#EE7733;"></span>3 above</span>
+<span><span class="dot" style="background:#009988;"></span>3 below</span>
+<span><span class="dot" style="background:#999;"></span>central locked</span>
+<span><span class="dot" style="background:#CC3311;"></span>central unlocked</span>
+<span style="margin-left:6px;">|</span>
+<span class="math">H_late / H_early = 13/12 → 67.4 × 13/12 ≈ 73.02 km/s/Mpc</span>
+<span style="margin-left:6px;">|</span>
+<button class="btn on" id="br" onclick="togR()">Rot</button>
 </div>
-<div id="legend">
-<span class="lg bl">● Blue</span> = 6 in-plane bonds &nbsp;|&nbsp;
-<span class="lg or">● Orange</span> = 3 above &nbsp;|&nbsp;
-<span class="lg tl">● Teal</span> = 3 below &nbsp;|&nbsp;
-<span class="lg gy">● Grey</span> = locked central node &nbsp;|&nbsp;
-<span class="lg rd">● Red</span> = unlocked central node<br>
-<span class="math">H<sub>late</sub>/H<sub>early</sub> = ν<sub>late</sub>/ν<sub>early</sub> = 13/12 → 67.4 × 13/12 ≈ 73.02 km/s/Mpc</span>
-</div>
-</div>
-<div id="ct">
-<button class="btn on" id="br" onclick="togR()">Rotate: ON</button>
-<button class="btn" onclick="togLabels()">Labels: ON</button>
-<button class="btn" onclick="togBonds()">Bonds: ON</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){"use strict";
-var L=2.0,lH=Math.sqrt(2/3)*L;
-var C={b:0x0077BB,cy:0x33BBEE,or:0xEE7733,rd:0xCC3311,tl:0x009988,gy:0x999999,yl:0xEECC00,gn:0x22AA44,wh:0xffffff,dgy:0x444444};
+var L=1.8,sc2=L/Math.sqrt(2);
+var C={b:0x0077BB,or:0xEE7733,tl:0x009988,gy:0x999999,rd:0xCC3311};
 
-// Build cuboctahedron: 12 surface nodes + 1 central
-// FCC unit cell: central node at origin, 12 nearest neighbours
-var nn=[];
-// 6 in-plane (square face midpoints at distance L)
-var ip=[[1,1,0],[-1,-1,0],[1,-1,0],[-1,1,0],[1,0,1],[-1,0,-1]];
-// Actually, cuboctahedral coords: 12 vertices of cuboctahedron
-// All permutations of (±1, ±1, 0) scaled by L/√2
-var cuboVerts=[];
-var perms=[[0,1],[0,2],[1,2]];
-for(var p=0;p<3;p++){var a=perms[p][0],b=perms[p][1];
-for(var sa=-1;sa<=1;sa+=2)for(var sb=-1;sb<=1;sb+=2){
-var v=[0,0,0];v[a]=sa;v[b]=sb;cuboVerts.push(v);}}
-// Scale so distance from origin = L
-var sc=L/Math.sqrt(2);
-for(var i=0;i<cuboVerts.length;i++){cuboVerts[i][0]*=sc;cuboVerts[i][1]*=sc;cuboVerts[i][2]*=sc;}
+// Cuboctahedron vertices: permutations of (±1,±1,0) scaled
+var cubo=[];
+var pm=[[0,1],[0,2],[1,2]];
+for(var p=0;p<3;p++){var a=pm[p][0],b=pm[p][1];
+for(var sa=-1;sa<=1;sa+=2)for(var sb=-1;sb<=1;sb+=2){var v=[0,0,0];v[a]=sa*sc2;v[b]=sb*sc2;cubo.push(v);}}
 
-// Classify: in-plane (y≈0), above (y>0), below (y<0)
-// Rotate so that [111] is roughly up: use raw coords, classify by y
-function classify(v){
-  if(Math.abs(v[1])<0.01)return"in";
-  return v[1]>0?"above":"below";
-}
-// With cuboctahedron at origin, let's use a better classification
-// 6 in equatorial plane, 3 above, 3 below
-// Sort by y coordinate
-var sorted=[...cuboVerts].map(function(v,i){return{v:v,i:i};});
-sorted.sort(function(a,b){return a.v[1]-b.v[1];});
-// Bottom 3, middle 6, top 3
-var belowIdx=[],inIdx=[],aboveIdx=[];
-for(var i=0;i<3;i++)belowIdx.push(sorted[i].i);
-for(var i=3;i<9;i++)inIdx.push(sorted[i].i);
-for(var i=9;i<12;i++)aboveIdx.push(sorted[i].i);
+// Sort by y to classify: bottom 3, middle 6, top 3
+var si=[...Array(12).keys()];
+si.sort(function(a,b){return cubo[a][1]-cubo[b][1];});
+var belI=si.slice(0,3),inI=si.slice(3,9),abI=si.slice(9,12);
 
-function setupScene(container,isLate){
-var W=container.clientWidth,H2=container.clientHeight;
-var scene=new THREE.Scene();scene.background=new THREE.Color(isLate?0xfff8f5:0xf5f8ff);
-var camera=new THREE.PerspectiveCamera(40,W/H2,0.1,100);
-camera.position.set(0,2.5,6);camera.lookAt(0,0,0);
-var renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(W,H2);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-container.insertBefore(renderer.domElement,container.firstChild);
-scene.add(new THREE.AmbientLight(0xffffff,0.5));
-var dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(5,8,6);scene.add(dl);
-scene.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-5,-3,-6);
-var group=new THREE.Group();scene.add(group);
+function mkS(g,p,r,c,op){var geo=new THREE.SphereGeometry(r,14,14);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.set(p[0],p[1],p[2]);g.add(s);return s;}
+function mkC(g,a,b,r,c,op){var d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]);var l=d.length();if(l<0.01)return;var mid=new THREE.Vector3((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);var geo=new THREE.CylinderGeometry(r,r,l,5);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(s);}
+function mkL(g,t,p,c,sz){var cv=document.createElement("canvas");cv.width=512;cv.height=96;var ctx=cv.getContext("2d");ctx.font="bold "+(sz||40)+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,256,48);var tx=new THREE.CanvasTexture(cv);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(2.0,0.38,1);g.add(s);return s;}
 
-function mS(p,r,c){var g=new THREE.SphereGeometry(r,16,16);var m=new THREE.MeshPhongMaterial({color:c});var s=new THREE.Mesh(g,m);s.position.set(p[0],p[1],p[2]);return s;}
-function mC(p1,p2,r,c,op){var d=new THREE.Vector3(p2[0]-p1[0],p2[1]-p1[1],p2[2]-p1[2]);var l=d.length();if(l<0.001)return new THREE.Group();var mid=new THREE.Vector3((p1[0]+p2[0])/2,(p1[1]+p2[1])/2,(p1[2]+p2[2])/2);var g=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(g,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return s;}
-function mL(text,pos,color,size){var cv=document.createElement("canvas");cv.width=256;cv.height=64;var ctx=cv.getContext("2d");ctx.font="bold "+(size||24)+"px -apple-system,sans-serif";ctx.fillStyle=color||"#333";ctx.textAlign="center";ctx.fillText(text,128,40);var t=new THREE.CanvasTexture(cv);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.position.set(pos[0],pos[1],pos[2]);s.scale.set(1.2,0.3,1);return s;}
+function build(container,isLate){
+var W=container.clientWidth,H=container.clientHeight;
+var scene=new THREE.Scene();scene.background=new THREE.Color(isLate?0xfff9f7:0xf7f9ff);
+var cam=new THREE.PerspectiveCamera(38,W/H,0.1,100);cam.position.set(0,2.0,5.5);cam.lookAt(0,0,0);
+var ren=new THREE.WebGLRenderer({antialias:true});ren.setSize(W,H);ren.setPixelRatio(Math.min(window.devicePixelRatio,2));
+container.appendChild(ren.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+var dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(4,8,5);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.15)).position.set(-4,-2,-5);
+var grp=new THREE.Group();scene.add(grp);
 
 // Central node
-var centralColor=isLate?C.rd:C.gy;
-var centralRadius=isLate?0.18:0.1;
-var centralOpacity=isLate?1.0:0.4;
-var cMat=new THREE.MeshPhongMaterial({color:centralColor,transparent:!isLate,opacity:centralOpacity});
-var cGeo=new THREE.SphereGeometry(centralRadius,16,16);
-var cMesh=new THREE.Mesh(cGeo,cMat);
-group.add(cMesh);
+var cR=isLate?0.16:0.09;
+var cC=isLate?C.rd:C.gy;
+var cO=isLate?1.0:0.35;
+mkS(grp,[0,0,0],cR,cC,cO);
 
-// Pulsing glow for late-universe central node
+// Glow pulse for late
+var glow=null;
 if(isLate){
-  var glowGeo=new THREE.SphereGeometry(0.3,16,16);
-  var glowMat=new THREE.MeshBasicMaterial({color:C.rd,transparent:true,opacity:0.15});
-  var glowMesh=new THREE.Mesh(glowGeo,glowMat);
-  group.add(glowMesh);
+  var gg=new THREE.SphereGeometry(0.28,16,16);
+  var gm=new THREE.MeshBasicMaterial({color:C.rd,transparent:true,opacity:0.12});
+  glow=new THREE.Mesh(gg,gm);grp.add(glow);
 }
 
-// Surface nodes
-var nodeLabels=[];
+// Compression shell for early
+if(!isLate){
+  var sg=new THREE.SphereGeometry(L/Math.sqrt(3),20,20);
+  var sm=new THREE.MeshBasicMaterial({color:0x0077BB,transparent:true,opacity:0.04,side:THREE.DoubleSide});
+  grp.add(new THREE.Mesh(sg,sm));
+}
+
+// Surface nodes + bonds to center
 for(var i=0;i<12;i++){
-  var v=cuboVerts[i];
-  var col;
-  if(inIdx.indexOf(i)>=0)col=C.b;
-  else if(aboveIdx.indexOf(i)>=0)col=C.or;
-  else col=C.tl;
-  group.add(mS(v,0.12,col));
-  // Bond to center
-  group.add(mC([0,0,0],v,0.025,col,0.6));
+  var v=cubo[i];
+  var col=inI.indexOf(i)>=0?C.b:abI.indexOf(i)>=0?C.or:C.tl;
+  mkS(grp,v,0.11,col,1);
+  mkC(grp,[0,0,0],v,0.022,col,0.55);
 }
 
-// Bonds between surface nodes (edges of cuboctahedron: connect if distance = L)
-var BR2=L*L*1.05;
+// Surface-surface bonds
+var BL2=L*L*1.05;
 for(var i=0;i<12;i++)for(var j=i+1;j<12;j++){
-  var dx=cuboVerts[i][0]-cuboVerts[j][0],dy=cuboVerts[i][1]-cuboVerts[j][1],dz=cuboVerts[i][2]-cuboVerts[j][2];
-  var d2=dx*dx+dy*dy+dz*dz;
-  if(d2<BR2)group.add(mC(cuboVerts[i],cuboVerts[j],0.015,C.gy,0.25));
+  var dx=cubo[i][0]-cubo[j][0],dy=cubo[i][1]-cubo[j][1],dz=cubo[i][2]-cubo[j][2];
+  if(dx*dx+dy*dy+dz*dz<BL2)mkC(grp,cubo[i],cubo[j],0.012,C.gy,0.2);
+}
+
+// Void ring for late
+if(isLate){
+  var rg=new THREE.RingGeometry(2.4,2.45,64);
+  var rm=new THREE.MeshBasicMaterial({color:0xCC3311,transparent:true,opacity:0.2,side:THREE.DoubleSide});
+  var ring=new THREE.Mesh(rg,rm);ring.rotation.x=Math.PI/2;grp.add(ring);
 }
 
 // Labels
 if(isLate){
-  group.add(mL("UNLOCKED",[-0.0,0.45,0],"#CC3311",20));
-  group.add(mL("ν = 13",[-0.0,-0.4,0],"#CC3311",22));
-  // Void indication: dashed circle
-  var voidGeo=new THREE.RingGeometry(2.8,2.85,64);
-  var voidMat=new THREE.MeshBasicMaterial({color:0xCC3311,transparent:true,opacity:0.3,side:THREE.DoubleSide});
-  var voidMesh=new THREE.Mesh(voidGeo,voidMat);
-  voidMesh.rotation.x=Math.PI/2;voidMesh.position.y=0;
-  group.add(voidMesh);
-  group.add(mL("COSMIC VOID",[0,-2.3,0],"#CC3311",18));
+  mkL(grp,"UNLOCKED",[0,0.5,0],"#CC3311",32);
+  mkL(grp,"12 + 1 = 13 active channels",[0,2.2,0],"#CC3311",30);
+  mkL(grp,"VOID BOUNDARY",[0,-2.1,0],"#CC3311",24);
 } else {
-  group.add(mL("LOCKED",[0,0.4,0],"#888",18));
-  group.add(mL("ν = 12",[0,-0.35,0],"#0077BB",22));
-  // Compression shell indication
-  var shellGeo=new THREE.SphereGeometry(L/Math.sqrt(3),24,24);
-  var shellMat=new THREE.MeshBasicMaterial({color:0x0077BB,transparent:true,opacity:0.04,side:THREE.DoubleSide});
-  group.add(new THREE.Mesh(shellGeo,shellMat));
-  group.add(mL("L/√3 shell",[1.5,1.5,0],"#0077BB",16));
+  mkL(grp,"LOCKED",[0,0.45,0],"#888888",28);
+  mkL(grp,"12 active channels",[0,2.2,0],"#0077BB",30);
+  mkL(grp,"(central geometrically blocked)",[0,1.85,0],"#0077BB",22);
+  mkL(grp,"L/√3 compression shell",[0,-2.1,0],"#0077BB",22);
 }
 
-// Count label at top
-var countText=isLate?"12 + 1 = 13 channels":"12 channels (central blocked)";
-var countCol=isLate?"#CC3311":"#0077BB";
-group.add(mL(countText,[0,2.5,0],countCol,20));
-
-// H0 label
-var h0Text=isLate?"H₀ ≈ 73.0":"H₀ ≈ 67.4";
-group.add(mL(h0Text,[0,2.1,0],countCol,22));
-
-return{scene:scene,camera:camera,renderer:renderer,group:group,glow:isLate?glowMesh:null};
+return{scene:scene,cam:cam,ren:ren,grp:grp,glow:glow,el:container};
 }
 
-var pE=document.getElementById("p-early"),pL=document.getElementById("p-late");
-var sE=setupScene(pE,false),sL=setupScene(pL,true);
+var sE=build(document.getElementById("pE"),false);
+var sL=build(document.getElementById("pL"),true);
 
-var ar=true,rot={x:0.25,y:0},md=false,mx=0,my=0;
+var ar=true,rot={x:0.3,y:0},md=false,mx=0,my=0;
 document.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
 document.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
 document.addEventListener("mouseup",function(){md=false;});
@@ -191,31 +148,33 @@ document.addEventListener("touchend",function(){md=false;});
 document.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.006;rot.x+=(e.clientY-my)*0.006;rot.x=Math.max(-1.2,Math.min(1.2,rot.x));mx=e.clientX;my=e.clientY;});
 document.addEventListener("touchmove",function(e){if(!md)return;var t=e.touches[0];rot.y+=(t.clientX-mx)*0.006;rot.x+=(t.clientY-my)*0.006;rot.x=Math.max(-1.2,Math.min(1.2,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
 
+// Zoom
+document.addEventListener("wheel",function(e){
+  sE.cam.position.z=Math.max(2.5,Math.min(12,sE.cam.position.z+e.deltaY*0.01));
+  sL.cam.position.z=sE.cam.position.z;
+  e.preventDefault();
+},{passive:false});
+
 var t=0;
-(function a(){requestAnimationFrame(a);t+=0.016;
+(function anim(){requestAnimationFrame(anim);t+=0.016;
 if(ar&&!md)rot.y+=0.003;
-sE.group.rotation.x=rot.x;sE.group.rotation.y=rot.y;
-sL.group.rotation.x=rot.x;sL.group.rotation.y=rot.y;
-if(sL.glow)sL.glow.material.opacity=0.1+0.08*Math.sin(t*3);
-sE.renderer.render(sE.scene,sE.camera);
-sL.renderer.render(sL.scene,sL.camera);
+sE.grp.rotation.x=rot.x;sE.grp.rotation.y=rot.y;
+sL.grp.rotation.x=rot.x;sL.grp.rotation.y=rot.y;
+if(sL.glow)sL.glow.material.opacity=0.08+0.07*Math.sin(t*3);
+sE.ren.render(sE.scene,sE.cam);
+sL.ren.render(sL.scene,sL.cam);
 })();
 
-window.addEventListener("resize",function(){
-var wE=pE.clientWidth,hE=pE.clientHeight;
-sE.camera.aspect=wE/hE;sE.camera.updateProjectionMatrix();sE.renderer.setSize(wE,hE);
-var wL=pL.clientWidth,hL=pL.clientHeight;
-sL.camera.aspect=wL/hL;sL.camera.updateProjectionMatrix();sL.renderer.setSize(wL,hL);
+function onResize(){
+[sE,sL].forEach(function(s){
+  var w=s.el.clientWidth,h=s.el.clientHeight;
+  s.cam.aspect=w/h;s.cam.updateProjectionMatrix();s.ren.setSize(w,h);
 });
+}
+window.addEventListener("resize",onResize);
+setTimeout(onResize,100);
 
-window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rotate: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
-var showLabels=true,showBonds=true;
-window.togLabels=function(){showLabels=!showLabels;
-sE.group.children.forEach(function(c){if(c.isSprite)c.visible=showLabels;});
-sL.group.children.forEach(function(c){if(c.isSprite)c.visible=showLabels;});};
-window.togBonds=function(){showBonds=!showBonds;
-sE.group.children.forEach(function(c){if(c.isMesh&&c.geometry.type==="CylinderGeometry")c.visible=showBonds;});
-sL.group.children.forEach(function(c){if(c.isMesh&&c.geometry.type==="CylinderGeometry")c.visible=showBonds;});};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
 })();
 </script>
 </body>
