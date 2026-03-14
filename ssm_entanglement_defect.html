@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: Matter as a Holographic Entanglement Defect in a K=12 Tensor Network</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+#badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
+#title{font-size:13px;font-weight:700;color:#222;}
+#cv{flex:1;display:block;min-height:0;}
+#desc{position:absolute;bottom:46px;left:10px;max-width:420px;background:rgba(255,255,255,0.96);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
+#desc b{color:#111;}
+.cb{color:#0077BB;}.cr{color:#CC3311;}.cg{color:#009988;}.co{color:#EE7733;}.cy{color:#996600;}.cp{color:#AA3377;}
+#eq{position:absolute;bottom:46px;right:10px;background:rgba(255,255,255,0.96);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sl{flex:1;max-width:350px;margin:0 8px;}
+#sl input{width:100%;}
+#fc{font-size:10px;color:#888;min-width:40px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="hd">
+<span id="badge" style="background:#0077BB;">K=12</span>
+<div id="title">Loading...</div>
+</div>
+<div style="flex:1;position:relative;min-height:0;">
+<canvas id="cv"></canvas>
+<div id="desc"></div>
+<div id="eq"></div>
+</div>
+<div id="ct">
+<button class="btn" onclick="goS()">⏮</button>
+<button class="btn" onclick="goP()">◀</button>
+<button class="btn on" id="bp" onclick="togPlay()">▶ Play</button>
+<button class="btn" onclick="goN()">▶</button>
+<button class="btn" onclick="goE()">⏭</button>
+<div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">1/9</span>
+<button class="btn on" id="br" onclick="togR()">Rot</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var canvas=document.getElementById("cv");
+var W,H2,scene,camera,renderer,group;
+var rot={x:0.25,y:0},md=false,mx=0,my=0,ar=true;
+
+function init(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;
+scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+camera=new THREE.PerspectiveCamera(42,W/H2,0.1,200);
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H2);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.18)).position.set(-4,-3,-5);
+group=new THREE.Group();scene.add(group);}
+init();
+
+canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
+window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md)return;var t=e.touches[0];rot.y+=(t.clientX-mx)*0.005;rot.x+=(t.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
+canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(3,Math.min(25,camera.position.z+e.deltaY*0.03));e.preventDefault();},{passive:false});
+window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;camera.aspect=W/H2;camera.updateProjectionMatrix();renderer.setSize(W,H2);});
+
+var C={b:0x0077BB,or:0xEE7733,tl:0x009988,rd:0xCC3311,gn:0x22AA44,wn:0xAA3377,gy:0x999999,lgy:0xcccccc,yl:0xEECC00};
+function mS(g,p,r,c,op){var geo=new THREE.SphereGeometry(r,16,16);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.set(p[0],p[1],p[2]);g.add(s);return s;}
+function mC(g,a,b,r,c,op){var d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]);var l=d.length();if(l<0.01)return;var mid=new THREE.Vector3((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);var geo=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(s);}
+function mL(g,t,p,c,sz){var cv2=document.createElement("canvas");cv2.width=640;cv2.height=96;var ctx=cv2.getContext("2d");ctx.font="bold "+(sz||32)+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,320,48);var tx=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(sz?sz*0.055:1.8,sz?sz*0.009:0.28,1);g.add(s);return s;}
+function mTri(g,v1,v2,v3,c,op){var geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1[0],v1[1],v1[2],v2[0],v2[1],v2[2],v3[0],v3[1],v3[2]]),3));geo.computeVertexNormals();g.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide})));}
+
+// === CUBOCTAHEDRON (K=12) ===
+var L=3.0; // large scale for visibility
+var csc=L/Math.sqrt(2);
+var cuboV=[];
+var pm=[[0,1],[0,2],[1,2]];
+for(var p=0;p<3;p++){var a=pm[p][0],b=pm[p][1];
+for(var sa=-1;sa<=1;sa+=2)for(var sb=-1;sb<=1;sb+=2){var v=[0,0,0];v[a]=sa*csc;v[b]=sb*csc;cuboV.push(v);}}
+// Classify by y
+var si2=[...Array(12).keys()];si2.sort(function(a,b){return cuboV[a][1]-cuboV[b][1];});
+var belI=si2.slice(0,3),inI=si2.slice(3,9),abI=si2.slice(9,12);
+// Bond threshold
+var BL2=L*L*1.1;
+
+// === 8 ENTANGLEMENT VOIDS of the FCC unit cell ===
+// In an FCC cell of side a, tet voids at (a/4)(±1,±1,±1)
+// For cuboctahedron centered at origin with our scale:
+var tetScale=csc; // distance from origin to vertex = csc
+// The 8 tet voids: each bounded by 4 of the 12 cuboctahedral vertices
+// We compute them from the cuboctahedron vertex positions
+// For FCC, tet void centres are at (±1,±1,±1) scaled
+var tvS=csc*0.5; // scale for tet void centres
+var tetCentres=[];
+for(var sx=-1;sx<=1;sx+=2)for(var sy=-1;sy<=1;sy+=2)for(var sz=-1;sz<=1;sz+=2)
+  tetCentres.push([sx*tvS,sy*tvS,sz*tvS]);
+
+// For each tet void, find 4 closest cuboctahedral vertices
+function dist3(a,b){return Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]));}
+var tetVoids=[];
+for(var t=0;t<8;t++){
+  var dists=cuboV.map(function(v,i){return{i:i,d:dist3(v,tetCentres[t])};});
+  dists.sort(function(a,b){return a.d-b.d;});
+  tetVoids.push([dists[0].i,dists[1].i,dists[2].i,dists[3].i]);
+}
+
+// Pick one void to zoom into (the +++ one)
+var mainVoid=tetVoids[7]; // (+,+,+) corner
+var TV=[cuboV[mainVoid[0]],cuboV[mainVoid[1]],cuboV[mainVoid[2]],cuboV[mainVoid[3]]];
+var TVctr=tetCentres[7];
+
+// Entanglement boundary for zoom steps (all edges = L, centred at origin)
+var rts=L/(2*Math.sqrt(2)); // ≈ 1.06 for L=3
+var RTV=[[rts,rts,rts],[rts,-rts,-rts],[-rts,rts,-rts],[-rts,-rts,rts]];
+var RTVctr=[0,0,0];
+
+// Skew edge pairs of the regular tetrahedron
+var skew=[[[RTV[0],RTV[1]],[RTV[2],RTV[3]]],[[RTV[0],RTV[2]],[RTV[1],RTV[3]]],[[RTV[0],RTV[3]],[RTV[1],RTV[2]]]];
+var skewC=[C.rd,C.b,C.gn];
+
+// Vertex 0 = corner (d-quark), 1,2,3 = face-centres (u-quarks)
+var cornerIdx=0;
+var faceIdx=[1,2,3];
+
+// ========== STEPS ==========
+var steps=[];
+
+// S0: Full cuboctahedron — K=12 coordination
+steps.push({cam:[0,1,11],bg:0xffffff,badge:"K = 12 TENSOR NODE",bc:"#0077BB",
+title:"The K=12 Tensor Node: 12 Entanglement Bonds (ebits)",
+build:function(g){
+  // Central tensor node
+  mS(g,[0,0,0],0.25,C.yl,1);
+  // 12 surface nodes colored by layer
+  for(var i=0;i<12;i++){
+    var col=inI.indexOf(i)>=0?C.b:abI.indexOf(i)>=0?C.or:C.tl;
+    mS(g,cuboV[i],0.18,col,1);
+    mC(g,[0,0,0],cuboV[i],0.04,col,0.5);
+  }
+  // Surface-surface bonds
+  for(var i=0;i<12;i++)for(var j=i+1;j<12;j++){
+    var dx=cuboV[i][0]-cuboV[j][0],dy=cuboV[i][1]-cuboV[j][1],dz=cuboV[i][2]-cuboV[j][2];
+    if(dx*dx+dy*dy+dz*dz<BL2)mC(g,cuboV[i],cuboV[j],0.02,C.gy,0.2);
+  }
+  mL(g,"Central tensor node",[0.6,0.5,0],"#CC9900",24);
+  mL(g,"6 in-plane + 3 above + 3 below = 12 ebits",[0,3.5,0],"#333333",26);
+  mL(g,"K = 12",[0,3.0,0],"#0077BB",34);
+},
+desc:'<b>The tensor node.</b> Every node in the K=12 FCC tensor network holds 12 entanglement bonds (ebits): <span class="cb">6 in-plane</span> (blue), <span class="co">3 above</span> (orange), <span class="cg">3 below</span> (teal). The <span class="cy">yellow</span> central node is fully entangled. This is the vacuum ground state of the holographic network.',
+eq:'K = 12 ebits\n6 + 3 + 3 = 12\n\nFCC tensor network\n= max entanglement'});
+
+// S1: Show the 8 zero-entropy voids
+steps.push({cam:[0,1,12],bg:0xffffff,badge:"8 ENTANGLEMENT VOIDS",bc:"#009988",
+title:"Inside the Tensor Node: 8 Zero-Entropy Voids",
+build:function(g){
+  // Surface nodes (dimmed)
+  for(var i=0;i<12;i++){
+    mS(g,cuboV[i],0.14,C.b,0.35);
+  }
+  // Surface bonds (faint)
+  for(var i=0;i<12;i++)for(var j=i+1;j<12;j++){
+    var dx=cuboV[i][0]-cuboV[j][0],dy=cuboV[i][1]-cuboV[j][1],dz=cuboV[i][2]-cuboV[j][2];
+    if(dx*dx+dy*dy+dz*dz<BL2)mC(g,cuboV[i],cuboV[j],0.012,C.lgy,0.12);
+  }
+  // 8 zero-entropy voids — show each as transparent tetrahedron
+  var tetColors=[C.tl,C.or,C.b,C.gn,C.wn,C.rd,C.yl,C.tl];
+  for(var t=0;t<8;t++){
+    var vi=tetVoids[t];
+    var v0=cuboV[vi[0]],v1=cuboV[vi[1]],v2=cuboV[vi[2]],v3=cuboV[vi[3]];
+    var cc=tetColors[t%tetColors.length];
+    mTri(g,v0,v1,v2,cc,0.1);mTri(g,v0,v1,v3,cc,0.1);
+    mTri(g,v0,v2,v3,cc,0.1);mTri(g,v1,v2,v3,cc,0.1);
+    // Void centre dot
+    mS(g,tetCentres[t],0.06,cc,0.7);
+  }
+  // Highlight the main void
+  var vi=mainVoid;
+  var v0=cuboV[vi[0]],v1=cuboV[vi[1]],v2=cuboV[vi[2]],v3=cuboV[vi[3]];
+  mTri(g,v0,v1,v2,C.rd,0.25);mTri(g,v0,v1,v3,C.rd,0.25);
+  mTri(g,v0,v2,v3,C.rd,0.25);mTri(g,v1,v2,v3,C.rd,0.25);
+  mS(g,TVctr,0.1,C.rd,1);
+
+  mL(g,"8 zero-entropy voids",[0,3.5,0],"#009988",30);
+  mL(g,"hidden inside every tensor node",[0,3.0,0],"#666666",22);
+  mL(g,"\u2190 this one",[TVctr[0]+0.6,TVctr[1]+0.3,TVctr[2]],"#CC3311",22);
+},
+desc:'<b>8 zero-entropy voids.</b> The space between the 12 entanglement bonds contains exactly <b>8 tetrahedral pockets</b>, each bounded by 4 tensor nodes. Each empty void has <b>S = 0 ebits</b> crossing its boundary2014zero entanglement entropy. The highlighted void (<span class="cr">red</span>) is where a defect will form.',
+eq:'Empty void: S = 0\n(no bonds cross boundary)\n\n8 voids per node\n4 bounding atoms each'});
+
+// S2: Zoom into the chosen void — empty
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+6],bg:0xffffff,badge:"S = 0 VOID",bc:"#009988",
+title:"Zooming In: One Zero-Entropy Void (S = 0)",
+build:function(g){
+  // The 4 bounding vertices — large
+  mS(g,RTV[0],0.2,C.tl,1); mS(g,RTV[1],0.2,C.tl,1);
+  mS(g,RTV[2],0.2,C.tl,1); mS(g,RTV[3],0.2,C.tl,1);
+  // 6 edges
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,RTV[i],RTV[j],0.03,C.tl,0.4);
+  // Faces
+  mTri(g,RTV[0],RTV[1],RTV[2],C.tl,0.07);mTri(g,RTV[0],RTV[1],RTV[3],C.tl,0.07);
+  mTri(g,RTV[0],RTV[2],RTV[3],C.tl,0.07);mTri(g,RTV[1],RTV[2],RTV[3],C.tl,0.07);
+  // Centre marker
+  mS(g,RTVctr,0.06,C.gy,0.3);
+  // Labels
+  mL(g,"Vertex A",[RTV[0][0]-0.6,RTV[0][1]-0.3,RTV[0][2]],"#009988",22);
+  mL(g,"B",[RTV[1][0]+0.4,RTV[1][1]+0.2,RTV[1][2]],"#009988",22);
+  mL(g,"C",[RTV[2][0]+0.4,RTV[2][1]-0.2,RTV[2][2]],"#009988",22);
+  mL(g,"D",[RTV[3][0]-0.4,RTV[3][1]+0.3,RTV[3][2]],"#009988",22);
+  mL(g,"S = 0 (no bonds cross boundary)",[RTVctr[0]+0.8,RTVctr[1],RTVctr[2]],"#888888",18);
+  mL(g,"Entanglement boundary",[RTVctr[0],RTVctr[1]+2.0,RTVctr[2]],"#009988",28);
+  mL(g,"each ebit = fundamental length L",[RTVctr[0],RTVctr[1]+1.6,RTVctr[2]],"#666666",20);
+},
+desc:'<b>Zoom in.</b> Four tensor nodes form the boundary of this void. All 6 entanglement bonds between them equal the fundamental length L. No node sits inside — no bonds cross the boundary → <b>S = 0 ebits</b>. This is where the entanglement defect will form.',
+eq:'4 bounding nodes\n6 inter-node ebits\n\nS_void = 0\n(no bonds cross boundary)'});
+
+// S3: Extra node appears
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+6],bg:0xffffff,badge:"THE ENTANGLEMENT DEFECT",bc:"#CC3311",
+title:"Entanglement Defect: An Interstitial Node Creates S = 4 ebits",
+build:function(g){
+  // Bounding vertices
+  mS(g,RTV[0],0.18,C.tl,0.7);mS(g,RTV[1],0.18,C.tl,0.7);
+  mS(g,RTV[2],0.18,C.tl,0.7);mS(g,RTV[3],0.18,C.tl,0.7);
+  // Tet edges (dimmed)
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,RTV[i],RTV[j],0.02,C.tl,0.2);
+  // THE ENTANGLEMENT DEFECT — big, red, pulsing
+  mS(g,RTVctr,0.28,C.rd,1);
+  var gg=new THREE.SphereGeometry(0.4,16,16);
+  var gm=new THREE.MeshBasicMaterial({color:C.rd,transparent:true,opacity:0.12});
+  var glow=new THREE.Mesh(gg,gm);glow.position.set(RTVctr[0],RTVctr[1],RTVctr[2]);g.add(glow);
+  g.userData.glows=[glow];
+  // 4 bonds from extra node to vertices
+  for(var i=0;i<4;i++)mC(g,RTVctr,RTV[i],0.05,C.rd,0.85);
+  mL(g,"INTERSTITIAL NODE",[RTVctr[0],RTVctr[1]+0.7,RTVctr[2]],"#CC3311",30);
+  mL(g,"S = 4 ebits",[RTVctr[0],RTVctr[1]-0.65,RTVctr[2]],"#CC3311",24);
+  mL(g,"4 entanglement bonds cross the void boundary",[RTVctr[0],RTVctr[1]+2.2,RTVctr[2]],"#333333",24);
+  mL(g,"\u0394S = 4 \u2212 0 = 4 ebits of excess entanglement",[RTVctr[0],RTVctr[1]+1.75,RTVctr[2]],"#CC3311",22);
+},
+desc:'<b>The entanglement defect.</b> An interstitial node sits at the void centre, bonded to all 4 bounding nodes. This introduces <span class="cr">4 entanglement bonds (ebits)</span> crossing the void boundary where previously there were none. The excess entanglement entropy: <b>\u0394S = 4 \u2212 0 = 4 ebits</b>. This is matter \u2014 a localized entanglement excess in the tensor network.',
+eq:'S_void = 0 (empty)\nS_defect = 4 (occupied)\n\n\u0394S = 4 ebits\n\nA_defect = 16 l\u00B2_P'});
+
+// S4: 1+3 charges
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+6],bg:0xffffff,badge:"ENTANGLEMENT ASYMMETRY",bc:"#EE7733",
+title:"The 1+3 Splitting: Fractional Charge from Entanglement Asymmetry",
+build:function(g){
+  // Corner vertex (d-quark) — GREEN, larger
+  mS(g,RTV[cornerIdx],0.22,C.gn,1);
+  // Face-centre vertices (u-quarks) — ORANGE
+  for(var i=0;i<3;i++)mS(g,RTV[faceIdx[i]],0.22,C.or,1);
+  // Extra node (smaller now)
+  mS(g,RTVctr,0.15,C.gy,0.5);
+  // Bonds: corner to face-centres (grey, symmetric)
+  for(var i=0;i<3;i++)mC(g,RTV[cornerIdx],RTV[faceIdx[i]],0.025,C.gy,0.35);
+  // Bonds: face-centre to face-centre (orange, asymmetric majority)
+  for(var i=0;i<3;i++)for(var j=i+1;j<3;j++)mC(g,RTV[faceIdx[i]],RTV[faceIdx[j]],0.035,C.or,0.5);
+  // Labels
+  mL(g,"d-quark (\u22121/3)",[RTV[cornerIdx][0]-0.8,RTV[cornerIdx][1]-0.35,RTV[cornerIdx][2]],"#22AA44",26);
+  mL(g,"3 identical bonds",[RTV[cornerIdx][0]-0.8,RTV[cornerIdx][1]-0.7,RTV[cornerIdx][2]],"#888888",18);
+  for(var i=0;i<3;i++){
+    var off=i===0?[0.7,0.3,0]:i===1?[0.7,-0.3,0]:[-0.7,0.35,0];
+    mL(g,"u (+2/3)",[RTV[faceIdx[i]][0]+off[0],RTV[faceIdx[i]][1]+off[1],RTV[faceIdx[i]][2]+off[2]],"#EE7733",22);
+  }
+  mL(g,"1+2 bond asymmetry",[RTV[faceIdx[0]][0]+0.7,RTV[faceIdx[0]][1]-0.1,RTV[faceIdx[0]][2]],"#888888",16);
+  mL(g,"PROTON: uud \u2192 +2/3 +2/3 \u22121/3 = +1",[RTVctr[0],RTVctr[1]+2.3,RTVctr[2]],"#333333",26);
+},
+desc:'<b>Entanglement asymmetry.</b> O<sub>h</sub> \u2229 T<sub>d</sub> splits the 4 bounding nodes into <b>1 corner</b> (<span class="cg">green</span>) and <b>3 face-centres</b> (<span class="co">orange</span>). Corner: 3 identical entanglement bonds \u2192 zero distinguishability \u2192 charge <b>\u22121/3</b>. Face-centre: 1 distinct + 2 equivalent bonds \u2192 majority channel \u2192 charge <b>+2/3</b>. Charge = fraction of entanglement pattern distinguishable by the EM (bipartite) sector.',
+eq:'Corner: 3/3 \u2192 \u22121/3 (d)\nFace-ctr: 2/3 \u2192 +2/3 (u)\n\nProton = uud = +1\nNeutron = udd = 0\n\u0394++ = uuu = +2'});
+
+// S5: Three colors
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+6],bg:0xffffff,badge:"THREE ENTANGLEMENT CROSSINGS",bc:"#AA3377",
+title:"Three Colors from Three Entanglement Crossing Pairs",
+build:function(g){
+  // Vertices dimmed
+  for(var i=0;i<4;i++)mS(g,RTV[i],0.14,C.gy,0.4);
+  mS(g,RTVctr,0.12,C.gy,0.35);
+  // Three skew edge pairs — fat colored pipes
+  for(var i=0;i<3;i++){
+    var p=skew[i];var cc=skewC[i];
+    mC(g,p[0][0],p[0][1],0.06,cc,0.9);
+    mC(g,p[1][0],p[1][1],0.06,cc,0.9);
+  }
+  mL(g,"Pair 1: AB / CD",[RTV[0][0]-1.0,RTV[0][1]+0.5,RTV[0][2]],"#CC3311",22);
+  mL(g,"Pair 2: AC / BD",[RTV[2][0]+1.0,RTV[2][1]-0.5,RTV[2][2]],"#0077BB",22);
+  mL(g,"Pair 3: AD / BC",[RTV[3][0]-1.0,RTV[3][1]+0.3,RTV[3][2]],"#22AA44",22);
+  mL(g,"3 skew-edge pairs = 3 colors",[RTVctr[0],RTVctr[1]+2.3,RTVctr[2]],"#AA3377",28);
+  mL(g,"C(4,2)/2 = 3 \u2014 no 4th pair exists",[RTVctr[0],RTVctr[1]+1.85,RTVctr[2]],"#666666",22);
+  mL(g,"Also: minimum crossing number c = 3 (trefoil)",[RTVctr[0],RTVctr[1]+1.45,RTVctr[2]],"#666666",20);
+},
+desc:'<b>Three entanglement crossings.</b> The 6 entanglement bonds form exactly <b>3 pairs of non-simultaneously-disentangleable bonds</b> (skew edges sharing no vertices). <span class="cr">Red</span>: AB/CD. <span class="cb">Blue</span>: AC/BD. <span class="cg">Green</span>: AD/BC. Each pair is one independent entanglement crossing \u2192 one color charge. No 4th crossing pair exists in a tetrahedron.',
+eq:'6 ebits \u00F7 2 = 3 pairs\n\n3 crossing pairs\n= 3 color charges\n\nc = 3 (trefoil)\nNo 4th pair exists'});
+
+// S6: Confinement
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+8],bg:0xffffff,badge:"ENTANGLEMENT PROTECTION",bc:"#0077BB",
+title:"Confinement as Topological Entanglement Protection",
+build:function(g){
+  // Bounding vertices with external bonds shown
+  for(var i=0;i<4;i++){
+    mS(g,RTV[i],0.16,C.b,0.8);
+    // Show ~6 external bond stubs per vertex
+    var dirs=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    for(var d=0;d<6;d++){
+      var ex=[RTV[i][0]+dirs[d][0]*L*0.4,RTV[i][1]+dirs[d][1]*L*0.4,RTV[i][2]+dirs[d][2]*L*0.4];
+      // Don't draw if near another tet vertex
+      var tooClose=false;
+      for(var k=0;k<4;k++){if(k===i&&false)continue;if(dist3(ex,RTV[k])<L*0.3||dist3(ex,RTVctr)<L*0.3)tooClose=true;}
+      if(!tooClose){mC(g,RTV[i],ex,0.012,C.lgy,0.25);mS(g,ex,0.04,C.lgy,0.35);}
+    }
+  }
+  // Internal bonds
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,RTV[i],RTV[j],0.025,C.b,0.4);
+  // Extra node
+  mS(g,RTVctr,0.25,C.rd,1);
+  for(var i=0;i<4;i++)mC(g,RTVctr,RTV[i],0.045,C.rd,0.75);
+  // Metric wall sphere
+  var wallR=L*0.35;
+  var sg=new THREE.SphereGeometry(wallR,20,20);
+  var sm=new THREE.MeshBasicMaterial({color:0x0077BB,transparent:true,opacity:0.06,side:THREE.DoubleSide});
+  var ws=new THREE.Mesh(sg,sm);ws.position.set(RTVctr[0],RTVctr[1],RTVctr[2]);g.add(ws);
+  mL(g,"L/\u221A3 metric wall",[RTVctr[0]+1.2,RTVctr[1]+0.7,RTVctr[2]],"#0077BB",24);
+  mL(g,"V(r) = \u03C3 r (linear potential)",[RTVctr[0],RTVctr[1]+2.3,RTVctr[2]],"#0077BB",28);
+  mL(g,"9 external ebits per node resist disentanglement",[RTVctr[0],RTVctr[1]+1.85,RTVctr[2]],"#666666",20);
+  mL(g,"Sever an ebit \u2192 new node pair nucleates (string breaking)",[RTVctr[0],RTVctr[1]-2.0,RTVctr[2]],"#333333",20);
+},
+desc:'<b>Entanglement protection.</b> Each bounding node has <b>9 external ebits</b> anchoring it to the K=12 network. The interstitial is trapped behind the <span class="cb">L/\u221A3 metric wall</span>. Stretching an ebit costs energy linear in distance: <b>V(r) = \u03C3r</b>. The entanglement is topologically protected because all 4 bonds pass through <b>non-bipartite</b> (triangular) faces \u2014 invisible to the EM sector. Severing an ebit nucleates a new node pair (string breaking).',
+eq:'V(r) = \u03C3 r\n(entanglement stretching)\n\n9 external ebits/node\nAll 4 internal ebits\npass through \u25B3 faces\n\n\u2192 topologically protected'});
+
+// S7: EM invisibility
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+6],bg:0xffffff,badge:"BIPARTITE vs NON-BIPARTITE",bc:"#EE7733",
+title:"Entanglement Protection: Bipartite vs Non-Bipartite Faces",
+build:function(g){
+  for(var i=0;i<4;i++)mS(g,RTV[i],0.15,C.or,0.8);
+  mS(g,RTVctr,0.18,C.rd,0.9);
+  for(var i=0;i<4;i++)mC(g,RTVctr,RTV[i],0.04,C.or,0.55);
+  // Highlight all 4 non-bipartite faces (\u25B3)
+  mTri(g,RTV[0],RTV[1],RTV[2],C.or,0.18);mTri(g,RTV[0],RTV[1],RTV[3],C.or,0.18);
+  mTri(g,RTV[0],RTV[2],RTV[3],C.or,0.18);mTri(g,RTV[1],RTV[2],RTV[3],C.or,0.18);
+  mL(g,"4 non-bipartite faces (\u25B3)",[RTVctr[0],RTVctr[1]+2.3,RTVctr[2]],"#EE7733",28);
+  mL(g,"Odd cycle C\u2083 \u2192 EM sector cannot couple",[RTVctr[0],RTVctr[1]+1.85,RTVctr[2]],"#EE7733",22);
+  mL(g,"EM operates only on bipartite (\u25A1) faces",[RTVctr[0],RTVctr[1]+1.45,RTVctr[2]],"#666666",20);
+  mL(g,"\u2192 internal bonds invisible to photons",[RTVctr[0],RTVctr[1]-1.8,RTVctr[2]],"#333333",22);
+  mL(g,"\u2192 only net baryon charge observable",[RTVctr[0],RTVctr[1]-2.2,RTVctr[2]],"#333333",22);
+},
+desc:'<b>Entanglement protection theorem.</b> The interstitial\u2019s 4 ebits pass through <span class="co">triangular (non-bipartite)</span> faces of the cuboctahedral shell. The EM sector operates exclusively on <b>bipartite (square, C\u2084)</b> faces. No EM operator can couple to or sever the internal ebits. This is <b>color confinement stated as an entanglement protection theorem</b>. Photons resolve only the net composite charge.',
+eq:'\u25B3 face: C\u2083 (non-bipartite)\n\u2192 entanglement PROTECTED\n\n\u25A1 face: C\u2084 (bipartite)\n\u2192 EM sector operates here\n\nConfinement = protection'});
+
+// S8: The mass
+steps.push({cam:[0,0,9],bg:0xfafafa,badge:"THE ENTANGLEMENT CASCADE",bc:"#996600",
+title:"m\u209A / m\u2091 = 1836 Disrupted Ebits",
+build:function(g){
+  mL(g,"( K + 1 )",[0,2.8,0],"#CC3311",48);
+  mL(g,"\u00D7  K\u00B2",[0,2.1,0],"#333333",44);
+  mL(g,"\u2212  c \u00D7 K",[0,1.4,0],"#0077BB",44);
+  mL(g,"13 \u00D7 144 \u2212 3 \u00D7 12",[0,0.4,0],"#333333",36);
+  mL(g,"1872 \u2212 36",[0,-0.3,0],"#333333",36);
+  mL(g,"= 1836",[0,-1.3,0],"#996600",64);
+  mL(g,"m\u209A / m\u2091",[0,-2.1,0],"#888888",30);
+  mL(g,"Observed: 1836.153",[0,-2.7,0],"#22AA44",24);
+  mL(g,"Match: 0.008%  |  Zero free parameters",[0,-3.2,0],"#888888",20);
+},
+desc:'<b>The entanglement cascade.</b> 13 structural nodes \u00D7 144 disrupted ebits per node, minus 3 entanglement crossings \u00D7 12 shared ebits. The proton mass = the total entanglement disruption cost of maintaining the interstitial defect. Mass IS disrupted entanglement.',
+eq:'<b style="color:#996600;font-size:16px;">1836 ebits</b>\n= 1836 m<sub>e</sub>\n\nMass = disrupted\nentanglement cost'});
+
+// RENDER ENGINE
+var idx=0,playing=false,pt=null;
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}group.userData.glows=[];}
+function renderStep(i){idx=Math.max(0,Math.min(i,steps.length-1));sli.value=idx;clearG();
+var s=steps[idx];s.build(group);
+camera.position.set(s.cam[0],s.cam[1],s.cam[2]);camera.lookAt(s.cam[0],s.cam[1]-0.5,0);
+scene.background=new THREE.Color(s.bg);rot.y=0;
+document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
+document.getElementById("title").textContent=s.title;
+document.getElementById("desc").innerHTML=s.desc;
+document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
+document.getElementById("eq").style.display=s.eq?'block':'none';
+document.getElementById("fc").textContent=(idx+1)+"/"+steps.length;}
+
+var t=0;
+(function anim(){requestAnimationFrame(anim);t+=0.016;
+if(ar&&!md)rot.y+=0.003;
+group.rotation.x=rot.x;group.rotation.y=rot.y;
+if(group.userData.glows)group.userData.glows.forEach(function(gl){gl.material.opacity=0.08+0.07*Math.sin(t*3);gl.scale.setScalar(1+0.06*Math.sin(t*3));});
+renderer.render(scene,camera);})();
+
+function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx>=steps.length-1){stp();return;}renderStep(idx+1);pt=setTimeout(nx,5000);}pt=setTimeout(nx,4500);};
+window.goS=function(){stp();renderStep(0);};window.goP=function(){stp();renderStep(idx-1);};
+window.goN=function(){stp();renderStep(idx+1);};window.goE=function(){stp();renderStep(steps.length-1);};
+window.goTo=function(v){stp();renderStep(v);};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
+renderStep(0);
+})();
+</script>
+</body>
+</html>
