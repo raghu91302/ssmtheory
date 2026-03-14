@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SSM: The 1.37 Billion Year Big Bang — Crystallization Wavefront</title>
+<title>SSM: The 1.37 Billion Year Big Bang</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
@@ -11,11 +11,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 #hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
 #badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
 #title{font-size:13px;font-weight:700;color:#222;}
-#cv{flex:1;display:block;min-height:0;}
-#desc{position:absolute;bottom:46px;left:10px;max-width:440px;background:rgba(255,255,255,0.96);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
+#main{flex:1;position:relative;min-height:0;}
+canvas{display:block;width:100%;height:100%;}
+#desc{position:absolute;bottom:44px;left:10px;max-width:440px;background:rgba(255,255,255,0.97);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
 #desc b{color:#111;}
-.cb{color:#0077BB;}.cr{color:#CC3311;}.cg{color:#009988;}.co{color:#EE7733;}.cy{color:#996600;}.cp{color:#AA3377;}
-#eq{position:absolute;bottom:46px;right:10px;background:rgba(255,255,255,0.96);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#eq{position:absolute;bottom:44px;right:10px;background:rgba(255,255,255,0.97);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
 #ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
 .btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
 .btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
@@ -27,13 +27,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 <body>
 <div id="wrap">
 <div id="hd">
-<span id="badge" style="background:#CC3311;">ORIGIN</span>
+<span id="badge" style="background:#332288;">ORIGIN</span>
 <div id="title">Loading...</div>
 </div>
-<div style="flex:1;position:relative;min-height:0;">
-<canvas id="cv"></canvas>
-<div id="desc"></div>
-<div id="eq"></div>
+<div id="main"><canvas id="cv"></canvas>
+<div id="desc"></div><div id="eq"></div>
 </div>
 <div id="ct">
 <button class="btn" onclick="goS()">⏮</button>
@@ -43,373 +41,497 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 <button class="btn" onclick="goE()">⏭</button>
 <div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
 <span id="fc">1/7</span>
-<button class="btn on" id="br" onclick="togR()">Rot</button>
 </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function(){"use strict";
-var canvas=document.getElementById("cv");
-var W,H2,scene,camera,renderer,group;
-var rot={x:0.15,y:0},md=false,mx=0,my=0,ar=true;
+// === Tol's colorblind-safe palette ===
+var P={
+  blue:"#0077BB",  cyan:"#33BBEE",  teal:"#009988",
+  orange:"#EE7733",red:"#CC3311",   magenta:"#EE3377",
+  purple:"#332288", grey:"#BBBBBB",  dark:"#333333",
+  green:"#228833",  yellow:"#CCBB44",lgrey:"#DDDDDD"
+};
 
-function init(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;
-scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
-camera=new THREE.PerspectiveCamera(42,W/H2,0.1,300);
-renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H2);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-scene.add(new THREE.AmbientLight(0xffffff,0.45));
-var dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(5,8,6);scene.add(dl);
-scene.add(new THREE.DirectionalLight(0x8888cc,0.15)).position.set(-4,-3,-5);
-group=new THREE.Group();scene.add(group);}
-init();
-
-canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
-canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
-window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
-window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=e.clientX;my=e.clientY;});
-window.addEventListener("touchmove",function(e){if(!md)return;var t2=e.touches[0];rot.y+=(t2.clientX-mx)*0.005;rot.x+=(t2.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=t2.clientX;my=t2.clientY;},{passive:true});
-canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(4,Math.min(30,camera.position.z+e.deltaY*0.03));e.preventDefault();},{passive:false});
-window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;camera.aspect=W/H2;camera.updateProjectionMatrix();renderer.setSize(W,H2);});
-
-var CL={b:0x0077BB,or:0xEE7733,tl:0x009988,rd:0xCC3311,gn:0x22AA44,wn:0xAA3377,gy:0x999999,lgy:0xcccccc,yl:0xEECC00};
-
-function mS(g,p,r,c,op){var geo=new THREE.SphereGeometry(r,20,20);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op,side:THREE.DoubleSide});var s=new THREE.Mesh(geo,m);s.position.set(p[0],p[1],p[2]);g.add(s);return s;}
-function mL(g,t,p,c,sz){var cv2=document.createElement("canvas");cv2.width=768;cv2.height=96;var ctx=cv2.getContext("2d");ctx.font="bold "+(sz||32)+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,384,48);var tx=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(sz?sz*0.06:2.0,sz?sz*0.009:0.28,1);g.add(s);return s;}
-function mRing(g,r,c,op,y){var geo=new THREE.RingGeometry(r-0.03,r+0.03,64);var m=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide});var s=new THREE.Mesh(geo,m);s.rotation.x=Math.PI/2;s.position.y=y||0;g.add(s);return s;}
-function mArrow(g,from,to,c,op){var d=new THREE.Vector3(to[0]-from[0],to[1]-from[1],to[2]-from[2]);var l=d.length();var mid=new THREE.Vector3((from[0]+to[0])/2,(from[1]+to[1])/2,(from[2]+to[2])/2);var geo=new THREE.CylinderGeometry(0.03,0.03,l,5);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(s);
-// Arrowhead
-var ah=new THREE.CylinderGeometry(0,0.1,0.2,8);var am=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var as2=new THREE.Mesh(ah,am);as2.position.set(to[0],to[1],to[2]);as2.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(as2);}
-
-var R=3.5; // observable universe radius
-
-// ============= STEPS =============
-var steps=[];
-
-// S0: The singular origin
-steps.push({cam:[0,0,12],bg:0xffffff,badge:"THE ORIGIN",bc:"#CC3311",
-title:"A Single Nucleation Event: The Absolute Cosmic Origin",
-build:function(g){
-  // Origin point — bright, pulsing
-  mS(g,[0,0,0],0.25,CL.rd,1);
-  var glow=new THREE.SphereGeometry(0.4,16,16);
-  var gm=new THREE.MeshBasicMaterial({color:CL.rd,transparent:true,opacity:0.15});
-  var gl=new THREE.Mesh(glow,gm);g.add(gl);
-  g.userData.glows=[gl];
-  // Expanding rings to suggest propagation
-  for(var i=1;i<=4;i++){
-    mRing(g,i*0.8,CL.rd,0.15-i*0.03);
-  }
-  mL(g,"ORIGIN",[0,0.7,0],"#CC3311",30);
-  mL(g,"Single nucleation event",[0,-0.6,0],"#CC3311",22);
-  mL(g,"Not simultaneous",[0,-1.8,0],"#333333",22);
-  mL(g,"Not multiple bubbles",[0,-2.3,0],"#333333",22);
-  mL(g,"One point. One wavefront.",[0,-2.9,0],"#CC3311",24);
-},
-desc:'<b>The origin.</b> In the SSM, the Big Bang is not a simultaneous global event. It is a <b>single nucleation event</b> at one point. The entire observable universe traces back to this one origin, propagating outward as a crystallization wavefront.',
-eq:''});
-
-// S1: WHY c=3 — the tetrahedral activation barrier
-(function(){
-// Regular tetrahedron vertices centred at origin
-var ts=1.8, tsc=ts/(2*Math.sqrt(2));
-var TV=[[tsc,tsc,tsc],[tsc,-tsc,-tsc],[-tsc,tsc,-tsc],[-tsc,-tsc,tsc]];
-var labels=["A","B","C","D"];
-// 3 skew-edge pairs
-var skewPairs=[
-  {e1:[0,1],e2:[2,3],col:0xCC3311,name:"Pair 1: AB / CD"},
-  {e1:[0,2],e2:[1,3],col:0x0077BB,name:"Pair 2: AC / BD"},
-  {e1:[0,3],e2:[1,2],col:0x22AA44,name:"Pair 3: AD / BC"}
-];
-var skewColHex=["#CC3311","#0077BB","#22AA44"];
-
-steps.push({cam:[0,0.5,9],bg:0xffffff,badge:"WHY c = 3",bc:"#AA3377",
-title:"The Activation Barrier: 3 Skew-Edge Pairs Must Flip Simultaneously",
-build:function(g){
-  // Draw tetrahedron vertices
-  for(var i=0;i<4;i++){
-    mS(g,TV[i],0.14,CL.gy,0.7);
-    var off=[[0.4,0.35,0],[0.4,-0.35,0],[-0.45,0.35,0],[-0.45,-0.35,0]];
-    mL(g,labels[i],[TV[i][0]+off[i][0],TV[i][1]+off[i][1],TV[i][2]+off[i][2]],"#666666",20);
-  }
-
-  // Draw all 6 edges faint first
-  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++){
-    var a2=TV[i],b2=TV[j];
-    var geo=new THREE.CylinderGeometry(0.015,0.015,
-      Math.sqrt((b2[0]-a2[0])*(b2[0]-a2[0])+(b2[1]-a2[1])*(b2[1]-a2[1])+(b2[2]-a2[2])*(b2[2]-a2[2])),5);
-    var mat=new THREE.MeshPhongMaterial({color:CL.lgy,transparent:true,opacity:0.15});
-    var mesh=new THREE.Mesh(geo,mat);
-    var mid=new THREE.Vector3((a2[0]+b2[0])/2,(a2[1]+b2[1])/2,(a2[2]+b2[2])/2);
-    mesh.position.copy(mid);
-    var dir=new THREE.Vector3(b2[0]-a2[0],b2[1]-a2[1],b2[2]-a2[2]).normalize();
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
-    g.add(mesh);
-  }
-
-  // Draw 3 skew-edge pairs as thick coloured pipes
-  for(var p2=0;p2<3;p2++){
-    var sp=skewPairs[p2];
-    var e1a=TV[sp.e1[0]],e1b=TV[sp.e1[1]];
-    var e2a=TV[sp.e2[0]],e2b=TV[sp.e2[1]];
-    // Edge 1
-    var l1=Math.sqrt((e1b[0]-e1a[0])*(e1b[0]-e1a[0])+(e1b[1]-e1a[1])*(e1b[1]-e1a[1])+(e1b[2]-e1a[2])*(e1b[2]-e1a[2]));
-    var g1=new THREE.CylinderGeometry(0.055,0.055,l1,6);
-    var m1=new THREE.MeshPhongMaterial({color:sp.col,transparent:true,opacity:0.85});
-    var s1=new THREE.Mesh(g1,m1);
-    s1.position.set((e1a[0]+e1b[0])/2,(e1a[1]+e1b[1])/2,(e1a[2]+e1b[2])/2);
-    s1.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(e1b[0]-e1a[0],e1b[1]-e1a[1],e1b[2]-e1a[2]).normalize());
-    g.add(s1);
-    // Edge 2
-    var l2=Math.sqrt((e2b[0]-e2a[0])*(e2b[0]-e2a[0])+(e2b[1]-e2a[1])*(e2b[1]-e2a[1])+(e2b[2]-e2a[2])*(e2b[2]-e2a[2]));
-    var g2b=new THREE.CylinderGeometry(0.055,0.055,l2,6);
-    var m2b=new THREE.MeshPhongMaterial({color:sp.col,transparent:true,opacity:0.85});
-    var s2b=new THREE.Mesh(g2b,m2b);
-    s2b.position.set((e2a[0]+e2b[0])/2,(e2a[1]+e2b[1])/2,(e2a[2]+e2b[2])/2);
-    s2b.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(e2b[0]-e2a[0],e2b[1]-e2a[1],e2b[2]-e2a[2]).normalize());
-    g.add(s2b);
-  }
-
-  // Pair labels on right side
-  for(var p2=0;p2<3;p2++){
-    mL(g,skewPairs[p2].name,[2.8,1.0-p2*0.8,0],skewColHex[p2],18);
-    mL(g,"= 1 bond to flip",[2.8,0.6-p2*0.8,0],"#888888",14);
-  }
-
-  // Title and explanation labels
-  mL(g,"6 edges \u00F7 2 = 3 opposite pairs",[0,3.0,0],"#AA3377",24);
-  mL(g,"Each pair = 1 independent topological crossing",[0,2.5,0],"#666666",18);
-  mL(g,"All 3 must flip SIMULTANEOUSLY for K=4 \u2192 K=12",[0,-2.4,0],"#333333",20);
-
-  // The barrier equation
-  mL(g,"E_a = c \u00D7 \u03B5 = 3\u03B5",[0,-3.0,0],"#AA3377",26);
-  mL(g,"p = e\u207B\u00B3 \u2248 0.0498",[0,-3.5,0],"#AA3377",24);
-
-  // Crossing symbol at centre
-  mL(g,"c = 3",[0,0,0],"#AA3377",36);
-},
-desc:'<b>Why c = 3.</b> The K=4 tetrahedron has 6 edges forming exactly <b>3 pairs of opposite (skew) edges</b> sharing no vertices. <span class="cr">Red</span>: AB/CD. <span class="cb">Blue</span>: AC/BD. <span class="cg">Green</span>: AD/BC. To convert K=4 \u2192 K=12, each skew pair must be severed and reconnected \u2014 <b>all 3 simultaneously</b>. This gives an activation barrier E_a = 3\u03B5. At the critical temperature (k\u2082T = \u03B5), the Arrhenius probability is p = e\u207B\u00B3. This is not a parameter \u2014 it is the combinatorics of a tetrahedron.',
-eq:'6 edges \u00F7 2 = 3 pairs\n(C(4,2)/2 = 3)\n\nE_a = 3\u03B5\nk\u2082T_reheat = \u03B5\n\np = e\u207B\u00B3 \u2248 0.0498'});
-})();
-
-// S2: Two speeds — 2D causal front vs 3D lock-in
-steps.push({cam:[0,0,14],bg:0xffffff,badge:"TWO SPEEDS",bc:"#0077BB",
-title:"Two Fronts: 2D Causal Boundary (v = c) vs 3D Crystallization (v = pc)",
-build:function(g){
-  // Origin
-  mS(g,[0,0,0],0.15,CL.rd,0.8);
-  // 2D causal front — large, fast, blue
-  var causalR=R*1.3;
-  var cGeo=new THREE.SphereGeometry(causalR,32,32);
-  var cMat=new THREE.MeshBasicMaterial({color:CL.b,transparent:true,opacity:0.06,side:THREE.DoubleSide});
-  g.add(new THREE.Mesh(cGeo,cMat));
-  mRing(g,causalR,CL.b,0.3);
-  mL(g,"2D causal front",[causalR+0.8,0.5,0],"#0077BB",20);
-  mL(g,"v = c",[causalR+0.5,-0.1,0],"#0077BB",22);
-  // 3D crystallization front — smaller, trailing, orange
-  var crystR=causalR*0.3; // ~p fraction but visually exaggerated for clarity
-  var crGeo=new THREE.SphereGeometry(crystR,32,32);
-  var crMat=new THREE.MeshPhongMaterial({color:CL.or,transparent:true,opacity:0.2,side:THREE.DoubleSide});
-  g.add(new THREE.Mesh(crGeo,crMat));
-  mRing(g,crystR,CL.or,0.5);
-  mL(g,"3D lock-in",[crystR+0.7,0.4,0],"#EE7733",20);
-  mL(g,"v = p\u00D7c \u2248 c/20",[crystR+0.7,-0.15,0],"#EE7733",22);
-  // Gap annotation
-  mArrow(g,[crystR+0.1,1.5,0],[causalR-0.1,1.5,0],CL.gy,0.5);
-  mL(g,"thermal equilibration zone",[((crystR+causalR)/2),1.9,0],"#888888",16);
-  mL(g,"(resolves horizon problem)",[((crystR+causalR)/2),1.55,0],"#888888",14);
-  // Bottom labels
-  mL(g,"The 3D crystallization trails at \u2248 1/20th the speed of light",[0,-2.5,0],"#333333",20);
-  mL(g,"p = e\u207B\u00B3 \u2248 0.0498",[0,-3.0,0],"#EE7733",22);
-},
-desc:'<b>Two propagation speeds.</b> The <span class="cb">2D causal front</span> (blue) races outward at the speed of light c = S_trans \u00D7 v_lattice = 4v_lattice. This IS c \u2014 the maximum signal speed defines the causal boundary and provides thermal equilibration. The <span class="co">3D crystallization</span> (orange) trails at p\u00D7c \u2248 c/20 because the K=4\u2192K=12 transition requires c=3 simultaneous bond flips (probability e\u207B\u00B3). The gap between them is the age gradient\u2019s origin.',
-eq:'v_front = c (causal)\nv_3D = p \u00D7 c \u2248 c/20\n\np = e\u207B\u00B3 \u2248 0.0498\n\nc \u226B v_3D'});
-
-// S2: Wavefront sweeping through the observable universe
-steps.push({cam:[0,0,14],bg:0xffffff,badge:"THE WAVEFRONT",bc:"#EE7733",
-title:"The Crystallization Wavefront Sweeps Across the Observable Universe",
-build:function(g){
-  // Observable universe outline
-  var outerGeo=new THREE.SphereGeometry(R,32,32);
-  var outerMat=new THREE.MeshBasicMaterial({color:CL.gy,transparent:true,opacity:0.05,side:THREE.DoubleSide});
-  g.add(new THREE.Mesh(outerGeo,outerMat));
-  mRing(g,R,CL.gy,0.2);
-  // Origin — off to the left
-  mS(g,[-R-1.5,0,0],0.12,CL.rd,0.8);
-  mL(g,"ORIGIN",[-R-1.5,0.5,0],"#CC3311",16);
-  // Wavefront sweeping direction arrow
-  mArrow(g,[-R-0.5,0,0],[R+0.5,0,0],CL.or,0.4);
-  mL(g,"wavefront direction",[0,-0.5,0],"#EE7733",16);
-  // Animated wavefront plane (vertical disc sweeping left to right)
-  var wfGeo=new THREE.CircleGeometry(R*1.1,32);
-  var wfMat=new THREE.MeshBasicMaterial({color:CL.or,transparent:true,opacity:0.15,side:THREE.DoubleSide});
-  var wf=new THREE.Mesh(wfGeo,wfMat);
-  wf.rotation.y=Math.PI/2;
-  g.add(wf);
-  g.userData.wavefront=wf;
-  // Older hemisphere label (left)
-  mL(g,"OLDER",[-R*0.55,R+0.8,0],"#CC3311",24);
-  mL(g,"crystallized first",[-R*0.55,R+0.35,0],"#CC3311",16);
-  mL(g,"14.49 Gyr",[-R*0.55,R-0.05,0],"#CC3311",20);
-  // Younger hemisphere label (right)
-  mL(g,"YOUNGER",[R*0.55,R+0.8,0],"#0077BB",24);
-  mL(g,"crystallized last",[R*0.55,R+0.35,0],"#0077BB",16);
-  mL(g,"13.11 Gyr",[R*0.55,R-0.05,0],"#0077BB",20);
-  // Observer at centre
-  mS(g,[0,0,0],0.12,CL.gn,1);
-  mL(g,"Observer",[0,0.45,0],"#22AA44",18);
-  mL(g,"(sees both hemispheres)",[0,-1.0,0],"#888888",14);
-  // Colour the two halves
-  // Left half (older) — warm red
-  var halfL=new THREE.SphereGeometry(R,32,32,Math.PI,Math.PI);
-  var halfLM=new THREE.MeshPhongMaterial({color:0xCC3311,transparent:true,opacity:0.08,side:THREE.DoubleSide});
-  var hlMesh=new THREE.Mesh(halfL,halfLM);
-  hlMesh.rotation.y=-Math.PI/2;
-  g.add(hlMesh);
-  // Right half (younger) — cool blue
-  var halfR=new THREE.SphereGeometry(R,32,32,Math.PI,Math.PI);
-  var halfRM=new THREE.MeshPhongMaterial({color:0x0077BB,transparent:true,opacity:0.08,side:THREE.DoubleSide});
-  var hrMesh=new THREE.Mesh(halfR,halfRM);
-  hrMesh.rotation.y=Math.PI/2;
-  g.add(hrMesh);
-  mL(g,"\u0394t = 1.37 Gyr",[0,-R-0.6,0],"#996600",24);
-},
-desc:'<b>The wavefront sweeps through.</b> The crystallization front (orange plane) swept past our position from left to right. The <span class="cr">older hemisphere</span> (left, red) crystallized first \u2014 14.49 Gyr ago. The <span class="cb">younger hemisphere</span> (right, blue) crystallized last \u2014 13.11 Gyr ago. The <span class="cg">observer</span> (green) sits at the midpoint, averaging to the measured 13.80 Gyr.',
-eq:'t_older = 14.49 Gyr\nt_younger = 13.11 Gyr\n\n\u0394t = 1.37 Gyr\nt_avg = 13.80 Gyr'});
-
-// S3: The age gradient mapped on the sphere
-steps.push({cam:[0,0,13],bg:0xffffff,badge:"AGE GRADIENT",bc:"#996600",
-title:"The Permanent Age Gradient Across the Observable Universe",
-build:function(g){
-  // Build sphere with longitudinal colour gradient (red → blue)
-  var nSlices=24;
-  for(var i=0;i<nSlices;i++){
-    var frac=i/(nSlices-1); // 0=left(old) to 1=right(young)
-    var theta0=(i/nSlices)*Math.PI;
-    var theta1=((i+1)/nSlices)*Math.PI;
-    var sliceGeo=new THREE.SphereGeometry(R,32,32,theta0,theta1-theta0+0.01);
-    var r2=Math.floor(204*(1-frac)+0*frac);
-    var g2=Math.floor(51*(1-frac)+119*frac);
-    var b2=Math.floor(17*(1-frac)+187*frac);
-    var col=new THREE.Color("rgb("+r2+","+g2+","+b2+")");
-    var sliceMat=new THREE.MeshPhongMaterial({color:col,transparent:true,opacity:0.25,side:THREE.DoubleSide});
-    var sm=new THREE.Mesh(sliceGeo,sliceMat);
-    sm.rotation.y=-Math.PI/2;
-    g.add(sm);
-  }
-  // Gradient bar labels
-  mL(g,"14.49 Gyr",[-R-0.8,0,0],"#CC3311",20);
-  mL(g,"13.80 Gyr",[0,-R-0.5,0],"#996600",20);
-  mL(g,"13.11 Gyr",[R+0.8,0,0],"#0077BB",20);
-  // Arrow along gradient
-  mArrow(g,[-R+0.3,R+0.3,0],[R-0.3,R+0.3,0],CL.gy,0.3);
-  mL(g,"crystallization direction",[0,R+0.7,0],"#888888",16);
-  // Origin pointer
-  mArrow(g,[-R-0.3,0.8,0],[-R-1.5,0.8,0],CL.rd,0.5);
-  mL(g,"\u2190 toward origin",[-R-1.8,0.4,0],"#CC3311",16);
-  // Observer
-  mS(g,[0,0,0],0.1,CL.gn,1);
-  mL(g,"\u0394t/t\u2080 = 2e\u207B\u00B3 \u2248 10%",[0,-R-1.1,0],"#996600",24);
-},
-desc:'<b>The age gradient.</b> The observable universe is colour-coded from <span class="cr">old (red, 14.49 Gyr)</span> to <span class="cb">young (blue, 13.11 Gyr)</span>. This is not a temperature difference \u2014 it is a <b>structural age difference</b>. The gradient direction always points back toward the absolute cosmic origin. Every observer measures the same 10% fractional gradient; only the direction varies.',
-eq:'\u0394t/t\u2080 = 2p = 2e\u207B\u00B3\n\u2248 0.0996 \u2248 10%\n\nScale-free,\nepoch-independent,\nuniversal'});
-
-// S4: CMB dipole comparison
-steps.push({cam:[0,0,13],bg:0xfafafa,badge:"CMB DIPOLE",bc:"#AA3377",
-title:"Predicted vs Observed CMB Hemispherical Asymmetry",
-build:function(g){
-  // Two-hemisphere sphere
-  var halfL2=new THREE.SphereGeometry(R,32,32,Math.PI,Math.PI);
-  var halfLM2=new THREE.MeshPhongMaterial({color:0xCC3311,transparent:true,opacity:0.15,side:THREE.DoubleSide});
-  var hlM2=new THREE.Mesh(halfL2,halfLM2);hlM2.rotation.y=-Math.PI/2;g.add(hlM2);
-  var halfR2=new THREE.SphereGeometry(R,32,32,Math.PI,Math.PI);
-  var halfRM2=new THREE.MeshPhongMaterial({color:0x0077BB,transparent:true,opacity:0.15,side:THREE.DoubleSide});
-  var hrM2=new THREE.Mesh(halfR2,halfRM2);hrM2.rotation.y=Math.PI/2;g.add(hrM2);
-  // Comparison panel (3D text)
-  mL(g,"\u039BCDM predicts: A = 0.000",[0,R+1.5,0],"#888888",22);
-  mL(g,"SSM predicts:  A = 0.049",[0,R+1.0,0],"#AA3377",22);
-  mL(g,"Planck observes: A = 0.066 \u00B1 0.021",[0,R+0.5,0],"#333333",24);
-  // Tension labels
-  mL(g,"\u039BCDM: > 3\u03C3 EXCLUDED",[-R*0.6,-R-0.5,0],"#CC3311",22);
-  mL(g,"SSM: within 1\u03C3 (0.8\u03C3)",[R*0.6,-R-0.5,0],"#22AA44",22);
-  // A = p derivation
-  mL(g,"A = \u0394T/T = \u00BD(\u0394t/t) = p = e\u207B\u00B3",[0,-R-1.2,0],"#AA3377",20);
-  mL(g,"(T \u221D t\u207B\u00B9\u02F2 in radiation era)",[0,-R-1.7,0],"#888888",16);
-  // Observer
-  mS(g,[0,0,0],0.1,CL.gn,1);
-},
-desc:'<b>CMB dipole.</b> During the radiation era, T \u221D t\u207B\u00B9\u02F2, so the fractional age gradient maps to a temperature dipole: <b>A = p = e\u207B\u00B3 \u2248 0.049</b>. Planck measures A = 0.066 \u00B1 0.021. The SSM prediction sits at <span class="cg">0.8\u03C3</span> \u2014 a comfortable match. \u039BCDM predicts A = 0, which is <span class="cr">excluded at >3\u03C3</span>.',
-eq:'A_predicted = e\u207B\u00B3 \u2248 0.049\nA_observed = 0.066 \u00B1 0.021\n\nTension: 0.8\u03C3\n\n\u039BCDM (A=0): >3\u03C3 excluded'});
-
-// S5: Co-aligned structure dipoles
-steps.push({cam:[0,0,14],bg:0xffffff,badge:"FALSIFIABLE TESTS",bc:"#22AA44",
-title:"All Structure Dipoles Must Co-Align Along the Same Axis",
-build:function(g){
-  // Sphere
-  var outerGeo2=new THREE.SphereGeometry(R,32,32);
-  var outerMat2=new THREE.MeshBasicMaterial({color:CL.gy,transparent:true,opacity:0.04,side:THREE.DoubleSide});
-  g.add(new THREE.Mesh(outerGeo2,outerMat2));
-  // Axis arrow
-  mArrow(g,[-R-1,0,0],[R+1,0,0],CL.rd,0.6);
-  mL(g,"THE AXIS",[-R-1.2,0.5,0],"#CC3311",24);
-  mL(g,"(l,b) \u2248 (221\u00B0, \u221227\u00B0)",[0,R+1.0,0],"#333333",18);
-  // Dipole markers along axis
-  var dipoles=[
-    {y:1.8,label:"CMB hemispherical asymmetry",col:"#AA3377",status:"A = 0.066 \u00B1 0.021 (Planck)"},
-    {y:0.6,label:"Quasar spectral index dipole",col:"#EE7733",status:"(l,b) \u2248 (201\u00B0,\u221229\u00B0) (Sinha 2023)"},
-    {y:-0.6,label:"Galaxy cluster maturity gradient",col:"#0077BB",status:"Testable with Euclid"},
-    {y:-1.8,label:"BAO scale asymmetry (\u0394r_d \u2248 7 Mpc)",col:"#009988",status:"Testable with DESI (~7\u03C3)"},
-  ];
-  for(var i=0;i<dipoles.length;i++){
-    var d=dipoles[i];
-    // Horizontal line at this y
-    var lineGeo=new THREE.CylinderGeometry(0.015,0.015,2*R+1,4);
-    var lineMat=new THREE.MeshPhongMaterial({color:new THREE.Color(d.col),transparent:true,opacity:0.4});
-    var line=new THREE.Mesh(lineGeo,lineMat);
-    line.rotation.z=Math.PI/2;line.position.y=d.y;g.add(line);
-    mL(g,d.label,[-0.5,d.y+0.3,0],d.col,16);
-    mL(g,d.status,[0.5,d.y-0.15,0],"#888888",13);
-  }
-  mL(g,"All dipoles co-align \u2192 single wavefront confirmed",[0,-R-0.8,0],"#22AA44",20);
-  mL(g,"Misalignment falsifies the model",[0,-R-1.3,0],"#CC3311",18);
-},
-desc:'<b>Falsifiable prediction.</b> If the Big Bang was a single wavefront, then <b>every</b> large-scale structure dipole must align along the same axis: CMB asymmetry, quasar evolution, cluster maturity, BAO scale. Sinha et al. (2023) already found the quasar spectral index dipole co-aligned with the CMB axis. DESI can detect the BAO shift at ~7\u03C3. <b>Any misalignment falsifies the model.</b>',
-eq:'All must co-align:\n\u2022 CMB asymmetry \u2713\n\u2022 Quasar evolution \u2713\n\u2022 Cluster maturity ?\n\u2022 BAO \u0394r_d \u2248 7 Mpc ?'});
-
-// RENDER ENGINE
-var idx=0,playing=false,pt=null;
-var sli=document.querySelector("#sl input");sli.max=steps.length-1;
-function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}group.userData.glows=[];group.userData.wavefront=null;}
-function renderStep(i){idx=Math.max(0,Math.min(i,steps.length-1));sli.value=idx;clearG();
-var s=steps[idx];s.build(group);
-camera.position.set(s.cam[0],s.cam[1],s.cam[2]);camera.lookAt(0,0,0);
-scene.background=new THREE.Color(s.bg);rot.y=0;
-document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
-document.getElementById("title").textContent=s.title;
-document.getElementById("desc").innerHTML=s.desc;
-document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
-document.getElementById("eq").style.display=s.eq?'block':'none';
-document.getElementById("fc").textContent=(idx+1)+"/"+steps.length;}
+var canvas=document.getElementById("cv"),ctx;
+var W,H;
+function resize(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;canvas.style.width=W+"px";canvas.style.height=H+"px";ctx=canvas.getContext("2d");ctx.scale(devicePixelRatio,devicePixelRatio);}
+resize();window.addEventListener("resize",resize);
 
 var t=0;
-(function anim(){requestAnimationFrame(anim);t+=0.016;
-if(ar&&!md)rot.y+=0.002;
-group.rotation.x=rot.x;group.rotation.y=rot.y;
-if(group.userData.glows)group.userData.glows.forEach(function(gl){gl.material.opacity=0.1+0.08*Math.sin(t*3);gl.scale.setScalar(1+0.08*Math.sin(t*3));});
-// Animated wavefront sweep
-if(group.userData.wavefront){
-  var wf=group.userData.wavefront;
-  var sweep=((t*0.15)%1); // 0→1 sweep
-  var wx=-R+sweep*2*R;
-  wf.position.x=wx;
-}
-renderer.render(scene,camera);})();
+var steps=[];
+var idx=0,playing=false,pt=null;
 
-function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
-window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx>=steps.length-1){stp();return;}renderStep(idx+1);pt=setTimeout(nx,6000);}pt=setTimeout(nx,5000);};
+// Helpers
+function cx(frac){return W*frac;}
+function cy(frac){return H*frac;}
+
+function drawDashedCircle(x,y,r,col,lw,dash){
+  ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash(dash||[]);
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+}
+function fillCircle(x,y,r,col){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function strokeCircle(x,y,r,col,lw){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();}
+function drawLine(x1,y1,x2,y2,col,lw,dash){ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);}
+function drawArrow(x1,y1,x2,y2,col,lw){
+  drawLine(x1,y1,x2,y2,col,lw);
+  var a=Math.atan2(y2-y1,x2-x1),hl=10;
+  ctx.fillStyle=col;ctx.beginPath();
+  ctx.moveTo(x2,y2);ctx.lineTo(x2-hl*Math.cos(a-0.35),y2-hl*Math.sin(a-0.35));
+  ctx.lineTo(x2-hl*Math.cos(a+0.35),y2-hl*Math.sin(a+0.35));ctx.fill();
+}
+function label(txt,x,y,col,sz,align){
+  ctx.fillStyle=col;ctx.font="bold "+(sz||14)+"px -apple-system,sans-serif";
+  ctx.textAlign=align||"center";ctx.textBaseline="middle";ctx.fillText(txt,x,y);
+}
+function labelLight(txt,x,y,col,sz,align){
+  ctx.fillStyle=col;ctx.font=(sz||13)+"px -apple-system,sans-serif";
+  ctx.textAlign=align||"center";ctx.textBaseline="middle";ctx.fillText(txt,x,y);
+}
+// Hatching pattern for older hemisphere
+function drawHatchedHalfCircle(cx2,cy2,r,side,col){
+  ctx.save();ctx.beginPath();
+  if(side==="left"){ctx.arc(cx2,cy2,r,-Math.PI/2,Math.PI/2,true);}
+  else{ctx.arc(cx2,cy2,r,-Math.PI/2,Math.PI/2,false);}
+  ctx.closePath();ctx.clip();
+  ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=0.25;
+  var step=8;
+  for(var i=-2*r;i<2*r;i+=step){
+    ctx.beginPath();ctx.moveTo(cx2+i-r,cy2-r);ctx.lineTo(cx2+i+r,cy2+r);ctx.stroke();
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+// Dotted fill for younger hemisphere
+function drawDottedHalfCircle(cx2,cy2,r,side,col){
+  ctx.save();ctx.beginPath();
+  if(side==="right"){ctx.arc(cx2,cy2,r,-Math.PI/2,Math.PI/2,false);}
+  else{ctx.arc(cx2,cy2,r,-Math.PI/2,Math.PI/2,true);}
+  ctx.closePath();ctx.clip();
+  ctx.fillStyle=col;ctx.globalAlpha=0.2;
+  var step=14;
+  for(var dx=-r;dx<r;dx+=step)for(var dy=-r;dy<r;dy+=step){
+    if(dx*dx+dy*dy<r*r){ctx.beginPath();ctx.arc(cx2+dx,cy2+dy,2,0,Math.PI*2);ctx.fill();}
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+
+// =========== STEPS ===========
+
+// S0: The singular origin
+steps.push({badge:"THE ORIGIN",bc:P.red,
+title:"A Single Nucleation Event: The Absolute Cosmic Origin",
+draw:function(){
+  var mx=cx(0.5),my=cy(0.42);
+  // Pulsing rings
+  var nRings=5;
+  for(var i=nRings;i>=0;i--){
+    var r2=20+i*35+Math.sin(t*2+i)*8;
+    var op=0.15-i*0.025;if(op<0.02)op=0.02;
+    ctx.globalAlpha=op;
+    strokeCircle(mx,my,r2,P.red,2);
+  }
+  ctx.globalAlpha=1;
+  // Origin dot
+  var pr=8+3*Math.sin(t*3);
+  fillCircle(mx,my,pr,P.red);
+  fillCircle(mx,my,pr+6,P.red+"33");
+  label("ORIGIN",mx,my-30,P.red,22);
+  label("Single nucleation event",mx,my+35,P.dark,16);
+  label("Not simultaneous. Not multiple bubbles.",mx,cy(0.72),P.dark,16);
+  label("One point. One wavefront.",mx,cy(0.78),P.red,18);
+},
+desc:'<b>The origin.</b> The Big Bang is not a simultaneous global event. It is a <b>single nucleation event</b> at one point. The entire observable universe traces back to this one origin, propagating outward as a crystallization wavefront.',
+eq:''});
+
+// S1: WHY c=3
+steps.push({badge:"WHY c = 3",bc:P.purple,
+title:"The Activation Barrier: 3 Skew-Edge Pairs Must Flip Simultaneously",
+draw:function(){
+  // 2D projection of tetrahedron — use a clear square layout
+  var mx=cx(0.38),my=cy(0.42),sc=Math.min(W,H)*0.22;
+  // Vertices in 2D projection (slightly rotated for visibility)
+  var verts=[
+    [mx-sc*0.8,my-sc*0.7],  // A top-left
+    [mx+sc*0.8,my-sc*0.3],  // B top-right
+    [mx+sc*0.2,my+sc*0.8],  // C bottom-right
+    [mx-sc*0.5,my+sc*0.5],  // D bottom-left
+  ];
+  var vl=["A","B","C","D"];
+  var voff=[[-18,-14],[14,-14],[14,14],[-18,14]];
+
+  // All 6 edges in light grey first
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++){
+    drawLine(verts[i][0],verts[i][1],verts[j][0],verts[j][1],P.lgrey,1.5);
+  }
+
+  // 3 skew-edge pairs — thick, colored, with distinct dash patterns
+  var pairs=[
+    {e1:[0,1],e2:[2,3],col:P.red,    dash:[],     name:"Pair 1: AB ↔ CD",    style:"solid"},
+    {e1:[0,2],e2:[1,3],col:P.blue,   dash:[10,5], name:"Pair 2: AC ↔ BD",    style:"dashed"},
+    {e1:[0,3],e2:[1,2],col:P.green,  dash:[3,5],  name:"Pair 3: AD ↔ BC",    style:"dotted"},
+  ];
+  for(var p2=0;p2<3;p2++){
+    var pp=pairs[p2];
+    ctx.setLineDash(pp.dash);ctx.strokeStyle=pp.col;ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(verts[pp.e1[0]][0],verts[pp.e1[0]][1]);ctx.lineTo(verts[pp.e1[1]][0],verts[pp.e1[1]][1]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(verts[pp.e2[0]][0],verts[pp.e2[0]][1]);ctx.lineTo(verts[pp.e2[1]][0],verts[pp.e2[1]][1]);ctx.stroke();
+    ctx.setLineDash([]);
+    // Crossing symbol where they intersect
+  }
+
+  // Vertices
+  for(var i=0;i<4;i++){
+    fillCircle(verts[i][0],verts[i][1],8,"#444");
+    fillCircle(verts[i][0],verts[i][1],6,"#fff");
+    label(vl[i],verts[i][0]+voff[i][0],verts[i][1]+voff[i][1],P.dark,16);
+  }
+
+  // Legend on the right
+  var lx=cx(0.7),ly=cy(0.22);
+  label("6 edges ÷ 2 = 3 opposite pairs",lx,ly,P.purple,16);
+  label("C(4,2)/2 = 3",lx,ly+24,P.dark,14);
+  for(var p2=0;p2<3;p2++){
+    var pp=pairs[p2];
+    var py=ly+70+p2*50;
+    ctx.strokeStyle=pp.col;ctx.lineWidth=4;ctx.setLineDash(pp.dash);
+    ctx.beginPath();ctx.moveTo(lx-80,py);ctx.lineTo(lx-30,py);ctx.stroke();
+    ctx.setLineDash([]);
+    label(pp.name,lx+30,py,pp.col,14,"left");
+    labelLight("("+pp.style+")",lx+30,py+18,"#888",11,"left");
+  }
+
+  // Bottom: the key physics
+  var by=cy(0.75);
+  label("Each pair = 1 independent bond rearrangement",cx(0.5),by,P.dark,15);
+  label("All 3 must succeed SIMULTANEOUSLY for K=4 → K=12",cx(0.5),by+28,P.dark,15);
+  label("Activation barrier: E_a = c × ε = 3ε",cx(0.5),by+64,P.purple,17);
+  label("At critical temperature k_BT = ε:   p = e⁻³ ≈ 0.0498",cx(0.5),by+92,P.purple,17);
+
+  // Centre crossing number
+  label("c = 3",mx+sc*0.15,my-sc*0.05,P.purple,28);
+},
+desc:'<b>Why c = 3.</b> The K=4 tetrahedron has 6 edges forming exactly <b>3 pairs of opposite (skew) edges</b> sharing no vertices. Each pair is drawn with a distinct line style for accessibility. To convert K=4 → K=12, each pair must be severed and reconnected — <b>all 3 simultaneously</b>. Activation barrier E_a = 3ε. At the critical temperature k_BT = ε, the Arrhenius probability is <b>p = e⁻³ ≈ 0.0498</b>.',
+eq:'6 edges ÷ 2 = 3\nE_a = 3ε\nk_BT = ε\np = e⁻³ ≈ 0.0498'});
+
+// S2: Two speeds — RACE animation
+steps.push({badge:"THE RACE",bc:P.blue,
+title:"Two Speeds: The 2D Causal Front (c) Races Ahead of the 3D Lock-in (c/20)",
+draw:function(){
+  // Animated race — two bars moving right
+  var mx=cx(0.08),my1=cy(0.28),my2=cy(0.48);
+  var trackW=cx(0.82),trackH=24;
+  var progress=(t*0.06)%1; // 0→1
+
+  // Track backgrounds
+  ctx.fillStyle=P.lgrey+"44";
+  ctx.fillRect(mx,my1-trackH/2,trackW,trackH);
+  ctx.fillRect(mx,my2-trackH/2,trackW,trackH);
+
+  // 2D causal front — full speed
+  var pos2D=mx+progress*trackW;
+  ctx.fillStyle=P.blue+"33";ctx.fillRect(mx,my1-trackH/2,pos2D-mx,trackH);
+  ctx.fillStyle=P.blue;ctx.fillRect(pos2D-4,my1-trackH/2-4,8,trackH+8);
+  // Triangle marker
+  ctx.beginPath();ctx.moveTo(pos2D,my1-trackH/2-10);ctx.lineTo(pos2D-6,my1-trackH/2-20);ctx.lineTo(pos2D+6,my1-trackH/2-20);ctx.fill();
+
+  // 3D lock-in — 1/20th speed
+  var p_val=Math.exp(-3);
+  var pos3D=mx+progress*p_val*trackW;
+  // Use hatching pattern
+  ctx.save();
+  ctx.beginPath();ctx.rect(mx,my2-trackH/2,pos3D-mx,trackH);ctx.clip();
+  ctx.fillStyle=P.orange+"33";ctx.fillRect(mx,my2-trackH/2,pos3D-mx,trackH);
+  ctx.strokeStyle=P.orange;ctx.lineWidth=1.5;
+  for(var i=-trackW;i<trackW;i+=6){ctx.beginPath();ctx.moveTo(mx+i,my2-trackH/2);ctx.lineTo(mx+i+trackH,my2+trackH/2);ctx.stroke();}
+  ctx.restore();
+  ctx.fillStyle=P.orange;ctx.fillRect(pos3D-4,my2-trackH/2-4,8,trackH+8);
+  // Square marker
+  ctx.fillRect(pos3D-6,my2-trackH/2-22,12,12);
+
+  // Labels
+  label("▲ 2D Causal Front",mx-4,my1,"#0077BB",15,"left");
+  label("v = c",pos2D+14,my1,P.blue,14,"left");
+  label("■ 3D Crystallization",mx-4,my2,P.orange,15,"left");
+  label("v = p×c ≈ c/20",pos3D+14,my2,P.orange,14,"left");
+
+  // Gap annotation
+  if(progress>0.15){
+    var gapStart=pos3D+8,gapEnd=pos2D-8;
+    if(gapEnd>gapStart+30){
+      drawLine(gapStart,cy(0.38),gapEnd,cy(0.38),"#666",1.5,[4,3]);
+      drawLine(gapStart,cy(0.36),gapStart,cy(0.40),"#666",1.5);
+      drawLine(gapEnd,cy(0.36),gapEnd,cy(0.40),"#666",1.5);
+      label("LAG = p × t",(gapStart+gapEnd)/2,cy(0.35),"#666",13);
+    }
+  }
+
+  // Start/finish labels
+  label("START",mx,cy(0.16),P.dark,13);
+  drawLine(mx,cy(0.19),mx,cy(0.55),"#aaa",1,[3,3]);
+  label("FINISH",mx+trackW,cy(0.16),P.dark,13);
+  drawLine(mx+trackW,cy(0.19),mx+trackW,cy(0.55),"#aaa",1,[3,3]);
+
+  // Explanation
+  label("The ▲ causal front defines the observable horizon (speed = c)",cx(0.5),cy(0.62),P.dark,14);
+  label("The ■ crystallization physically builds the 3D vacuum",cx(0.5),cy(0.68),P.dark,14);
+  label("The gap between them is the age gradient's origin",cx(0.5),cy(0.76),P.purple,15);
+  label("p = e⁻³ ≈ 0.0498   →   3D trails at ~5% of the causal speed",cx(0.5),cy(0.84),P.orange,15);
+
+  // Legend
+  labelLight("▲ triangle = 2D causal front     ■ square = 3D lock-in     ╱╱ hatching = crystallized volume",cx(0.5),cy(0.92),"#888",11);
+},
+desc:'<b>The race.</b> Both fronts start at the origin. The <b>▲ 2D causal front</b> (blue, triangle marker) races ahead at c — this is the speed of light, the maximum signal speed. The <b>■ 3D crystallization</b> (orange, square marker, hatched fill) trails at p×c ≈ c/20. The growing gap between them IS the temporal lag that produces the age gradient. Markers and patterns distinguish the fronts without relying on colour alone.',
+eq:'v_causal = c\nv_crystal = p×c\n\np = e⁻³ ≈ 1/20\n\nLag = p × t\n(grows linearly)'});
+
+// S3: Wavefront crossing observable universe
+steps.push({badge:"THE CROSSING",bc:P.orange,
+title:"The Wavefront Sweeps Across the Observable Universe",
+draw:function(){
+  var ux=cx(0.5),uy=cy(0.42),ur=Math.min(W,H)*0.3;
+  // Observable universe circle
+  strokeCircle(ux,uy,ur,P.dark,2);
+  label("Observable Universe",ux,uy-ur-18,P.dark,14);
+
+  // Animated wavefront line sweeping left→right
+  var sweep=((t*0.08)%1.4)-0.2; // -0.2 to 1.2 for overshoot
+  var wx=ux-ur+sweep*2*ur;
+
+  // Older half (hatched) — left of wavefront
+  ctx.save();
+  ctx.beginPath();ctx.arc(ux,uy,ur-1,0,Math.PI*2);ctx.clip();
+  if(wx>ux-ur){
+    ctx.beginPath();ctx.rect(ux-ur,uy-ur,Math.min(wx-(ux-ur),2*ur),2*ur);ctx.clip();
+    ctx.fillStyle=P.orange+"15";ctx.fillRect(ux-ur,uy-ur,2*ur,2*ur);
+    ctx.strokeStyle=P.orange;ctx.lineWidth=1;ctx.globalAlpha=0.3;
+    for(var i=-2*ur;i<4*ur;i+=7){ctx.beginPath();ctx.moveTo(ux-ur+i,uy-ur);ctx.lineTo(ux-ur+i-2*ur,uy+ur);ctx.stroke();}
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+
+  // Younger half (dotted) — right of wavefront
+  ctx.save();
+  ctx.beginPath();ctx.arc(ux,uy,ur-1,0,Math.PI*2);ctx.clip();
+  if(wx<ux+ur){
+    ctx.beginPath();ctx.rect(Math.max(wx,ux-ur),uy-ur,ux+ur-Math.max(wx,ux-ur),2*ur);ctx.clip();
+    ctx.fillStyle=P.blue+"10";ctx.fillRect(ux-ur,uy-ur,2*ur,2*ur);
+    ctx.fillStyle=P.blue;ctx.globalAlpha=0.15;
+    for(var dx2=-ur;dx2<ur;dx2+=12)for(var dy2=-ur;dy2<ur;dy2+=12){
+      if(dx2*dx2+dy2*dy2<ur*ur){ctx.beginPath();ctx.arc(ux+dx2,uy+dy2,1.5,0,Math.PI*2);ctx.fill();}
+    }
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+
+  // Wavefront line
+  if(wx>ux-ur&&wx<ux+ur){
+    var halfH=Math.sqrt(Math.max(0,ur*ur-(wx-ux)*(wx-ux)));
+    drawLine(wx,uy-halfH,wx,uy+halfH,P.orange,3);
+    label("■ front",wx,uy-halfH-16,P.orange,12);
+  }
+
+  // Origin arrow
+  drawArrow(ux-ur-50,uy,ux-ur-15,uy,P.red,2);
+  label("ORIGIN",ux-ur-70,uy-14,P.red,12);
+
+  // Direction arrow
+  drawArrow(ux-ur*0.3,uy+ur+25,ux+ur*0.3,uy+ur+25,P.orange,2);
+  label("wavefront direction",ux,uy+ur+42,P.orange,12);
+
+  // Hemisphere labels
+  label("╱╱ OLDER",ux-ur*0.5,uy-ur*0.5,P.orange,16);
+  label("crystallized first",ux-ur*0.5,uy-ur*0.5+20,"#666",12);
+  label("·· YOUNGER",ux+ur*0.5,uy-ur*0.5,P.blue,16);
+  label("crystallized last",ux+ur*0.5,uy-ur*0.5+20,"#666",12);
+
+  // Observer at centre
+  fillCircle(ux,uy,5,P.green);strokeCircle(ux,uy,5,P.dark,1.5);
+  label("Observer",ux+4,uy+18,P.green,12,"left");
+  label("(midpoint: 13.80 Gyr)",ux+4,uy+34,"#888",11,"left");
+
+  // Age labels at poles
+  label("14.49 Gyr",ux-ur-8,uy+20,P.orange,14,"right");
+  label("13.11 Gyr",ux+ur+8,uy+20,P.blue,14,"left");
+
+  // Bottom
+  label("Δt = 1.37 Billion Years",cx(0.5),cy(0.82),P.purple,20);
+  labelLight("╱╱ hatching = older (crystallized)     ·· dots = younger (not yet crystallized)",cx(0.5),cy(0.9),"#888",12);
+},
+desc:'<b>The crossing.</b> The crystallization front (orange ■ line) sweeps through the observable universe from left to right. The <b>╱╱ hatched</b> region crystallized first (older, 14.49 Gyr). The <b>·· dotted</b> region crystallized last (younger, 13.11 Gyr). The observer (green ●) sits at the midpoint, averaging to the measured 13.80 Gyr.',
+eq:'t_older = 14.49 Gyr\nt_younger = 13.11 Gyr\nt_avg = 13.80 Gyr\n\nΔt = 1.37 Gyr'});
+
+// S4: Age gradient on sphere cross-section
+steps.push({badge:"AGE GRADIENT",bc:P.purple,
+title:"The Permanent 10% Age Gradient Across the Sky",
+draw:function(){
+  var ux=cx(0.5),uy=cy(0.4),ur=Math.min(W,H)*0.28;
+  // Gradient bar (horizontal, inside the circle)
+  var nSegs=32;
+  for(var i=0;i<nSegs;i++){
+    var frac=i/nSegs;
+    var x0=ux-ur+frac*2*ur,x1=ux-ur+(frac+1/nSegs)*2*ur;
+    // Interpolate orange→purple→blue
+    var r2=Math.floor(238*(1-frac)+0*frac);
+    var g2=Math.floor(119*(1-frac)+119*frac);
+    var b2=Math.floor(51*(1-frac)+187*frac);
+    ctx.fillStyle="rgba("+r2+","+g2+","+b2+",0.2)";
+    ctx.save();ctx.beginPath();ctx.arc(ux,uy,ur,0,Math.PI*2);ctx.clip();
+    ctx.fillRect(x0,uy-ur,x1-x0+1,2*ur);ctx.restore();
+  }
+  strokeCircle(ux,uy,ur,P.dark,2);
+
+  // Gradient arrow
+  drawArrow(ux-ur+10,uy,ux+ur-10,uy,"#666",1.5);
+  label("age gradient",ux,uy+16,"#666",11);
+
+  // Labels at poles
+  label("14.49 Gyr",ux-ur-10,uy,P.orange,15,"right");
+  label("13.11 Gyr",ux+ur+10,uy,P.blue,15,"left");
+  label("13.80",ux,uy-14,P.purple,13);
+
+  // Origin pointer
+  drawArrow(ux-ur-20,uy-40,ux-ur-60,uy-40,P.red,2);
+  label("← toward origin",ux-ur-45,uy-55,P.red,12);
+
+  // The equation — big and central
+  label("Δt / t₀ = 2p = 2e⁻³ ≈ 10%",cx(0.5),cy(0.7),P.purple,22);
+  label("Scale-free. Epoch-independent. Universal.",cx(0.5),cy(0.77),"#666",14);
+
+  // Every observer gets the same amplitude
+  label("Every observer anywhere in the cosmos measures",cx(0.5),cy(0.85),P.dark,14);
+  label("the same 10% gradient — only the direction varies",cx(0.5),cy(0.91),P.dark,14);
+},
+desc:'<b>The age gradient.</b> The observable universe has a smooth, permanent <b>10% age gradient</b> across the sky. From 14.49 Gyr (older, toward origin) to 13.11 Gyr (younger, away from origin). This ratio Δt/t₀ = 2e⁻³ is <b>scale-free and epoch-independent</b> — it was the same at recombination as it is today. Every observer in the cosmos measures the same fractional gradient.',
+eq:'Δt/t₀ = 2p = 2e⁻³\n≈ 0.0996 ≈ 10%\n\nUniversal constant\n(direction varies)'});
+
+// S5: CMB dipole comparison
+steps.push({badge:"CMB MATCH",bc:P.green,
+title:"Predicted vs Observed CMB Hemispherical Asymmetry",
+draw:function(){
+  // Three horizontal bars: ΛCDM, SSM, Observed
+  var bx=cx(0.15),bw=cx(0.7),by0=cy(0.22),bh=36,gap=24;
+  var maxA=0.1; // scale: A=0.1 fills full bar
+
+  // Bar 1: ΛCDM prediction
+  var y1=by0;
+  ctx.fillStyle=P.lgrey+"44";ctx.fillRect(bx,y1,bw,bh);
+  label("ΛCDM predicts:",bx-8,y1+bh/2,"#888",14,"right");
+  label("A = 0.000",bx+20,y1+bh/2,P.red,16,"left");
+  // Red X
+  label("✗ excluded at >3σ",bx+bw-80,y1+bh/2,P.red,13);
+
+  // Bar 2: SSM prediction
+  var y2=by0+bh+gap;
+  ctx.fillStyle=P.lgrey+"44";ctx.fillRect(bx,y2,bw,bh);
+  var ssm_w=bw*(0.049/maxA);
+  ctx.fillStyle=P.purple+"44";ctx.fillRect(bx,y2,ssm_w,bh);
+  // Marker line
+  drawLine(bx+ssm_w,y2-6,bx+ssm_w,y2+bh+6,P.purple,3);
+  label("SSM predicts:",bx-8,y2+bh/2,P.purple,14,"right");
+  label("A = e⁻³ ≈ 0.049",bx+ssm_w+12,y2+bh/2,P.purple,16,"left");
+
+  // Bar 3: Observed
+  var y3=by0+2*(bh+gap);
+  ctx.fillStyle=P.lgrey+"44";ctx.fillRect(bx,y3,bw,bh);
+  var obs_w=bw*(0.066/maxA);
+  var err_w=bw*(0.021/maxA);
+  // Error range
+  ctx.fillStyle=P.green+"22";ctx.fillRect(bx+obs_w-err_w,y3,2*err_w,bh);
+  // Observed line
+  drawLine(bx+obs_w,y3-6,bx+obs_w,y3+bh+6,P.green,3);
+  label("Planck observes:",bx-8,y3+bh/2,P.green,14,"right");
+  label("A = 0.066 ± 0.021",bx+obs_w+12,y3+bh/2,P.green,16,"left");
+  // ±1σ range label
+  labelLight("← 1σ range →",bx+obs_w,y3+bh+16,"#888",11);
+
+  // SSM falls within 1σ annotation
+  drawLine(bx+ssm_w,y2+bh+6,bx+ssm_w,y3-6,P.purple,1.5,[4,3]);
+  label("✓ within 1σ (0.8σ)",bx+ssm_w+60,y2+bh+gap/2+4,P.green,14);
+
+  // Scale bar
+  for(var a2=0;a2<=10;a2++){
+    var sx=bx+bw*(a2/100)/maxA*10;
+    drawLine(sx,y3+bh+30,sx,y3+bh+36,"#aaa",1);
+    if(a2%2===0)labelLight((a2/100).toFixed(2),sx,y3+bh+46,"#aaa",10);
+  }
+  labelLight("Asymmetry amplitude A",bx+bw/2,y3+bh+60,"#888",12);
+
+  // The derivation
+  label("A = ½ × (Δt/t₀) = ½ × 2p = p = e⁻³",cx(0.5),cy(0.78),P.purple,17);
+  labelLight("Via Sachs-Wolfe: perturbation growth ∝ age → amplitude modulation",cx(0.5),cy(0.84),"#666",13);
+
+  // Bottom verdict
+  label("ΛCDM: zero asymmetry → ruled out.   SSM: e⁻³ → confirmed.",cx(0.5),cy(0.92),P.dark,15);
+},
+desc:'<b>CMB match.</b> ΛCDM predicts A = 0 (no asymmetry) — <span style="color:#CC3311;">excluded at >3σ</span>. The SSM predicts A = p = e⁻³ ≈ 0.049, derived from the age gradient via the Sachs-Wolfe effect. Planck observes A = 0.066 ± 0.021. The SSM prediction sits comfortably <span style="color:#228833;">within 1σ</span> (0.8σ tension). The green shaded band shows the ±1σ range.',
+eq:'A_pred = e⁻³ ≈ 0.049\nA_obs = 0.066 ± 0.021\n\nTension: 0.8σ ✓\nΛCDM: >3σ ✗'});
+
+// S6: Co-aligned falsifiable tests
+steps.push({badge:"FALSIFIABLE TESTS",bc:P.teal,
+title:"All Structure Dipoles Must Co-Align Along the Same Axis",
+draw:function(){
+  var mx=cx(0.5),axY=cy(0.15);
+  // The axis arrow
+  drawArrow(cx(0.08),axY,cx(0.92),axY,P.red,2.5);
+  label("THE AXIS: toward cosmic origin",mx,axY-16,P.red,14);
+  label("(l,b) ≈ (221°, −27°)",mx,axY+16,"#888",12);
+
+  // 4 test rows
+  var tests=[
+    {name:"CMB hemispherical asymmetry",data:"A = 0.066 ± 0.021 (Planck 2018)",status:"✓ CONFIRMED",sc:P.green,sym:"●"},
+    {name:"Quasar spectral index dipole",data:"(l,b) ≈ (201°,−29°) — co-aligned (Sinha 2023)",status:"✓ CO-ALIGNED",sc:P.green,sym:"◆"},
+    {name:"Galaxy cluster maturity gradient",data:"Higher masses in older hemisphere at same z",status:"? TESTABLE (Euclid)",sc:P.orange,sym:"▲"},
+    {name:"BAO scale asymmetry (Δr_d ≈ 7 Mpc)",data:"~7σ detection possible with hemispheric split",status:"? TESTABLE (DESI)",sc:P.orange,sym:"■"},
+  ];
+
+  for(var i=0;i<tests.length;i++){
+    var ty=cy(0.28)+i*cy(0.15);
+    var tt=tests[i];
+    // Horizontal band
+    drawLine(cx(0.08),ty,cx(0.92),ty,P.lgrey,1);
+    // Symbol + name
+    label(tt.sym+"  "+tt.name,cx(0.08),ty-12,P.dark,14,"left");
+    // Data
+    labelLight(tt.data,cx(0.12),ty+10,"#666",12,"left");
+    // Status badge
+    ctx.fillStyle=tt.sc+"22";
+    var stW=ctx.measureText(tt.status).width+16;
+    ctx.fillRect(cx(0.92)-stW-4,ty-12,stW+8,24);
+    label(tt.status,cx(0.92)-2,ty,tt.sc,13,"right");
+  }
+
+  // Bottom
+  label("All dipoles must co-align → single wavefront confirmed",cx(0.5),cy(0.85),P.teal,16);
+  label("Any misalignment falsifies the model",cx(0.5),cy(0.92),P.red,15);
+},
+desc:'<b>Falsifiable predictions.</b> If the Big Bang was a single wavefront, then <b>every</b> large-scale structure dipole must align along the same axis. Different symbols (● ◆ ▲ ■) and status badges distinguish each test without relying on colour. Two are already confirmed. Two are testable with current surveys. <b>Any misalignment falsifies the model.</b>',
+eq:'All must co-align:\n● CMB asymmetry ✓\n◆ Quasar index ✓\n▲ Cluster maturity ?\n■ BAO Δr_d ≈ 7 Mpc ?'});
+
+// =========== ENGINE ===========
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+
+function renderStep(i){
+  idx=Math.max(0,Math.min(i,steps.length-1));sli.value=idx;
+  var s=steps[idx];
+  document.getElementById("badge").textContent=s.badge;
+  document.getElementById("badge").style.background=s.bc;
+  document.getElementById("title").textContent=s.title;
+  document.getElementById("desc").innerHTML=s.desc;
+  document.getElementById("eq").innerHTML=(s.eq||'').replace(/\n/g,'<br>');
+  document.getElementById("eq").style.display=s.eq?'block':'none';
+  document.getElementById("fc").textContent=(idx+1)+"/"+steps.length;
+}
+
+(function anim(){
+  requestAnimationFrame(anim);t+=0.016;
+  ctx.clearRect(0,0,W,H);
+  steps[idx].draw();
+})();
+
+function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="▶ Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="⏸ Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx>=steps.length-1){stp();return;}renderStep(idx+1);pt=setTimeout(nx,6000);}pt=setTimeout(nx,5000);};
 window.goS=function(){stp();renderStep(0);};window.goP=function(){stp();renderStep(idx-1);};
 window.goN=function(){stp();renderStep(idx+1);};window.goE=function(){stp();renderStep(steps.length-1);};
 window.goTo=function(v){stp();renderStep(v);};
-window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
 window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
 renderStep(0);
 })();
