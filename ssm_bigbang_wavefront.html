@@ -42,7 +42,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 <button class="btn" onclick="goN()">▶</button>
 <button class="btn" onclick="goE()">⏭</button>
 <div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
-<span id="fc">1/6</span>
+<span id="fc">1/7</span>
 <button class="btn on" id="br" onclick="togR()">Rot</button>
 </div>
 </div>
@@ -108,7 +108,90 @@ build:function(g){
 desc:'<b>The origin.</b> In the SSM, the Big Bang is not a simultaneous global event. It is a <b>single nucleation event</b> at one point. The entire observable universe traces back to this one origin, propagating outward as a crystallization wavefront.',
 eq:''});
 
-// S1: Two speeds — 2D causal front vs 3D lock-in
+// S1: WHY c=3 — the tetrahedral activation barrier
+(function(){
+// Regular tetrahedron vertices centred at origin
+var ts=1.8, tsc=ts/(2*Math.sqrt(2));
+var TV=[[tsc,tsc,tsc],[tsc,-tsc,-tsc],[-tsc,tsc,-tsc],[-tsc,-tsc,tsc]];
+var labels=["A","B","C","D"];
+// 3 skew-edge pairs
+var skewPairs=[
+  {e1:[0,1],e2:[2,3],col:0xCC3311,name:"Pair 1: AB / CD"},
+  {e1:[0,2],e2:[1,3],col:0x0077BB,name:"Pair 2: AC / BD"},
+  {e1:[0,3],e2:[1,2],col:0x22AA44,name:"Pair 3: AD / BC"}
+];
+var skewColHex=["#CC3311","#0077BB","#22AA44"];
+
+steps.push({cam:[0,0.5,9],bg:0xffffff,badge:"WHY c = 3",bc:"#AA3377",
+title:"The Activation Barrier: 3 Skew-Edge Pairs Must Flip Simultaneously",
+build:function(g){
+  // Draw tetrahedron vertices
+  for(var i=0;i<4;i++){
+    mS(g,TV[i],0.14,CL.gy,0.7);
+    var off=[[0.4,0.35,0],[0.4,-0.35,0],[-0.45,0.35,0],[-0.45,-0.35,0]];
+    mL(g,labels[i],[TV[i][0]+off[i][0],TV[i][1]+off[i][1],TV[i][2]+off[i][2]],"#666666",20);
+  }
+
+  // Draw all 6 edges faint first
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++){
+    var a2=TV[i],b2=TV[j];
+    var geo=new THREE.CylinderGeometry(0.015,0.015,
+      Math.sqrt((b2[0]-a2[0])*(b2[0]-a2[0])+(b2[1]-a2[1])*(b2[1]-a2[1])+(b2[2]-a2[2])*(b2[2]-a2[2])),5);
+    var mat=new THREE.MeshPhongMaterial({color:CL.lgy,transparent:true,opacity:0.15});
+    var mesh=new THREE.Mesh(geo,mat);
+    var mid=new THREE.Vector3((a2[0]+b2[0])/2,(a2[1]+b2[1])/2,(a2[2]+b2[2])/2);
+    mesh.position.copy(mid);
+    var dir=new THREE.Vector3(b2[0]-a2[0],b2[1]-a2[1],b2[2]-a2[2]).normalize();
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+    g.add(mesh);
+  }
+
+  // Draw 3 skew-edge pairs as thick coloured pipes
+  for(var p2=0;p2<3;p2++){
+    var sp=skewPairs[p2];
+    var e1a=TV[sp.e1[0]],e1b=TV[sp.e1[1]];
+    var e2a=TV[sp.e2[0]],e2b=TV[sp.e2[1]];
+    // Edge 1
+    var l1=Math.sqrt((e1b[0]-e1a[0])*(e1b[0]-e1a[0])+(e1b[1]-e1a[1])*(e1b[1]-e1a[1])+(e1b[2]-e1a[2])*(e1b[2]-e1a[2]));
+    var g1=new THREE.CylinderGeometry(0.055,0.055,l1,6);
+    var m1=new THREE.MeshPhongMaterial({color:sp.col,transparent:true,opacity:0.85});
+    var s1=new THREE.Mesh(g1,m1);
+    s1.position.set((e1a[0]+e1b[0])/2,(e1a[1]+e1b[1])/2,(e1a[2]+e1b[2])/2);
+    s1.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(e1b[0]-e1a[0],e1b[1]-e1a[1],e1b[2]-e1a[2]).normalize());
+    g.add(s1);
+    // Edge 2
+    var l2=Math.sqrt((e2b[0]-e2a[0])*(e2b[0]-e2a[0])+(e2b[1]-e2a[1])*(e2b[1]-e2a[1])+(e2b[2]-e2a[2])*(e2b[2]-e2a[2]));
+    var g2b=new THREE.CylinderGeometry(0.055,0.055,l2,6);
+    var m2b=new THREE.MeshPhongMaterial({color:sp.col,transparent:true,opacity:0.85});
+    var s2b=new THREE.Mesh(g2b,m2b);
+    s2b.position.set((e2a[0]+e2b[0])/2,(e2a[1]+e2b[1])/2,(e2a[2]+e2b[2])/2);
+    s2b.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(e2b[0]-e2a[0],e2b[1]-e2a[1],e2b[2]-e2a[2]).normalize());
+    g.add(s2b);
+  }
+
+  // Pair labels on right side
+  for(var p2=0;p2<3;p2++){
+    mL(g,skewPairs[p2].name,[2.8,1.0-p2*0.8,0],skewColHex[p2],18);
+    mL(g,"= 1 bond to flip",[2.8,0.6-p2*0.8,0],"#888888",14);
+  }
+
+  // Title and explanation labels
+  mL(g,"6 edges \u00F7 2 = 3 opposite pairs",[0,3.0,0],"#AA3377",24);
+  mL(g,"Each pair = 1 independent topological crossing",[0,2.5,0],"#666666",18);
+  mL(g,"All 3 must flip SIMULTANEOUSLY for K=4 \u2192 K=12",[0,-2.4,0],"#333333",20);
+
+  // The barrier equation
+  mL(g,"E_a = c \u00D7 \u03B5 = 3\u03B5",[0,-3.0,0],"#AA3377",26);
+  mL(g,"p = e\u207B\u00B3 \u2248 0.0498",[0,-3.5,0],"#AA3377",24);
+
+  // Crossing symbol at centre
+  mL(g,"c = 3",[0,0,0],"#AA3377",36);
+},
+desc:'<b>Why c = 3.</b> The K=4 tetrahedron has 6 edges forming exactly <b>3 pairs of opposite (skew) edges</b> sharing no vertices. <span class="cr">Red</span>: AB/CD. <span class="cb">Blue</span>: AC/BD. <span class="cg">Green</span>: AD/BC. To convert K=4 \u2192 K=12, each skew pair must be severed and reconnected \u2014 <b>all 3 simultaneously</b>. This gives an activation barrier E_a = 3\u03B5. At the critical temperature (k\u2082T = \u03B5), the Arrhenius probability is p = e\u207B\u00B3. This is not a parameter \u2014 it is the combinatorics of a tetrahedron.',
+eq:'6 edges \u00F7 2 = 3 pairs\n(C(4,2)/2 = 3)\n\nE_a = 3\u03B5\nk\u2082T_reheat = \u03B5\n\np = e\u207B\u00B3 \u2248 0.0498'});
+})();
+
+// S2: Two speeds — 2D causal front vs 3D lock-in
 steps.push({cam:[0,0,14],bg:0xffffff,badge:"TWO SPEEDS",bc:"#0077BB",
 title:"Two Fronts: 2D Causal Boundary (v = c) vs 3D Crystallization (v = pc)",
 build:function(g){
