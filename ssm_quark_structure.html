@@ -74,7 +74,7 @@ window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clien
 var C={b:0x0077BB,or:0xEE7733,tl:0x009988,rd:0xCC3311,gn:0x22AA44,wn:0xAA3377,gy:0x999999,lgy:0xcccccc,yl:0xEECC00};
 function mS(g,p,r,c,op){var geo=new THREE.SphereGeometry(r,16,16);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.set(p[0],p[1],p[2]);g.add(s);return s;}
 function mC(g,a,b,r,c,op){var d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]);var l=d.length();if(l<0.01)return;var mid=new THREE.Vector3((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);var geo=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(s);}
-function mL(g,t,p,c,sz){var cv2=document.createElement("canvas");cv2.width=640;cv2.height=96;var ctx=cv2.getContext("2d");ctx.font="bold "+(sz||32)+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,320,48);var tx=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(sz?sz*0.055:1.8,sz?sz*0.009:0.28,1);g.add(s);return s;}
+function mL(g,t,p,c,sz){var cv2=document.createElement("canvas");cv2.width=1024;cv2.height=128;var ctx=cv2.getContext("2d");ctx.font="bold "+(sz||32)+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,512,64);var tx=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(sz?sz*0.095:3.0,sz?sz*0.016:0.48,1);g.add(s);return s;}
 function mTri(g,v1,v2,v3,c,op){var geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1[0],v1[1],v1[2],v2[0],v2[1],v2[2],v3[0],v3[1],v3[2]]),3));geo.computeVertexNormals();g.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide})));}
 
 // === CUBOCTAHEDRON (K=12) ===
@@ -365,6 +365,97 @@ build:function(g){
 },
 desc:'<b>The proton mass.</b> 13 structural nodes \u00D7 144 disrupted second-neighbours, minus 3 skew crossings \u00D7 12 shared bonds. Every number traces to the tetrahedral void inside the K=12 cuboctahedron. No fitting, no free parameters.',
 eq:'<b style="color:#996600;font-size:16px;">1836 m<sub>e</sub></b>\n\nObserved: 1836.153\n0.008% match'});
+
+// S10: TORSIONAL DEFICIT — the 4+8 bond split and exposed torsional channels
+steps.push({cam:[RTVctr[0],RTVctr[1]+0.5,RTVctr[2]+7],bg:0xffffff,badge:"TORSIONAL DEFICIT",bc:"#EE7733",
+title:"\u0394S_tors = 8: All Torsional Channels Exposed to the Bulk",
+build:function(g){
+  // Show bounding vertices
+  for(var i=0;i<4;i++)mS(g,RTV[i],0.18,C.tl,0.7);
+  // Extra node at centre
+  mS(g,RTVctr,0.22,C.rd,0.9);
+  // 4 internal bonds (translational — blue, thick)
+  for(var i=0;i<4;i++){
+    var geo=new THREE.CylinderGeometry(0.055,0.055,
+      Math.sqrt(Math.pow(RTV[i][0]-RTVctr[0],2)+Math.pow(RTV[i][1]-RTVctr[1],2)+Math.pow(RTV[i][2]-RTVctr[2],2)),6);
+    var mat=new THREE.MeshPhongMaterial({color:C.b,transparent:true,opacity:0.85});
+    var m=new THREE.Mesh(geo,mat);
+    m.position.set((RTV[i][0]+RTVctr[0])/2,(RTV[i][1]+RTVctr[1])/2,(RTV[i][2]+RTVctr[2])/2);
+    var dir=new THREE.Vector3(RTV[i][0]-RTVctr[0],RTV[i][1]-RTVctr[1],RTV[i][2]-RTVctr[2]).normalize();
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+    g.add(m);
+  }
+  // For each bounding vertex, show 8 outward torsional stubs (orange)
+  for(var i=0;i<4;i++){
+    var vx=RTV[i][0],vy=RTV[i][1],vz=RTV[i][2];
+    // 8 random-ish outward directions (representing the 8 torsional bonds)
+    var dirs=[];
+    for(var a=0;a<8;a++){
+      var th=a*Math.PI*2/8,ph=0.6+0.5*Math.sin(a*1.7+i);
+      dirs.push([Math.sin(ph)*Math.cos(th),Math.sin(ph)*Math.sin(th),Math.cos(ph)]);
+    }
+    for(var a=0;a<8;a++){
+      var d=dirs[a],len=0.55;
+      var ex=vx+d[0]*len,ey=vy+d[1]*len,ez=vz+d[2]*len;
+      var geo2=new THREE.CylinderGeometry(0.025,0.025,len,4);
+      var mat2=new THREE.MeshPhongMaterial({color:C.or,transparent:true,opacity:0.7});
+      var m2=new THREE.Mesh(geo2,mat2);
+      m2.position.set((vx+ex)/2,(vy+ey)/2,(vz+ez)/2);
+      var dir2=new THREE.Vector3(d[0],d[1],d[2]);
+      m2.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir2);
+      g.add(m2);
+      // Tip sphere
+      mS(g,[ex,ey,ez],0.04,C.or,0.5);
+    }
+  }
+  // Labels
+  mL(g,"4 internal bonds",[RTVctr[0]-1.5,RTVctr[1]+2.5,RTVctr[2]],"#0077BB",22);
+  mL(g,"(translational = visible)",[RTVctr[0]-1.5,RTVctr[1]+2.1,RTVctr[2]],"#0077BB",18);
+  mL(g,"8 \u00D7 4 = 32 exposed torsional bonds",[RTVctr[0]+1.5,RTVctr[1]+2.5,RTVctr[2]],"#EE7733",22);
+  mL(g,"(per vertex: \u0394S_tors = 8)",[RTVctr[0]+1.5,RTVctr[1]+2.1,RTVctr[2]],"#EE7733",18);
+  mL(g,"\u0394S_tors = 8 \u2192 torsional monopole source",[RTVctr[0],RTVctr[1]-2.5,RTVctr[2]],"#CC3311",24);
+  mL(g,"This strain IS dark matter",[RTVctr[0],RTVctr[1]-3.0,RTVctr[2]],"#CC3311",22);
+},
+desc:'<b>The torsional deficit.</b> The 4 internal bonds (blue) are all <b>translational</b> \u2014 they form the rigid tetrahedral frame. Each bounding vertex has K=12 total bonds, 4 internal, leaving <b>8 torsional bonds exposed</b> (orange stubs) to the bulk. This \u0394S_tors = 8 deficit creates a <b>torsional monopole</b> \u2014 a source of rotational strain that propagates outward as the dark matter halo.',
+eq:'K = S_trans + S_tors\n12 = 4 + 8\n\nInternal: 4 translational\nExposed: 8 torsional\n\n\u0394S_tors = 8 per vertex'});
+
+// S11: DARK MATTER HALO — zoomed out, 1/r² strain rings
+steps.push({cam:[0,0,18],bg:0xfafafa,badge:"DARK MATTER HALO",bc:"#332288",
+title:"The 1/r\u00B2 Torsional Strain Field = Dark Matter Halo",
+build:function(g){
+  // Central defect (small red dot)
+  mS(g,[0,0,0],0.2,C.rd,1);
+  mL(g,"Baryon",[0,0.6,0],"#CC3311",20);
+  // Expanding torsional strain rings (orange, fading with radius)
+  for(var i=1;i<=7;i++){
+    var r=i*0.9;
+    var geo=new THREE.TorusGeometry(r,0.03,8,48);
+    var op=0.5/i;
+    var mat=new THREE.MeshBasicMaterial({color:C.or,transparent:true,opacity:op});
+    var torus=new THREE.Mesh(geo,mat);
+    g.add(torus);
+    // Also XZ plane
+    var torus2=new THREE.Mesh(geo.clone(),new THREE.MeshBasicMaterial({color:C.or,transparent:true,opacity:op}));
+    torus2.rotation.x=Math.PI/2;
+    g.add(torus2);
+  }
+  // 1/r² labels at different radii
+  mL(g,"\u03B5 = \u03BCb\u00B2 / (8\u03C0\u00B2r\u00B2)",[3.5,3.5,0],"#EE7733",24);
+  mL(g,"\u221D 1/r\u00B2",[3.5,2.9,0],"#EE7733",28);
+  // Result chain
+  mL(g,"\u03C1 \u221D 1/r\u00B2  \u2192  M(r) \u221D r  \u2192  v = const",[-1,-3.5,0],"#333333",22);
+  mL(g,"Flat rotation curves without dark matter particles",[-1,-4.2,0],"#332288",22);
+  // Rotation curve comparison
+  mL(g,"v(r)",[-5,2.5,0],"#333333",20);
+  // Flat line
+  mL(g,"\u2014\u2014\u2014 SSM: flat",[5.5,1.5,0],"#22AA44",18);
+  mL(g,"\u00B7\u00B7\u00B7\u00B7\u00B7 Kepler: \u221D 1/\u221Ar",[5.5,0.8,0],"#AA3377",18);
+  // Key predictions
+  mL(g,"v\u2074 = G\u00B7a\u2080\u00B7M_b  (Tully-Fisher)",[0,-5.2,0],"#0077BB",22);
+  mL(g,"a\u2080 = cH\u2080/2\u03C0 \u2248 1.1 \u00D7 10\u207B\u00B9\u2070 m/s\u00B2",[0,-5.9,0],"#009988",22);
+},
+desc:'<b>The dark matter halo.</b> The \u0394S_tors = 8 torsional monopole radiates a strain field \u03B5 \u221D 1/r\u00B2 (Volterra screw dislocation). Superposing N randomly-oriented baryonic dislocations gives a spherical halo \u03C1 \u221D 1/r\u00B2. Stochastic \u221AN chiral cancellation yields the <b>Tully-Fisher relation v\u2074 = Ga\u2080M_b</b>. The acceleration scale <b>a\u2080 = cH\u2080/2\u03C0 \u2248 1.1 \u00D7 10\u207B\u00B9\u2070 m/s\u00B2</b> (observed: 1.2 \u00D7 10\u207B\u00B9\u2070). Zero free parameters.',
+eq:'\u03B5 \u221D 1/r\u00B2 (Volterra)\n\u03C1_halo \u221D 1/r\u00B2\nM(r) \u221D r\nv = const\n\nv\u2074 = Ga\u2080M_b\na\u2080 = cH\u2080/2\u03C0'});
 
 // RENDER ENGINE
 var idx=0,playing=false,pt=null;
