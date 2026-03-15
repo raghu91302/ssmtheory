@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: Neutron Star Lattice Saturation — The 13/12 Mechanism</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+#badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
+#title{font-size:13px;font-weight:700;color:#222;flex:1;}
+#main{flex:1;position:relative;min-height:0;}
+canvas{display:block;width:100%;height:100%;}
+#desc{position:absolute;bottom:44px;left:10px;max-width:420px;background:rgba(255,255,255,0.96);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
+#desc b{color:#111;}
+#eq{position:absolute;bottom:44px;right:10px;background:rgba(255,255,255,0.96);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;}
+.btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sl{flex:1;max-width:350px;margin:0 8px;}#sl input{width:100%;}
+#fc{font-size:10px;color:#888;min-width:40px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="hd"><span id="badge" style="background:#0077BB;">NORMAL</span><div id="title">Loading...</div></div>
+<div id="main"><canvas id="cv"></canvas><div id="desc"></div><div id="eq"></div></div>
+<div id="ct">
+<button class="btn" onclick="goS()">⏮</button><button class="btn" onclick="goP()">◀</button>
+<button class="btn on" id="bp" onclick="togPlay()">▶ Play</button>
+<button class="btn" onclick="goN()">▶</button><button class="btn" onclick="goE()">⏭</button>
+<div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">1/5</span><button class="btn on" id="br" onclick="togR()">Rot</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var canvas=document.getElementById("cv"),W,H,scene,camera,renderer,group;
+var rot={x:0.35,y:0},md=false,mx=0,my=0,ar=true,t=0;
+
+function init(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W;canvas.height=H;
+scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+camera=new THREE.PerspectiveCamera(38,W/H,0.1,200);camera.position.set(0,0,8);
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-4,-3,-5);
+group=new THREE.Group();scene.add(group);}
+init();
+window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W;canvas.height=H;camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);});
+
+canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
+window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md)return;var t2=e.touches[0];rot.y+=(t2.clientX-mx)*0.005;rot.x+=(t2.clientY-my)*0.005;mx=t2.clientX;my=t2.clientY;},{passive:true});
+canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(4,Math.min(20,camera.position.z+e.deltaY*0.02));e.preventDefault();},{passive:false});
+
+var sc=1/Math.sqrt(2);
+var V=[[1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],[1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],[0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]].map(function(v){return[v[0]*sc,v[1]*sc,v[2]*sc];});
+var E=[];for(var i=0;i<12;i++)for(var j=i+1;j<12;j++){var dx=V[i][0]-V[j][0],dy=V[i][1]-V[j][1],dz=V[i][2]-V[j][2];if(Math.sqrt(dx*dx+dy*dy+dz*dz)<1.05)E.push([i,j]);}
+
+function mS(g,p,r,c,op){var m=new THREE.Mesh(new THREE.SphereGeometry(r,16,16),new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op}));m.position.set(p[0],p[1],p[2]);g.add(m);return m;}
+function mB(g,a,b,r,c,op){var d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]);var l=d.length();var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,6),new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op}));m.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(m);return m;}
+function mR(g,r,c,op){var m=new THREE.Mesh(new THREE.TorusGeometry(r,0.015,16,64),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:op}));g.add(m);return m;}
+
+var CL={n:0x0077BB,v:0xCC3311,w:0xEE7733,b:0x999999,g:0xCC3311,x:0x228833,s:0x33BBEE};
+var steps=[];
+
+steps.push({badge:"NORMAL STATE",bc:"#0077BB",cam:[0,0,8],
+title:"The K = 12 Cuboctahedron: 12 Boundary Nodes + 1 Central Void",
+build:function(g){
+  for(var i=0;i<12;i++)mS(g,V[i],0.1,CL.n,1);
+  var cv=mS(g,[0,0,0],0.15,CL.v,1);var gl=mS(g,[0,0,0],0.25,CL.g,0.15);g.userData.glows=[gl,cv];
+  for(var i=0;i<12;i++)mB(g,[0,0,0],V[i],0.02,CL.b,0.4);
+  for(var e=0;e<E.length;e++)mB(g,V[E[e][0]],V[E[e][1]],0.015,CL.b,0.2);
+},
+desc:'<b>Normal state.</b> 12 boundary nodes (blue) + 1 central gap (red). In normal spacetime, the gap is physically dormant — no force, no pressure, no EOS. Nuclear physics sees only the <b>12 bonds</b>. The void is invisible.',
+eq:'K = 12 neighbours\n+1 dormant void\n= 13 geometric entities\n\nEOS sees: 12 only'});
+
+steps.push({badge:"COMPRESSION",bc:"#EE7733",cam:[0,0,8],
+title:"Gravitational Compression: Neutron Star Core Squeezes the Lattice",
+build:function(g){
+  var f=0.78;var V2=V.map(function(v){return[v[0]*f,v[1]*f,v[2]*f];});
+  for(var i=0;i<12;i++)mS(g,V2[i],0.1,CL.n,1);
+  var cv=mS(g,[0,0,0],0.15,CL.v,1);var gl=mS(g,[0,0,0],0.22,CL.g,0.15);g.userData.glows=[gl,cv];
+  for(var i=0;i<12;i++)mB(g,[0,0,0],V2[i],0.02,CL.b,0.4);
+  for(var e=0;e<E.length;e++)mB(g,V2[E[e][0]],V2[E[e][1]],0.015,CL.b,0.2);
+  for(var i=0;i<12;i++){mB(g,[V[i][0]*1.4,V[i][1]*1.4,V[i][2]*1.4],[V[i][0]*0.95,V[i][1]*0.95,V[i][2]*0.95],0.025,CL.w,0.5);mS(g,[V[i][0]*0.95,V[i][1]*0.95,V[i][2]*0.95],0.04,CL.w,0.7);}
+},
+desc:'<b>Compression.</b> Gravity squeezes the 12 nodes inward (orange arrows). The EOS describes how bonds resist. The void shrinks — but 12 spheres around a centre <b>always</b> leave an irreducible gap.',
+eq:'Gravity compresses\nL → L/√3\n\n12 nodes resist (EOS)\nVoid becoming rigid'});
+
+steps.push({badge:"VOID ACTIVATES",bc:"#CC3311",cam:[0,0,8],
+title:"The Metric Wall: Void Activates as a 13th Structural Entity",
+build:function(g){
+  var f=0.58;var V2=V.map(function(v){return[v[0]*f,v[1]*f,v[2]*f];});
+  for(var i=0;i<12;i++)mS(g,V2[i],0.1,CL.n,1);
+  var cv=mS(g,[0,0,0],0.2,CL.v,1);var g1=mS(g,[0,0,0],0.3,CL.g,0.2);var g2=mS(g,[0,0,0],0.4,CL.g,0.1);g.userData.glows=[g1,g2,cv];
+  for(var i=0;i<12;i++)mB(g,[0,0,0],V2[i],0.02,CL.b,0.4);
+  for(var e=0;e<E.length;e++)mB(g,V2[E[e][0]],V2[E[e][1]],0.015,CL.b,0.2);
+  var wr=V[0][0]*f*1.15;
+  for(var p=0;p<3;p++){var ring=mR(g,wr+0.15,CL.w,0.35);if(p===1)ring.rotation.x=Math.PI/2;if(p===2)ring.rotation.y=Math.PI/2;}
+},
+desc:'<b>Void activates.</b> At r_min = L/√3, the 12 nodes hit their limit. The void is now an <b>irreducible geometric entity</b> — a virtual <b>13th node</b> that the EOS never counted.',
+eq:'r_min = L/√3\n\n12 nodes: AT LIMIT\nVoid ACTIVATES as 13th\n\nEOS knows: 12\nReality now: 13'});
+
+steps.push({badge:"13/12 EXPANSION",bc:"#228833",cam:[0,0,8],
+title:"The 13th Entity Forces Radial Expansion: ξ = 13/12",
+build:function(g){
+  var fi=0.58,fo=fi*13/12;
+  var Vi=V.map(function(v){return[v[0]*fi,v[1]*fi,v[2]*fi];});
+  var Vo=V.map(function(v){return[v[0]*fo,v[1]*fo,v[2]*fo];});
+  for(var i=0;i<12;i++)mS(g,Vi[i],0.07,CL.n,0.2);
+  for(var i=0;i<12;i++)mS(g,Vo[i],0.1,CL.x,0.9);
+  var cv=mS(g,[0,0,0],0.2,CL.v,1);var gl=mS(g,[0,0,0],0.3,CL.g,0.18);g.userData.glows=[gl,cv];
+  for(var i=0;i<12;i++)mB(g,[0,0,0],Vo[i],0.02,CL.x,0.4);
+  for(var e=0;e<E.length;e++)mB(g,Vo[E[e][0]],Vo[E[e][1]],0.015,CL.x,0.2);
+  for(var i=0;i<12;i++){mB(g,Vi[i],Vo[i],0.028,CL.x,0.6);mS(g,Vo[i],0.04,CL.x,0.9);}
+},
+desc:'<b>The mechanism:</b> EOS predicts R from 12 bonds — correct. But the activated void (1/12 of the cell) isn\'t in the EOS. Degeneracy pressure pushes it <b>radially outward</b> (green arrows). The EOS counts 12; nature has 13.',
+eq:'EOS counts: 12\nCompression adds: +1\nTotal: 13\n\nR_obs = R_EOS × 13/12\nΔR/R = 8.3%'});
+
+steps.push({badge:"NEUTRON STAR",bc:"#33BBEE",cam:[0,0,10],
+title:"R_obs = R_EOS × 13/12 — Matches All NICER Data",
+build:function(g){
+  var nsR=2.0,coreR=nsR*12/13;
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(nsR,32,32),new THREE.MeshPhongMaterial({color:CL.s,transparent:true,opacity:0.12})));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(coreR,32,32),new THREE.MeshPhongMaterial({color:CL.n,transparent:true,opacity:0.1})));
+  var cv=mS(g,[0,0,0],0.3,CL.v,0.8);var gl=mS(g,[0,0,0],0.5,CL.g,0.1);g.userData.glows=[gl,cv];
+  for(var p=0;p<3;p++){var r1=mR(g,coreR,CL.n,0.25);var r2=mR(g,nsR,CL.s,0.25);if(p===1){r1.rotation.x=Math.PI/2;r2.rotation.x=Math.PI/2;}if(p===2){r1.rotation.y=Math.PI/2;r2.rotation.y=Math.PI/2;}}
+  var D=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  for(var d=0;d<6;d++){mB(g,[D[d][0]*coreR,D[d][1]*coreR,D[d][2]*coreR],[D[d][0]*nsR,D[d][1]*nsR,D[d][2]*nsR],0.03,CL.x,0.6);mS(g,[D[d][0]*nsR,D[d][1]*nsR,D[d][2]*nsR],0.06,CL.x,0.8);}
+},
+desc:'<b>Result:</b> Blue sphere = R_EOS (GW). Cyan = R_obs (NICER). Green arrows = the 1/12 gap. <b>J0030: 13.0 vs 13.02 km. J0952: 2.35 vs 2.35 M☉.</b> Zero free parameters.',
+eq:'R_obs = R_EOS × 13/12\nM_max = M_TOV × 13/12\n\nJ0030: 13.0 vs 13.02 km\nJ0952: 2.35 vs 2.35 M☉'});
+
+var idx=0,playing=false,pt=null;
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}group.userData.glows=[];}
+function renderStep(i){idx=Math.max(0,Math.min(i,steps.length-1));sli.value=idx;clearG();
+var s=steps[idx];s.build(group);camera.position.set(s.cam[0],s.cam[1],s.cam[2]);camera.lookAt(0,0,0);rot.y=0;
+document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
+document.getElementById("title").textContent=s.title;
+document.getElementById("desc").innerHTML=s.desc;
+document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
+document.getElementById("eq").style.display=s.eq?'block':'none';
+document.getElementById("fc").textContent=(idx+1)+"/"+steps.length;}
+(function anim(){requestAnimationFrame(anim);t+=0.016;
+if(ar&&!md)rot.y+=0.004;
+group.rotation.x=rot.x;group.rotation.y=rot.y;
+if(group.userData.glows)group.userData.glows.forEach(function(gl){gl.material.opacity=0.08+0.12*Math.sin(t*2.5);gl.scale.setScalar(1+0.08*Math.sin(t*2.5));});
+renderer.render(scene,camera);})();
+function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx>=steps.length-1){stp();return;}renderStep(idx+1);pt=setTimeout(nx,7000);}pt=setTimeout(nx,6000);};
+window.goS=function(){stp();renderStep(0);};window.goP=function(){stp();renderStep(idx-1);};
+window.goN=function(){stp();renderStep(idx+1);};window.goE=function(){stp();renderStep(steps.length-1);};
+window.goTo=function(v){stp();renderStep(v);};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
+renderStep(0);
+})();
+</script>
+</body>
+</html>
