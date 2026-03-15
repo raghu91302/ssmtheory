@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: Holographic Projection — 2D Sheets to 3D Bulk</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+#badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
+#title{font-size:13px;font-weight:700;color:#222;flex:1;}
+#desc{position:absolute;bottom:46px;left:10px;max-width:420px;background:rgba(255,255,255,0.96);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
+#desc b{color:#111;}
+#eq{position:absolute;bottom:46px;right:10px;background:rgba(255,255,255,0.96);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sl{flex:1;max-width:350px;margin:0 8px;}
+#sl input{width:100%;}
+#fc{font-size:10px;color:#888;min-width:40px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="hd">
+<span id="badge" style="background:#0077BB;">SHEET A</span>
+<div id="title">Loading...</div>
+</div>
+<div style="flex:1;position:relative;min-height:0;">
+<canvas id="cv"></canvas>
+<div id="desc"></div><div id="eq"></div>
+</div>
+<div id="ct">
+<button class="btn" onclick="goS()">⏮</button>
+<button class="btn" onclick="goP()">◀</button>
+<button class="btn on" id="bp" onclick="togPlay()">▶ Play</button>
+<button class="btn" onclick="goN()">▶</button>
+<button class="btn" onclick="goE()">⏭</button>
+<div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">1/5</span>
+<button class="btn on" id="br" onclick="togR()">Rot</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var canvas=document.getElementById("cv");
+var W,H,scene,camera,renderer,group;
+var rot={x:0.45,y:0},md=false,mx=0,my=0,ar=true;
+function init(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W;canvas.height=H;
+scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+camera=new THREE.PerspectiveCamera(40,W/H,0.1,300);
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-4,-3,-5);
+group=new THREE.Group();scene.add(group);}
+init();
+canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
+window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md)return;var t2=e.touches[0];rot.y+=(t2.clientX-mx)*0.005;rot.x+=(t2.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=t2.clientX;my=t2.clientY;},{passive:true});
+canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(4,Math.min(35,camera.position.z+e.deltaY*0.03));e.preventDefault();},{passive:false});
+window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W;canvas.height=H;camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);});
+
+var CL={A:0x0077BB,B:0xCC3311,C:0x228833,bond:0xBBBBBB,cubo:0xEE7733};
+var h=Math.sqrt(2/3);
+var nx=7,ny=6,sp=1.0;
+
+function hexGrid(offx,offz,yval){
+  var pts=[];
+  for(var r=0;r<ny;r++)for(var c=0;c<nx;c++){
+    var x=offx+(c+(r%2)*0.5)*sp;
+    var z=offz+r*sp*0.866;
+    pts.push(new THREE.Vector3(x,yval,z));
+  }
+  return pts;
+}
+var ptsA=hexGrid(0,0,0);
+var ptsB=hexGrid(0.5,0.289,h);
+var ptsC=hexGrid(0,0.577,2*h);
+var cenX=nx*sp*0.5,cenZ=ny*sp*0.433,cenY=h;
+
+function mS(g,v,r,c,op){var geo=new THREE.SphereGeometry(r,10,10);var mat=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,mat);s.position.copy(v);g.add(s);return s;}
+function mB(g,a,b,r,c,op){var d=new THREE.Vector3().subVectors(b,a);var l=d.length();var mid=new THREE.Vector3().addVectors(a,b).multiplyScalar(0.5);var geo=new THREE.CylinderGeometry(r,r,l,5);var mat=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var m=new THREE.Mesh(geo,mat);m.position.copy(mid);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(m);}
+function mPlane(g,pts,c,op){var xs=pts.map(function(p){return p.x;}),zs=pts.map(function(p){return p.z;});var xmn=Math.min.apply(null,xs)-0.4,xmx=Math.max.apply(null,xs)+0.4,zmn=Math.min.apply(null,zs)-0.4,zmx=Math.max.apply(null,zs)+0.4;var y=pts[0].y;var geo=new THREE.PlaneGeometry(xmx-xmn,zmx-zmn);var mat=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide});var m=new THREE.Mesh(geo,mat);m.rotation.x=-Math.PI/2;m.position.set((xmn+xmx)/2,y,(zmn+zmx)/2);g.add(m);}
+function addHex(g,pts,col,op){for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){if(pts[i].distanceTo(pts[j])<sp*1.15)mB(g,pts[i],pts[j],0.02,col,op);}}
+function addInter(g,top,bot,col,op){for(var i=0;i<top.length;i++)for(var j=0;j<bot.length;j++){if(top[i].distanceTo(bot[j])<1.05)mB(g,top[i],bot[j],0.015,col,op);}}
+
+var steps=[];
+
+// S0: Sheet A
+steps.push({cam:[0,5,10],badge:"SHEET A",bc:"#0077BB",
+title:"The Fundamental 2D Boundary: A Single K = 6 Hexagonal Sheet",
+build:function(g){mPlane(g,ptsA,CL.A,0.08);for(var i=0;i<ptsA.length;i++)mS(g,ptsA[i],0.09,CL.A,1);addHex(g,ptsA,CL.A,0.5);},
+desc:'<b>Sheet A: the boundary.</b> A single K=6 hexagonal layer. Each node = qubit. Each bond = Bell pair |Φ⁺⟩. This sheet has <b>exact SO(2)</b> rotational symmetry (hexagonal structure tensor is isotropic). All physical information lives here.',
+eq:'K = 6\nExact SO(2)\n\nBond = |Φ⁺⟩'});
+
+// S1: A+B
+steps.push({cam:[0,6,10],badge:"+ SHEET B",bc:"#CC3311",
+title:"First Lift: Sheet B at Height h = √(2/3)·L — The B Position in ABC Stacking",
+build:function(g){mPlane(g,ptsA,CL.A,0.06);mPlane(g,ptsB,CL.B,0.06);for(var i=0;i<ptsA.length;i++)mS(g,ptsA[i],0.08,CL.A,0.7);for(var i=0;i<ptsB.length;i++)mS(g,ptsB[i],0.08,CL.B,0.9);addHex(g,ptsA,CL.A,0.25);addHex(g,ptsB,CL.B,0.4);addInter(g,ptsB,ptsA,CL.bond,0.3);},
+desc:'<b>Sheet B: first lift.</b> A second hex layer (red) at height h = √(2/3)L, offset to the B stacking position. Each B node bonds to 3 nearest A nodes below — these inter-layer bonds (grey) carry the entanglement that builds the third dimension from the 2D boundary.',
+eq:'h = √(2/3) × L\n\nB offset from A:\n(½, √3/6)\n\n3 bonds down\nper B node'});
+
+// S2: A+B+C
+steps.push({cam:[0,7,11],badge:"+ SHEET C",bc:"#228833",
+title:"Full ABC Stack: Three K = 6 Sheets → Tetrahedral Voids Form Between Layers",
+build:function(g){mPlane(g,ptsA,CL.A,0.05);mPlane(g,ptsB,CL.B,0.05);mPlane(g,ptsC,CL.C,0.05);for(var i=0;i<ptsA.length;i++)mS(g,ptsA[i],0.07,CL.A,0.6);for(var i=0;i<ptsB.length;i++)mS(g,ptsB[i],0.07,CL.B,0.6);for(var i=0;i<ptsC.length;i++)mS(g,ptsC[i],0.07,CL.C,0.8);addHex(g,ptsA,CL.A,0.15);addHex(g,ptsB,CL.B,0.15);addHex(g,ptsC,CL.C,0.25);addInter(g,ptsB,ptsA,CL.bond,0.2);addInter(g,ptsC,ptsB,CL.bond,0.2);},
+desc:'<b>Full ABC stacking.</b> Three hexagonal layers complete the repeat unit. Between layers, <b>tetrahedral voids</b> form naturally — 3 nodes from one layer + 1 from the next. This is the geometric phase transition: 2D entanglement sheets crystallize into 3D FCC. The entire 3D structure is determined by the 2D boundary data.',
+eq:'A (blue, y = 0)\nB (red, y = h)\nC (green, y = 2h)\n\nABC stacking\n→ FCC lattice'});
+
+// S3: Cuboctahedron highlight
+steps.push({cam:[0,5,8],badge:"K = 12",bc:"#EE7733",
+title:"The Cuboctahedron Emerges: 6 In-Plane + 3 Above + 3 Below = 12 Neighbours",
+build:function(g){
+  for(var i=0;i<ptsA.length;i++)mS(g,ptsA[i],0.04,CL.A,0.15);
+  for(var i=0;i<ptsB.length;i++)mS(g,ptsB[i],0.04,CL.B,0.15);
+  for(var i=0;i<ptsC.length;i++)mS(g,ptsC[i],0.04,CL.C,0.15);
+  var ci=Math.floor(ptsB.length/2);var center=ptsB[ci];
+  mS(g,center,0.16,CL.cubo,1);
+  var all=ptsA.concat(ptsB,ptsC),nn=[];
+  for(var i=0;i<all.length;i++){var d=center.distanceTo(all[i]);if(d>0.01&&d<1.08)nn.push({pt:all[i],d:d});}
+  nn.sort(function(a,b){return a.d-b.d;});nn=nn.slice(0,12);
+  for(var i=0;i<nn.length;i++){
+    var col=Math.abs(nn[i].pt.y)<0.01?CL.A:Math.abs(nn[i].pt.y-h)<0.01?CL.B:CL.C;
+    mS(g,nn[i].pt,0.11,col,0.9);mB(g,center,nn[i].pt,0.035,CL.cubo,0.75);
+  }
+  for(var i=0;i<nn.length;i++)for(var j=i+1;j<nn.length;j++){if(nn[i].pt.distanceTo(nn[j].pt)<1.08)mB(g,nn[i].pt,nn[j].pt,0.02,CL.cubo,0.25);}
+},
+desc:'<b>K = 12 cuboctahedron.</b> Select any node (orange centre). Its 12 nearest neighbours form the <b>cuboctahedron</b>: 6 in-plane (same colour) + 3 above + 3 below. K=12 is not imposed — it <b>emerges</b> from stacking three K=6 sheets. The 3D coordination is entirely a consequence of 2D boundary geometry.',
+eq:'6 in-plane\n3 above\n3 below\n= 12 total\n\nK = 12\n= cuboctahedron\n= FCC'});
+
+// S4: Symmetry chain
+steps.push({cam:[0,8,14],badge:"SO(2) → SO(3,1)",bc:"#228833",
+title:"Exact Lorentz Invariance: Each Sheet Has SO(2), Four {111} Families Generate SO(3,1)",
+build:function(g){
+  mPlane(g,ptsA,CL.A,0.08);mPlane(g,ptsB,CL.B,0.08);mPlane(g,ptsC,CL.C,0.08);
+  for(var i=0;i<ptsA.length;i++)mS(g,ptsA[i],0.05,CL.A,0.4);
+  for(var i=0;i<ptsB.length;i++)mS(g,ptsB[i],0.05,CL.B,0.4);
+  for(var i=0;i<ptsC.length;i++)mS(g,ptsC[i],0.05,CL.C,0.4);
+  addHex(g,ptsA,CL.A,0.1);addHex(g,ptsB,CL.B,0.1);addHex(g,ptsC,CL.C,0.1);
+  addInter(g,ptsB,ptsA,CL.bond,0.1);addInter(g,ptsC,ptsB,CL.bond,0.1);
+  // Rotation rings on each sheet
+  for(var ly=0;ly<3;ly++){var yy=ly*h;var col=[CL.A,CL.B,CL.C][ly];
+    var geo=new THREE.TorusGeometry(2.0,0.03,8,48,Math.PI*1.6);
+    var mat=new THREE.MeshPhongMaterial({color:col,transparent:true,opacity:0.6});
+    var torus=new THREE.Mesh(geo,mat);torus.position.set(cenX,yy,cenZ);torus.rotation.x=-Math.PI/2;g.add(torus);
+    // Arrowhead on torus
+    var ahGeo=new THREE.ConeGeometry(0.08,0.2,6);var ahMat=new THREE.MeshPhongMaterial({color:col,transparent:true,opacity:0.6});
+    var ah=new THREE.Mesh(ahGeo,ahMat);
+    var ang=Math.PI*1.6;ah.position.set(cenX+2.0*Math.cos(ang),yy,cenZ+2.0*Math.sin(ang));ah.rotation.x=-Math.PI/2;g.add(ah);
+  }
+},
+desc:'<b>The symmetry chain.</b> Each hex sheet (rotation arrows) has exact SO(2). The FCC has <b>4 families of {111} planes</b> — we see one family here (ABC). The other 3 families slice through the lattice at different angles. In Lie theory, 2 non-parallel SO(2) generate full SO(3). Add time-reversal + c → <b>exact SO(3,1)</b>. The lattice is a coordinate choice; the symmetry is exact.',
+eq:'Each {111} sheet:\nexact SO(2)\n\n4 families\n→ SO(3)\n+ T-reversal + c\n→ SO(3,1)\n\nExact Poincaré ✓'});
+
+// RENDER
+var idx2=0,playing2=false,pt3=null;
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}}
+function renderStep(i){idx2=Math.max(0,Math.min(i,steps.length-1));sli.value=idx2;clearG();
+var s=steps[idx2];s.build(group);
+group.position.set(-cenX,-cenY,-cenZ);
+camera.position.set(s.cam[0],s.cam[1],s.cam[2]);camera.lookAt(0,0,0);
+rot.y=0;
+document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
+document.getElementById("title").textContent=s.title;
+document.getElementById("desc").innerHTML=s.desc;
+document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
+document.getElementById("eq").style.display=s.eq?'block':'none';
+document.getElementById("fc").textContent=(idx2+1)+"/"+steps.length;}
+(function anim(){requestAnimationFrame(anim);
+if(ar&&!md)rot.y+=0.003;
+group.rotation.x=rot.x;group.rotation.y=rot.y;
+renderer.render(scene,camera);})();
+function stp(){playing2=false;if(pt3)clearTimeout(pt3);pt3=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing2){stp();return;}playing2=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx2>=steps.length-1){stp();return;}renderStep(idx2+1);pt3=setTimeout(nx,6000);}pt3=setTimeout(nx,5000);};
+window.goS=function(){stp();renderStep(0);};window.goP=function(){stp();renderStep(idx2-1);};
+window.goN=function(){stp();renderStep(idx2+1);};window.goE=function(){stp();renderStep(steps.length-1);};
+window.goTo=function(v){stp();renderStep(v);};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
+renderStep(0);
+})();
+</script>
+</body>
+</html>
