@@ -175,6 +175,84 @@ g.add(mL("INFLATION",new THREE.Vector3(0,-lH-0.4,0),"#CC3311"));
 // S3: Deficit zoom
 steps.push({b:function(g){var eA=new THREE.Vector3(-L/2,0,0),eB=new THREE.Vector3(L/2,0,0);var r3=L*Math.sqrt(3)/2;g.add(mC(eA,eB,0.05,C.rd,1));g.add(mS(eA,0.08,C.rd));g.add(mS(eB,0.08,C.rd));var cols=[C.b,C.cy,C.tl,C.or,C.wn];for(var i=0;i<5;i++){var a=i*DI;var v=new THREE.Vector3(0,Math.sin(a)*r3,Math.cos(a)*r3);g.add(mS(v,0.06,cols[i]));g.add(mC(eA,v,0.02,cols[i],0.7));g.add(mC(eB,v,0.02,cols[i],0.7));var a2=(i+1)*DI;var v2=new THREE.Vector3(0,Math.sin(a2)*r3,Math.cos(a2)*r3);g.add(mT(eA,v,v2,cols[i],0.15));g.add(mT(eB,v,v2,cols[i],0.15));}var gS=5*DI,gM=(gS+2*Math.PI)/2,seg=20;for(var i=0;i<seg;i++){var a1=gS+(i/seg)*DEF,a22=gS+((i+1)/seg)*DEF;var vv1=new THREE.Vector3(0,Math.sin(a1)*r3,Math.cos(a1)*r3);var vv2=new THREE.Vector3(0,Math.sin(a22)*r3,Math.cos(a22)*r3);g.add(mT(eA,vv1,vv2,C.rd,0.5));g.add(mT(eB,vv1,vv2,C.rd,0.5));}var vGA=new THREE.Vector3(0,Math.sin(gS)*r3,Math.cos(gS)*r3),vGB=new THREE.Vector3(0,r3,0);g.add(mC(eA,vGA,0.035,C.rd,1));g.add(mC(eB,vGA,0.035,C.rd,1));g.add(mC(eA,vGB,0.035,C.rd,1));g.add(mC(eB,vGB,0.035,C.rd,1));g.add(mS(vGA,0.06,C.rd));g.add(mS(vGB,0.06,C.rd));var aD=new THREE.Vector3(0,Math.sin(gS),Math.cos(gS)).normalize();g.add(mA(new THREE.Vector3(0,0,0),new THREE.Vector3(1,0,0),aD,DEF,1.1,C.rd));var lp=new THREE.Vector3(0,Math.sin(gM)*1.7,Math.cos(gM)*1.7);g.add(mL("\u03B4 \u2248 7.36\u00B0 = 0.128 rad",lp,"#CC3311"));g.add(mL("THE DEFICIT GAP",new THREE.Vector3(lp.x,lp.y+0.35,lp.z),"#CC3311"));for(var i=0;i<3;i++){var aa=gS+(i+0.5)*(DEF/3);var inn=new THREE.Vector3(0,Math.sin(aa)*r3*0.5,Math.cos(aa)*r3*0.5);var out=new THREE.Vector3(0,Math.sin(aa)*r3*1.5,Math.cos(aa)*r3*1.5);g.add(mC(inn,out,0.025,C.yl,0.9));var tip=new THREE.Vector3(0,Math.sin(aa)*r3*1.65,Math.cos(aa)*r3*1.65);g.add(mC(out,tip,0.05,C.yl,0.9));}g.add(mL("R \u2248 0.128/lP\u00B2",new THREE.Vector3(2.2,1.3,0),"#0077BB"));g.add(mL("ns \u2248 0.9646",new THREE.Vector3(2.2,0.9,0),"#009988"));g.add(mL("\u039Beff \u2248 0.032/lP\u00B2",new THREE.Vector3(2.2,0.5,0),"#0077BB"));},ph:"k4",badge:"THE DEFICIT \u2192 INFLATION",bc:"#CC3311",label:"Inside the Foam: The 0.128 rad Gap at Every Sheet Edge",desc:"Zooming into any shared edge from the original sheet: the lifted tetrahedra pack around it. 5 tetrahedra consume 352.6\u00B0. The 7.36\u00B0 gap (red wedge) IS curvature. R \u2248 \u03B4/lP\u00B2. The stitching operator frantically nucleates new K=4 nodes to close these gaps — that is inflation. ns = 1 \u2212 \u221A3\u00B7\u03B4/(2\u03C0) \u2248 0.9646.",legend:'<div class="lt">The Regge Deficit</div><span class="mt">\u03B4 = 2\u03C0 \u2212 5\u00B7arccos(1/3)</span><br><span class="mt">\u03B4 \u2248 0.128 rad</span><br><br><span class="mt">R \u2248 \u03B4/l<sub>P</sub>\u00B2</span><br><span class="mt">\u039B<sub>eff</sub> = R/4</span><br><span class="mt">n<sub>s</sub> \u2248 0.96461</span><br>Planck: 0.9649\u00B10.0042 \u2713',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u25B6 <b style="color:#CC3311">K=4 Deficit \u2192 Expansion</b><br>\u00A0\u00A0 K=12 Vacuum'});
 
+
+// S3.5: Two sheets formed, tetrahedra seeding the third
+steps.push({b:function(g){
+var allN=[],rad=2;
+// 2 ABC layers only (A at y=0, B at y=lH)
+for(var ly=0;ly<2;ly++){var off=[[0,0],[L/2,LH/3]];var o=off[ly%2];
+for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;allN.push([q*L+r*L/2+o[0],ly*lH,r*LH+o[1]]);}}
+var N=allN.length;
+// Bonds
+var bonds=[];
+for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){var dx=allN[i][0]-allN[j][0],dy=allN[i][1]-allN[j][1],dz=allN[i][2]-allN[j][2];if(dx*dx+dy*dy+dz*dz<BR2){bonds.push([i,j]);}}
+// Center for view
+var cx=0,cy=0,cz=0;for(var i=0;i<N;i++){cx+=allN[i][0];cy+=allN[i][1];cz+=allN[i][2];}cx/=N;cy/=N;cz/=N;
+// Draw inter-layer bonds (purple)
+for(var b=0;b<bonds.length;b++){var bi=bonds[b][0],bj=bonds[b][1];
+var p1=new THREE.Vector3(allN[bi][0]-cx,allN[bi][1]-cy,allN[bi][2]-cz);
+var p2=new THREE.Vector3(allN[bj][0]-cx,allN[bj][1]-cy,allN[bj][2]-cz);
+var dyb=Math.abs(allN[bi][1]-allN[bj][1]);
+g.add(mC(p1,p2,dyb>0.3?0.025:0.015,dyb>0.3?C.wn:C.gr,dyb>0.3?0.5:0.25));}
+// Draw nodes: layer A = teal, layer B = orange
+for(var i=0;i<N;i++){var p=new THREE.Vector3(allN[i][0]-cx,allN[i][1]-cy,allN[i][2]-cz);
+var isA=allN[i][1]<lH*0.5;
+g.add(mS(p,0.06,isA?C.tl:C.or));}
+
+// Now add tetrahedra projecting UP from sheet B to seed sheet C
+// Sheet C offset = [L,2*LH/3] at y=2*lH
+var offC=[L,2*LH/3];
+var seedN=[];
+for(var q=-1;q<=1;q++)for(var r=-1;r<=1;r++){if(Math.abs(q+r)>1)continue;seedN.push([q*L+r*L/2+offC[0],2*lH,r*LH+offC[1]]);}
+// Draw seed nodes as ghosts (sheet C forming)
+for(var i=0;i<seedN.length;i++){
+var p=new THREE.Vector3(seedN[i][0]-cx,seedN[i][1]-cy,seedN[i][2]-cz);
+g.add(mS(p,0.05,C.b));
+// Make transparent
+g.children[g.children.length-1].material=new THREE.MeshPhongMaterial({color:C.b,transparent:true,opacity:0.3});}
+
+// Draw bonds from sheet B nodes to sheet C seed nodes (the new lifts)
+for(var i=0;i<N;i++){if(allN[i][1]<lH*0.5)continue; // skip sheet A
+for(var j=0;j<seedN.length;j++){
+var dx=allN[i][0]-seedN[j][0],dy=allN[i][1]-seedN[j][1],dz=allN[i][2]-seedN[j][2];
+if(dx*dx+dy*dy+dz*dz<BR2){
+var p1=new THREE.Vector3(allN[i][0]-cx,allN[i][1]-cy,allN[i][2]-cz);
+var p2=new THREE.Vector3(seedN[j][0]-cx,seedN[j][1]-cy,seedN[j][2]-cz);
+g.add(mC(p1,p2,0.025,C.b,0.35));}}}
+
+// Sheet D seeding DOWNWARD from Sheet A
+var offD=[L/2,LH/3]; // same offset pattern as B but mirrored
+var seedD=[];
+for(var q=-1;q<=1;q++)for(var r=-1;r<=1;r++){if(Math.abs(q+r)>1)continue;seedD.push([q*L+r*L/2+offD[0],-lH,r*LH+offD[1]]);}
+// Draw seed nodes as ghosts (sheet D forming below)
+for(var i=0;i<seedD.length;i++){
+var p=new THREE.Vector3(seedD[i][0]-cx,seedD[i][1]-cy,seedD[i][2]-cz);
+var mm=mS(p,0.05,C.or);
+mm.material=new THREE.MeshPhongMaterial({color:C.or,transparent:true,opacity:0.3});
+g.add(mm);}
+// Draw bonds from sheet A nodes DOWN to sheet D seed nodes
+for(var i=0;i<N;i++){if(allN[i][1]>lH*0.5)continue; // only sheet A
+for(var j=0;j<seedD.length;j++){
+var dx=allN[i][0]-seedD[j][0],dy=allN[i][1]-seedD[j][1],dz=allN[i][2]-seedD[j][2];
+if(dx*dx+dy*dy+dz*dz<BR2){
+var p1=new THREE.Vector3(allN[i][0]-cx,allN[i][1]-cy,allN[i][2]-cz);
+var p2=new THREE.Vector3(seedD[j][0]-cx,seedD[j][1]-cy,seedD[j][2]-cz);
+g.add(mC(p1,p2,0.025,C.or,0.35));}}}
+
+// Labels
+g.add(mL("Sheet D (seeding down)",new THREE.Vector3(-3.2,-3*lH/2+0.1,0),"#EE7733"));
+g.add(mL("Sheet A (original K=6)",new THREE.Vector3(-3.2,-lH/2+0.1,0),"#009988"));
+g.add(mL("Sheet B (from lifts)",new THREE.Vector3(-3.2,lH/2+0.1,0),"#EE7733"));
+g.add(mL("Sheet C (seeding now)",new THREE.Vector3(-3.2,3*lH/2+0.1,0),"#0077BB"));
+g.add(mL("Lifts from B seed C",new THREE.Vector3(3.0,lH+0.3,0),"#663377"));
+g.add(mL("p = e\u207B\u00B3 per site",new THREE.Vector3(3.0,lH-0.1,0),"#663377"));
+
+},ph:"k4",badge:"2 SHEETS + SEEDING",bc:"#AA3377",label:"Bidirectional Growth: Sheet B Seeds C Upward, Sheet A Seeds D Downward",
+desc:"The tetrahedral lifts from Sheet A (teal) have coalesced into Sheet B (orange) above. Crucially, the lift process is bidirectional: Sheet B seeds Sheet C upward (blue ghosts), while Sheet A simultaneously seeds Sheet D downward (orange ghosts). The 3D FCC bulk grows in both directions at once \u2014 each completed sheet seeds the next layer above AND below. This cascade is how the lattice fills 3D space.",
+legend:'<div class="lt">Two Sheets + Seeding</div><span style="color:#009988">\u25CF Sheet A</span> (original, teal)<br><span style="color:#EE7733">\u25CF Sheet B</span> (formed above, orange)<br><span style="color:#0077BB">\u25CF Sheet C</span> (seeding up, blue ghosts)<br><span style="color:#EE7733">\u25CF Sheet D</span> (seeding down, orange ghosts)<br><br>Growth is <b>bidirectional</b>:<br>B \u2191 seeds C &nbsp;|&nbsp; A \u2193 seeds D<br><br><span class="mt">Each lift: p = e<sup>\u22123</sup> \u2248 5%</span>',
+tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u25B6 <b style="color:#AA3377">2 Sheets + Seeding</b><br>\u00A0\u00A0 K=12 Vacuum'});
+
+
 // S4: K=12 FCC — small clean cluster showing cuboctahedral coordination
 steps.push({b:function(g){
 var allN=[],rad=2;
@@ -234,6 +312,267 @@ g.add(mL("Layer A (center)",new THREE.Vector3(-3.0,0.15,0),"#009988"));
 g.add(mL("Layer B (below)",new THREE.Vector3(-3.0,-lH+0.15,0),"#0077BB"));
 g.add(mL("\u03B4 = 0  |  R = 0  |  Flat",new THREE.Vector3(0,lH+0.8,0),"#22AA44"));
 },ph:"k12",badge:"K = 12  CUBOCTAHEDRON",bc:"#22AA44",label:"Phase III: The K=12 FCC Lattice \u2014 Cuboctahedral Coordination",desc:"The frustrated K=4 foam has crystallized into three ordered ABC-stacked layers. The highlighted node (yellow) achieves K=12: 6 in-plane bonds (teal) + 3 to the layer above (orange) + 3 to the layer below (blue). This is the cuboctahedral coordination of the FCC lattice. Deficit angles vanish (\u03B4=0), curvature vanishes (R=0): Minkowski space. The 2D\u21923D holographic projection is visible \u2014 each layer is a flat hexagonal sheet, stacked with ABC offset.",legend:'<div class="lt">Phase III: K = 12</div>3 ABC-stacked hexagonal layers.<br><br>Highlighted node (yellow):<br><span style="color:#009988">\u25CF 6 in-plane</span> (teal)<br><span style="color:#EE7733">\u25CF 3 above</span> (orange)<br><span style="color:#0077BB">\u25CF 3 below</span> (blue)<br><b>6 + 3 + 3 = 12</b><br><br><span class="mt">\u03B4 = 0, R = 0</span><br>Inflation ended. Minkowski vacuum.',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u25B6 <b style="color:#22AA44">K=12 Vacuum (Now)</b>'});
+
+
+steps.push({b:function(g){
+g.add(mS(new THREE.Vector3(-0.9551,0.2263,0.0000),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-0.9551,-0.2263,0.0000),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.4076,0.2263,0.0000),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.4076,-0.2263,0.0000),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-0.9551,0.0000,0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-0.9551,0.0000,-0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.4076,0.0000,0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.4076,0.0000,-0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.1814,0.2263,0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.1814,0.2263,-0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.1814,-0.2263,0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.1814,-0.2263,-0.2263),0.035,0x0032c8));
+g.add(mS(new THREE.Vector3(-1.1814,0,0),0.04,0x0032c8));
+g.add(mC(new THREE.Vector3(-0.9551,0.2263,0.0000),new THREE.Vector3(-0.9551,0.0000,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.2263,0.0000),new THREE.Vector3(-0.9551,0.0000,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.2263,0.0000),new THREE.Vector3(-1.1814,0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.2263,0.0000),new THREE.Vector3(-1.1814,0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,-0.2263,0.0000),new THREE.Vector3(-0.9551,0.0000,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,-0.2263,0.0000),new THREE.Vector3(-0.9551,0.0000,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,-0.2263,0.0000),new THREE.Vector3(-1.1814,-0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,-0.2263,0.0000),new THREE.Vector3(-1.1814,-0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.2263,0.0000),new THREE.Vector3(-1.4076,0.0000,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.2263,0.0000),new THREE.Vector3(-1.4076,0.0000,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.2263,0.0000),new THREE.Vector3(-1.1814,0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.2263,0.0000),new THREE.Vector3(-1.1814,0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,-0.2263,0.0000),new THREE.Vector3(-1.4076,0.0000,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,-0.2263,0.0000),new THREE.Vector3(-1.4076,0.0000,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,-0.2263,0.0000),new THREE.Vector3(-1.1814,-0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,-0.2263,0.0000),new THREE.Vector3(-1.1814,-0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.0000,0.2263),new THREE.Vector3(-1.1814,0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.0000,0.2263),new THREE.Vector3(-1.1814,-0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.0000,-0.2263),new THREE.Vector3(-1.1814,0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-0.9551,0.0000,-0.2263),new THREE.Vector3(-1.1814,-0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.0000,0.2263),new THREE.Vector3(-1.1814,0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.0000,0.2263),new THREE.Vector3(-1.1814,-0.2263,0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.0000,-0.2263),new THREE.Vector3(-1.1814,0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mC(new THREE.Vector3(-1.4076,0.0000,-0.2263),new THREE.Vector3(-1.1814,-0.2263,-0.2263),0.01,0x0032c8,0.5));
+g.add(mS(new THREE.Vector3(-0.4825,0.2263,0.0000),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.4825,-0.2263,0.0000),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.9351,0.2263,0.0000),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.9351,-0.2263,0.0000),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.4825,0.0000,0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.4825,0.0000,-0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.9351,0.0000,0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.9351,0.0000,-0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.7088,0.2263,0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.7088,0.2263,-0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.7088,-0.2263,0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.7088,-0.2263,-0.2263),0.035,0x2832a0));
+g.add(mS(new THREE.Vector3(-0.7088,0,0),0.04,0x2832a0));
+g.add(mC(new THREE.Vector3(-0.4825,0.2263,0.0000),new THREE.Vector3(-0.4825,0.0000,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.2263,0.0000),new THREE.Vector3(-0.4825,0.0000,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.2263,0.0000),new THREE.Vector3(-0.7088,0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.2263,0.0000),new THREE.Vector3(-0.7088,0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,-0.2263,0.0000),new THREE.Vector3(-0.4825,0.0000,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,-0.2263,0.0000),new THREE.Vector3(-0.4825,0.0000,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,-0.2263,0.0000),new THREE.Vector3(-0.7088,-0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,-0.2263,0.0000),new THREE.Vector3(-0.7088,-0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.2263,0.0000),new THREE.Vector3(-0.9351,0.0000,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.2263,0.0000),new THREE.Vector3(-0.9351,0.0000,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.2263,0.0000),new THREE.Vector3(-0.7088,0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.2263,0.0000),new THREE.Vector3(-0.7088,0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,-0.2263,0.0000),new THREE.Vector3(-0.9351,0.0000,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,-0.2263,0.0000),new THREE.Vector3(-0.9351,0.0000,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,-0.2263,0.0000),new THREE.Vector3(-0.7088,-0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,-0.2263,0.0000),new THREE.Vector3(-0.7088,-0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.0000,0.2263),new THREE.Vector3(-0.7088,0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.0000,0.2263),new THREE.Vector3(-0.7088,-0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.0000,-0.2263),new THREE.Vector3(-0.7088,0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.4825,0.0000,-0.2263),new THREE.Vector3(-0.7088,-0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.0000,0.2263),new THREE.Vector3(-0.7088,0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.0000,0.2263),new THREE.Vector3(-0.7088,-0.2263,0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.0000,-0.2263),new THREE.Vector3(-0.7088,0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mC(new THREE.Vector3(-0.9351,0.0000,-0.2263),new THREE.Vector3(-0.7088,-0.2263,-0.2263),0.01,0x2832a0,0.5));
+g.add(mS(new THREE.Vector3(-0.0100,0.2263,0.0000),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.0100,-0.2263,0.0000),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.4625,0.2263,0.0000),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.4625,-0.2263,0.0000),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.0100,0.0000,0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.0100,0.0000,-0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.4625,0.0000,0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.4625,0.0000,-0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.2363,0.2263,0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.2363,0.2263,-0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.2363,-0.2263,0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.2363,-0.2263,-0.2263),0.035,0x503278));
+g.add(mS(new THREE.Vector3(-0.2363,0,0),0.04,0x503278));
+g.add(mC(new THREE.Vector3(-0.0100,0.2263,0.0000),new THREE.Vector3(-0.0100,0.0000,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.2263,0.0000),new THREE.Vector3(-0.0100,0.0000,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.2263,0.0000),new THREE.Vector3(-0.2363,0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.2263,0.0000),new THREE.Vector3(-0.2363,0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,-0.2263,0.0000),new THREE.Vector3(-0.0100,0.0000,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,-0.2263,0.0000),new THREE.Vector3(-0.0100,0.0000,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,-0.2263,0.0000),new THREE.Vector3(-0.2363,-0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,-0.2263,0.0000),new THREE.Vector3(-0.2363,-0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.2263,0.0000),new THREE.Vector3(-0.4625,0.0000,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.2263,0.0000),new THREE.Vector3(-0.4625,0.0000,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.2263,0.0000),new THREE.Vector3(-0.2363,0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.2263,0.0000),new THREE.Vector3(-0.2363,0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,-0.2263,0.0000),new THREE.Vector3(-0.4625,0.0000,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,-0.2263,0.0000),new THREE.Vector3(-0.4625,0.0000,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,-0.2263,0.0000),new THREE.Vector3(-0.2363,-0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,-0.2263,0.0000),new THREE.Vector3(-0.2363,-0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.0000,0.2263),new THREE.Vector3(-0.2363,0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.0000,0.2263),new THREE.Vector3(-0.2363,-0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.0000,-0.2263),new THREE.Vector3(-0.2363,0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.0100,0.0000,-0.2263),new THREE.Vector3(-0.2363,-0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.0000,0.2263),new THREE.Vector3(-0.2363,0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.0000,0.2263),new THREE.Vector3(-0.2363,-0.2263,0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.0000,-0.2263),new THREE.Vector3(-0.2363,0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mC(new THREE.Vector3(-0.4625,0.0000,-0.2263),new THREE.Vector3(-0.2363,-0.2263,-0.2263),0.01,0x503278,0.5));
+g.add(mS(new THREE.Vector3(0.4625,0.2263,0.0000),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.4625,-0.2263,0.0000),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.0100,0.2263,0.0000),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.0100,-0.2263,0.0000),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.4625,0.0000,0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.4625,0.0000,-0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.0100,0.0000,0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.0100,0.0000,-0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.2363,0.2263,0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.2363,0.2263,-0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.2363,-0.2263,0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.2363,-0.2263,-0.2263),0.035,0x783250));
+g.add(mS(new THREE.Vector3(0.2363,0,0),0.04,0x783250));
+g.add(mC(new THREE.Vector3(0.4625,0.2263,0.0000),new THREE.Vector3(0.4625,0.0000,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.2263,0.0000),new THREE.Vector3(0.4625,0.0000,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.2263,0.0000),new THREE.Vector3(0.2363,0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.2263,0.0000),new THREE.Vector3(0.2363,0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,-0.2263,0.0000),new THREE.Vector3(0.4625,0.0000,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,-0.2263,0.0000),new THREE.Vector3(0.4625,0.0000,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,-0.2263,0.0000),new THREE.Vector3(0.2363,-0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,-0.2263,0.0000),new THREE.Vector3(0.2363,-0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.2263,0.0000),new THREE.Vector3(0.0100,0.0000,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.2263,0.0000),new THREE.Vector3(0.0100,0.0000,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.2263,0.0000),new THREE.Vector3(0.2363,0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.2263,0.0000),new THREE.Vector3(0.2363,0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,-0.2263,0.0000),new THREE.Vector3(0.0100,0.0000,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,-0.2263,0.0000),new THREE.Vector3(0.0100,0.0000,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,-0.2263,0.0000),new THREE.Vector3(0.2363,-0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,-0.2263,0.0000),new THREE.Vector3(0.2363,-0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.0000,0.2263),new THREE.Vector3(0.2363,0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.0000,0.2263),new THREE.Vector3(0.2363,-0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.0000,-0.2263),new THREE.Vector3(0.2363,0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.4625,0.0000,-0.2263),new THREE.Vector3(0.2363,-0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.0000,0.2263),new THREE.Vector3(0.2363,0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.0000,0.2263),new THREE.Vector3(0.2363,-0.2263,0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.0000,-0.2263),new THREE.Vector3(0.2363,0.2263,-0.2263),0.01,0x783250,0.5));
+g.add(mC(new THREE.Vector3(0.0100,0.0000,-0.2263),new THREE.Vector3(0.2363,-0.2263,-0.2263),0.01,0x783250,0.5));
+g.add((function(){var m=mS(new THREE.Vector3(0.9351,0.2263,0.0000),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9351,-0.2263,0.0000),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.4825,0.2263,0.0000),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.4825,-0.2263,0.0000),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9351,0.0000,0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9351,0.0000,-0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.4825,0.0000,0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.4825,0.0000,-0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.7088,0.2263,0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.7088,0.2263,-0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.7088,-0.2263,0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.7088,-0.2263,-0.2263),0.035,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.7088,0,0),0.04,0xa03227);m.material.transparent=true;m.material.opacity=0.5;return m;})());
+g.add(mC(new THREE.Vector3(0.9351,0.2263,0.0000),new THREE.Vector3(0.9351,0.0000,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.2263,0.0000),new THREE.Vector3(0.9351,0.0000,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.2263,0.0000),new THREE.Vector3(0.7088,0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.2263,0.0000),new THREE.Vector3(0.7088,0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,-0.2263,0.0000),new THREE.Vector3(0.9351,0.0000,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,-0.2263,0.0000),new THREE.Vector3(0.9351,0.0000,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,-0.2263,0.0000),new THREE.Vector3(0.7088,-0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,-0.2263,0.0000),new THREE.Vector3(0.7088,-0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.2263,0.0000),new THREE.Vector3(0.4825,0.0000,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.2263,0.0000),new THREE.Vector3(0.4825,0.0000,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.2263,0.0000),new THREE.Vector3(0.7088,0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.2263,0.0000),new THREE.Vector3(0.7088,0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,-0.2263,0.0000),new THREE.Vector3(0.4825,0.0000,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,-0.2263,0.0000),new THREE.Vector3(0.4825,0.0000,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,-0.2263,0.0000),new THREE.Vector3(0.7088,-0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,-0.2263,0.0000),new THREE.Vector3(0.7088,-0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.0000,0.2263),new THREE.Vector3(0.7088,0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.0000,0.2263),new THREE.Vector3(0.7088,-0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.0000,-0.2263),new THREE.Vector3(0.7088,0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.9351,0.0000,-0.2263),new THREE.Vector3(0.7088,-0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.0000,0.2263),new THREE.Vector3(0.7088,0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.0000,0.2263),new THREE.Vector3(0.7088,-0.2263,0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.0000,-0.2263),new THREE.Vector3(0.7088,0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add(mC(new THREE.Vector3(0.4825,0.0000,-0.2263),new THREE.Vector3(0.7088,-0.2263,-0.2263),0.01,0xa03227,0.25));
+g.add((function(){var m=mS(new THREE.Vector3(1.4076,0.2263,0.0000),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.4076,-0.2263,0.0000),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9551,0.2263,0.0000),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9551,-0.2263,0.0000),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.4076,0.0000,0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.4076,0.0000,-0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9551,0.0000,0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(0.9551,0.0000,-0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.1814,0.2263,0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.1814,0.2263,-0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.1814,-0.2263,0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.1814,-0.2263,-0.2263),0.035,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add((function(){var m=mS(new THREE.Vector3(1.1814,0,0),0.04,0xc83200);m.material.transparent=true;m.material.opacity=0.15;return m;})());
+g.add(mC(new THREE.Vector3(1.4076,0.2263,0.0000),new THREE.Vector3(1.4076,0.0000,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.2263,0.0000),new THREE.Vector3(1.4076,0.0000,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.2263,0.0000),new THREE.Vector3(1.1814,0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.2263,0.0000),new THREE.Vector3(1.1814,0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,-0.2263,0.0000),new THREE.Vector3(1.4076,0.0000,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,-0.2263,0.0000),new THREE.Vector3(1.4076,0.0000,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,-0.2263,0.0000),new THREE.Vector3(1.1814,-0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,-0.2263,0.0000),new THREE.Vector3(1.1814,-0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.2263,0.0000),new THREE.Vector3(0.9551,0.0000,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.2263,0.0000),new THREE.Vector3(0.9551,0.0000,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.2263,0.0000),new THREE.Vector3(1.1814,0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.2263,0.0000),new THREE.Vector3(1.1814,0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,-0.2263,0.0000),new THREE.Vector3(0.9551,0.0000,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,-0.2263,0.0000),new THREE.Vector3(0.9551,0.0000,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,-0.2263,0.0000),new THREE.Vector3(1.1814,-0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,-0.2263,0.0000),new THREE.Vector3(1.1814,-0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.0000,0.2263),new THREE.Vector3(1.1814,0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.0000,0.2263),new THREE.Vector3(1.1814,-0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.0000,-0.2263),new THREE.Vector3(1.1814,0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(1.4076,0.0000,-0.2263),new THREE.Vector3(1.1814,-0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.0000,0.2263),new THREE.Vector3(1.1814,0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.0000,0.2263),new THREE.Vector3(1.1814,-0.2263,0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.0000,-0.2263),new THREE.Vector3(1.1814,0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.9551,0.0000,-0.2263),new THREE.Vector3(1.1814,-0.2263,-0.2263),0.01,0xc83200,0.08));
+g.add(mC(new THREE.Vector3(0.945,0.55,0),new THREE.Vector3(1.545,0.55,0),0.035,C.or,0.9));
+g.add(mS(new THREE.Vector3(1.545,0.55,0),0.06,C.or));
+g.add(mL("crystallization front",new THREE.Vector3(1.245,0.85,0),"#EE7733"));
+g.add(mL("OLD (cooler)",new THREE.Vector3(-1.581,-0.7,0),"#0077BB"));
+g.add(mL("YOUNG (forming)",new THREE.Vector3(1.581,-0.7,0),"#CC3311"));
+},ph:"k12",badge:"CRYSTALLIZATION FRONT",bc:"#663377",label:"The Front Propagates: K=12 Cells Crystallize in Sequence",
+desc:"The K=12 cuboctahedra crystallize in sequence as the front (orange arrow) sweeps left to right. Each cell forms with both 2D stitching and 3D lifting simultaneously. Blue cells (left) formed first and have cooled longer. Red cells (right) are younger. The fading and ghost cells show the front advancing. This finite propagation speed creates an age gradient across the observable universe: \u0394t/t = 2p.",
+legend:'<div class="lt">Crystallization Front</div><span style="color:#0077BB">\u25CF Blue = old</span> (formed first)<br><span style="color:#CC3311">\u25CF Red = young</span> (just forming)<br><span style="color:#EE7733">\u25CF Arrow = front</span><br><br>Cells packed, no gaps.<br>Fading = forming now.<br>Ghost = next in line.<br><br><span class="mt">v<sub>3D</sub> = p \u00D7 v<sub>front</sub></span><br><span class="mt">\u0394t/t = 2p</span>',
+tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum<br>\u25B6 <b style="color:#663377">Crystallization Front</b><br>\u00A0\u00A0 CMB Asymmetry'});
+
+steps.push({b:function(g){
+  var R2=2.2,seg=32;
+  var geo=new THREE.SphereGeometry(R2,seg,seg);
+  var colors=[];var pos=geo.attributes.position;
+  var sd=42;function sr(){sd=(sd*16807)%2147483647;return(sd-1)/2147483646;}
+  for(var i=0;i<pos.count;i++){
+    var x=pos.getX(i);
+    var frac=(x/R2+1)/2;
+    var fluct=(sr()-0.5)*0.12;
+    var cr=Math.min(1,Math.max(0,0.2+0.8*frac+fluct*0.3));
+    var cb=Math.min(1,Math.max(0,0.2+0.8*(1-frac)+fluct*0.3));
+    var cg=Math.min(1,Math.max(0,0.15+fluct*0.2));
+    colors.push(cr,cg,cb);
+  }
+  geo.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
+  g.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({vertexColors:true,transparent:true,opacity:0.85})));
+  g.add(mC(new THREE.Vector3(-3,0,0),new THREE.Vector3(3,0,0),0.02,C.gr,0.3));
+  g.add(mS(new THREE.Vector3(-3,0,0),0.1,C.b));
+  g.add(mS(new THREE.Vector3(3,0,0),0.1,C.rd));
+  g.add(mL("OLD (cooler)",new THREE.Vector3(-2.2,1.6,0),"#0077BB"));
+  g.add(mL("YOUNG (hotter)",new THREE.Vector3(1.5,1.6,0),"#CC3311"));
+  g.add(mL("A = p = e\u207B\u00B3 \u2248 0.049",new THREE.Vector3(0,-2.8,0),"#CC3311"));
+},ph:"k12",badge:"CMB ASYMMETRY",bc:"#CC3311",label:"Macroscopic Fossil: The CMB Hemispherical Power Asymmetry",
+desc:"The finite-speed crystallization front created an age gradient across the observable universe. This maps onto the CMB as a hemispherical power asymmetry: the left hemisphere (blue, crystallized first) is slightly cooler with lower fluctuation power. The right hemisphere (red, crystallized last) is hotter. The derivation: \u0394t/t = 2p, T \u221D t\u207B\u00B9\u2044\u00B2 gives \u0394T/T = \u00BD \u00D7 2p = p. So A = p = e\u207B\u00B3 \u2248 0.049. Planck measures 0.066 \u00B1 0.021 \u2014 within 0.8\u03C3.",
+legend:'<div class="lt">CMB Asymmetry</div><span class="mt">\u0394t/t = 2p = 2e<sup>\u22123</sup></span><br><span class="mt">\u0394T/T = \u00BD \u00D7 \u0394t/t</span><br><span class="mt">A = \u00BD \u00D7 2p = p</span><br><br><b>A = e<sup>\u22123</sup> \u2248 0.049</b><br>Planck: 0.066 \u00B1 0.021<br><b>0.8\u03C3 match \u2713</b><br><br>Standard inflation: A = 0<br><span style="color:#CC3311">Excluded at >3\u03C3 \u2717</span>',
+tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Inflation<br>\u00A0\u00A0 K=12 Vacuum<br>\u00A0\u00A0 Crystallization Front<br>\u25B6 <b style="color:#CC3311">CMB Asymmetry</b>'});
 
 // RENDER
 var si3=0,pl2=false,pt2=null;var sli2=document.querySelector("#sld input");sli2.max=steps.length-1;
