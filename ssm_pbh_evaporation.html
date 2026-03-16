@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSM: Geometric Evaporation — Topological Vacancy Healing</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+#badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
+#title{font-size:13px;font-weight:700;color:#222;flex:1;}
+#main{flex:1;position:relative;min-height:0;}
+canvas{display:block;width:100%;height:100%;}
+#desc{position:absolute;bottom:44px;left:10px;max-width:420px;background:rgba(255,255,255,0.96);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
+#desc b{color:#111;}
+#eq{position:absolute;bottom:44px;right:10px;background:rgba(255,255,255,0.96);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;}
+.btn.on{border-color:#0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sl{flex:1;max-width:350px;margin:0 8px;}#sl input{width:100%;}
+#fc{font-size:10px;color:#888;min-width:40px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="hd"><span id="badge" style="background:#0077BB;">K=12 LATTICE</span><div id="title">Loading...</div></div>
+<div id="main"><canvas id="cv"></canvas><div id="desc"></div><div id="eq"></div></div>
+<div id="ct">
+<button class="btn" onclick="goS()">⏮</button><button class="btn" onclick="goP()">◀</button>
+<button class="btn on" id="bp" onclick="togPlay()">▶ Play</button>
+<button class="btn" onclick="goN()">▶</button><button class="btn" onclick="goE()">⏭</button>
+<div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">1/5</span><button class="btn on" id="br" onclick="togR()">Rot</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var canvas=document.getElementById("cv"),W,H,scene,camera,renderer,group;
+var rot={x:0.4,y:0},md=false,mx=0,my=0,ar=true,t=0;
+
+function init(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W;canvas.height=H;
+scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+camera=new THREE.PerspectiveCamera(40,W/H,0.1,300);camera.position.set(0,3,9);camera.lookAt(0,0,0);
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-4,-3,-5);
+group=new THREE.Group();scene.add(group);}
+init();
+window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H=p.clientHeight;canvas.width=W;canvas.height=H;camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);});
+canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
+window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md)return;var t2=e.touches[0];rot.y+=(t2.clientX-mx)*0.005;rot.x+=(t2.clientY-my)*0.005;mx=t2.clientX;my=t2.clientY;},{passive:true});
+canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(4,Math.min(20,camera.position.z+e.deltaY*0.02));e.preventDefault();},{passive:false});
+
+// Helpers
+function mS(g,p,r,c,op){var m=new THREE.Mesh(new THREE.SphereGeometry(r,10,10),new THREE.MeshPhongMaterial({color:c,transparent:op!==undefined&&op<1,opacity:op!==undefined?op:1}));m.position.copy(p);g.add(m);return m;}
+function mB(g,a,b,r,c,op){var d=new THREE.Vector3().subVectors(b,a);var l=d.length();if(l<0.001)return;var mid=new THREE.Vector3().addVectors(a,b).multiplyScalar(0.5);var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,6),new THREE.MeshPhongMaterial({color:c,transparent:op!==undefined&&op<1,opacity:op!==undefined?op:1}));m.position.copy(mid);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(m);return m;}
+function mL(g,t,p,c){var cv2=document.createElement("canvas");cv2.width=320;cv2.height=64;var ctx=cv2.getContext("2d");ctx.font="bold 26px -apple-system,sans-serif";ctx.fillStyle=c||"#333";ctx.textAlign="center";ctx.fillText(t,160,40);var tx=new THREE.CanvasTexture(cv2);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.copy(p);s.scale.set(1.5,0.3,1);g.add(s);return s;}
+
+var CL={intact:0x0077BB,vacancy:0xCC3311,border:0xEE7733,heal:0x228833,bond:0xBBBBBB,dangle:0xEE7733};
+
+// Build FCC slab with optional vacancy
+function buildSlab(g,vacR,healR,showLabels){
+  var L=0.7,h=Math.sqrt(2/3)*L,LH=Math.sqrt(3)/2*L;
+  var rad=3,BR=L*1.05;
+  var allN=[],layers=3;
+  for(var ly=0;ly<layers;ly++){
+    var off=[[0,0],[L/2,LH/3],[L,2*LH/3]];var o=off[ly%3];
+    for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){
+      if(Math.abs(q+r)>rad)continue;
+      allN.push([q*L+r*L/2+o[0],ly*h,r*LH+o[1]]);
+    }
+  }
+  var N=allN.length;
+  // Center
+  var cx=0,cy=0,cz=0;
+  for(var i=0;i<N;i++){cx+=allN[i][0];cy+=allN[i][1];cz+=allN[i][2];}
+  cx/=N;cy/=N;cz/=N;
+
+  // Find bonds
+  var bonds=[];
+  for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){
+    var dx=allN[i][0]-allN[j][0],dy=allN[i][1]-allN[j][1],dz=allN[i][2]-allN[j][2];
+    if(dx*dx+dy*dy+dz*dz<BR*BR)bonds.push([i,j]);
+  }
+
+  // Draw bonds
+  for(var b=0;b<bonds.length;b++){
+    var bi=bonds[b][0],bj=bonds[b][1];
+    var pi=new THREE.Vector3(allN[bi][0]-cx,allN[bi][1]-cy,allN[bi][2]-cz);
+    var pj=new THREE.Vector3(allN[bj][0]-cx,allN[bj][1]-cy,allN[bj][2]-cz);
+    var di=pi.length(),dj=pj.length();
+    var iIn=di<vacR,jIn=dj<vacR;
+    var iHeal=healR!==undefined&&di>=healR&&di<vacR;
+    var jHeal=healR!==undefined&&dj>=healR&&dj<vacR;
+
+    if(iIn&&!iHeal&&jIn&&!jHeal)continue; // both inside vacancy
+    if((iIn&&!iHeal)||(jIn&&!jHeal)){
+      // Dangling bond
+      mB(g,pi,pj,0.025,CL.dangle,0.7);
+    } else if(iHeal||jHeal){
+      // Healed bond
+      mB(g,pi,pj,0.02,CL.heal,0.6);
+    } else {
+      mB(g,pi,pj,0.012,CL.bond,0.2);
+    }
+  }
+
+  // Draw nodes
+  for(var i=0;i<N;i++){
+    var p=new THREE.Vector3(allN[i][0]-cx,allN[i][1]-cy,allN[i][2]-cz);
+    var d=p.length();
+    if(d<vacR){
+      if(healR!==undefined&&d>=healR){
+        // Healed node
+        mS(g,p,0.06,CL.heal,0.85);
+      }
+      // else: inside vacancy, skip
+    } else if(d<vacR*1.2){
+      // Border node
+      mS(g,p,0.07,CL.border,0.9);
+    } else {
+      mS(g,p,0.05,CL.intact,0.85);
+    }
+  }
+
+  // Vacancy sphere (translucent)
+  if(vacR>0.1){
+    var actualR=healR!==undefined?healR:vacR;
+    var vGeo=new THREE.SphereGeometry(actualR,24,24);
+    var vMat=new THREE.MeshPhongMaterial({color:0xCC3311,transparent:true,opacity:0.08,side:THREE.DoubleSide});
+    g.add(new THREE.Mesh(vGeo,vMat));
+    // Wireframe
+    var wGeo=new THREE.SphereGeometry(actualR,12,12);
+    var wMat=new THREE.MeshBasicMaterial({color:0xCC3311,wireframe:true,transparent:true,opacity:0.15});
+    g.add(new THREE.Mesh(wGeo,wMat));
+  }
+  // Original vacancy outline if healing
+  if(healR!==undefined&&healR<vacR){
+    var oGeo=new THREE.SphereGeometry(vacR,12,12);
+    var oMat=new THREE.MeshBasicMaterial({color:0xCC3311,wireframe:true,transparent:true,opacity:0.06});
+    g.add(new THREE.Mesh(oGeo,oMat));
+  }
+}
+
+var steps=[];
+
+// S0: Intact lattice
+steps.push({badge:"K=12 LATTICE",bc:"#0077BB",cam:[0,3,9],
+title:"The Intact K = 12 FCC Vacuum Lattice",
+build:function(g){buildSlab(g,0);},
+desc:'<b>The intact vacuum.</b> Every node has K=12 nearest neighbours (blue). All bonds are maximally entangled Bell pairs. This is the ground state — zero curvature, zero defects.',
+eq:'K = 12 everywhere\nAll bonds intact\nGround state energy = 0'});
+
+// S1: Vacancy forms
+steps.push({badge:"VACANCY FORMS",bc:"#CC3311",cam:[0,3,9],
+title:"Gravitational Compression Shatters the Lattice → Topological Vacancy (K = 0)",
+build:function(g){buildSlab(g,1.2);
+  mL(g,"K = 0",new THREE.Vector3(0,0,0),"#CC3311");
+},
+desc:'<b>A black hole forms.</b> Gravitational compression drives internode spacing below r_min = L/√3. Tetrahedral voids collapse → bonds sever → K drops to 0. The red sphere is the <b>topological vacancy</b> — a literal hole in spacetime. Orange nodes at the boundary are the event horizon. Orange dangling bonds = severed Bell pairs that generate Bekenstein-Hawking entropy: S = A/(4l²_P).',
+eq:'r < L/√3 → K = 0\n\nBoundary = event horizon\nS = A/(4l²_P) from\nsevered bond counting\n\nT_H = ℏc³/(8πGMk_B)'});
+
+// S2: Healing pressure
+steps.push({badge:"HEALING PRESSURE",bc:"#EE7733",cam:[0,3,9],
+title:"Young-Laplace Pressure: The Lattice Pushes Inward to Heal the Void",
+build:function(g){buildSlab(g,1.2);
+  mL(g,"K = 0",new THREE.Vector3(0,0,0),"#CC3311");
+  // Inward arrows
+  for(var i=0;i<20;i++){
+    var th=Math.random()*Math.PI,ph=Math.random()*2*Math.PI;
+    var r1=1.5,r2=1.25;
+    var x1=r1*Math.sin(th)*Math.cos(ph),y1=r1*Math.cos(th),z1=r1*Math.sin(th)*Math.sin(ph);
+    var x2=r2*Math.sin(th)*Math.cos(ph),y2=r2*Math.cos(th),z2=r2*Math.sin(th)*Math.sin(ph);
+    mB(g,new THREE.Vector3(x1,y1,z1),new THREE.Vector3(x2,y2,z2),0.03,CL.dangle,0.6);
+    mS(g,new THREE.Vector3(x2,y2,z2),0.05,CL.dangle,0.8);
+  }
+  mL(g,"P = 2σ/R_H",new THREE.Vector3(0,2.0,0),"#EE7733");
+},
+desc:'<b>Healing pressure.</b> The intact lattice has surface tension σ = ℏc/(4l³_P) — energy cost of each severed bond per unit area. The Young-Laplace pressure P = 2σ/R_H pushes inward (orange arrows), trying to re-stitch the void. Smaller voids have higher curvature → stronger healing pressure → faster evaporation. This is why microscopic PBHs evaporate so fast.',
+eq:'σ = ℏc/(4l³_P)\nP = 2σ/R_H\n\nSmaller void → higher P\n→ faster healing'});
+
+// S3: Healing in progress
+steps.push({badge:"GEOMETRIC HEALING",bc:"#228833",cam:[0,3,9],
+title:"Vacancy Shrinks: Bonds Re-Stitch at Ṙ = −(c/2)(l_P/R_H)",
+build:function(g){buildSlab(g,1.2,0.7);
+  mL(g,"K = 0",new THREE.Vector3(0,0,0),"#CC3311");
+  mL(g,"re-stitched",new THREE.Vector3(0,-1.8,0),"#228833");
+  // Inward arrows in healed zone
+  for(var i=0;i<12;i++){
+    var th=Math.random()*Math.PI,ph=Math.random()*2*Math.PI;
+    var r1=1.2,r2=0.8;
+    var x1=r1*Math.sin(th)*Math.cos(ph),y1=r1*Math.cos(th),z1=r1*Math.sin(th)*Math.sin(ph);
+    var x2=r2*Math.sin(th)*Math.cos(ph),y2=r2*Math.cos(th),z2=r2*Math.sin(th)*Math.sin(ph);
+    mB(g,new THREE.Vector3(x1,y1,z1),new THREE.Vector3(x2,y2,z2),0.025,CL.heal,0.5);
+    mS(g,new THREE.Vector3(x2,y2,z2),0.04,CL.heal,0.7);
+  }
+},
+desc:'<b>Geometric healing.</b> The green zone shows where K=12 connectivity has been restored — bonds re-stitched, nodes reconnected. The vacancy (red) has shrunk. The dashed red wireframe shows the original event horizon; the solid red sphere is the current (smaller) vacancy. Each quantum jump re-stitches one Planck-volume of lattice. Recession velocity: <b>Ṙ = −(c/2)(l_P/R_H)</b>.',
+eq:'Ṙ = −(c/2)(l_P/R_H)\n\nṀ = −c⁵l_P/(8G²M)\n\nτ = 4t_P(M/m_P)²\n∝ M² not M³'});
+
+// S4: Complete evaporation + comparison
+steps.push({badge:"EVAPORATED",bc:"#228833",cam:[0,3,9],
+title:"Complete Evaporation: 10¹⁵ g PBH → 0.45 ms (vs 13.8 Gyr Hawking)",
+build:function(g){buildSlab(g,0);
+  mL(g,"HEALED",new THREE.Vector3(0,0,0),"#228833");
+  mL(g,"K = 12 restored",new THREE.Vector3(0,-0.4,0),"#228833");
+},
+desc:'<b>Complete evaporation.</b> The vacancy is gone — K=12 connectivity fully restored. The mass-energy has been released as metric perturbations and SM decay products. A 10¹⁵ g PBH evaporates in <b>0.45 ms</b> via this geometric channel, vs 13.8 Gyr via Hawking. This cleanly resolves the gamma-ray constraint. Macroscopic BHs (Cygnus X-1, Sgr A*) are Peierls-locked: the healing pressure is too weak to overcome the lattice friction at R_H ≫ 1 fm.',
+eq:'10¹⁵ g PBH:\nHawking: τ = 13.8 Gyr\nGeometric: τ = 0.45 ms\n\nMacroscopic BHs:\nPeierls-locked (stable)\nL_corr ~ 1 fm'});
+
+var idx=0,playing=false,pt=null;
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}}
+function renderStep(i){idx=Math.max(0,Math.min(i,steps.length-1));sli.value=idx;clearG();
+var s=steps[idx];s.build(group);camera.position.set(s.cam[0],s.cam[1],s.cam[2]);camera.lookAt(0,0,0);rot.y=0;
+document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
+document.getElementById("title").textContent=s.title;
+document.getElementById("desc").innerHTML=s.desc;
+document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
+document.getElementById("fc").textContent=(idx+1)+"/"+steps.length;}
+(function anim(){requestAnimationFrame(anim);t+=0.016;
+if(ar&&!md)rot.y+=0.003;
+group.rotation.x=rot.x;group.rotation.y=rot.y;
+renderer.render(scene,camera);})();
+function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx>=steps.length-1){stp();return;}renderStep(idx+1);pt=setTimeout(nx,7000);}pt=setTimeout(nx,6000);};
+window.goS=function(){stp();renderStep(0);};window.goP=function(){stp();renderStep(idx-1);};
+window.goN=function(){stp();renderStep(idx+1);};window.goE=function(){stp();renderStep(steps.length-1);};
+window.goTo=function(v){stp();renderStep(v);};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
+renderStep(0);
+})();
+</script>
+</body>
+</html>
