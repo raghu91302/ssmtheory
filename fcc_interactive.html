@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #ffffff; font-family: -apple-system, 'Helvetica Neue', sans-serif; overflow: hidden; }
+canvas { display: block; }
+#hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0) 100%);
+  padding: 16px 20px 40px; z-index: 10; pointer-events: none;
+}
+#hud h1 { font-size: 16px; color: #1a1a2e; font-weight: 700; letter-spacing: 0.3px; }
+#hud .sub { font-size: 11px; color: #666; margin-top: 4px; }
+#hud .eq { font-size: 18px; color: #c0550a; font-weight: 700; margin-top: 8px; font-family: 'Georgia', serif; }
+#controls {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0) 100%);
+  padding: 36px 16px 14px; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center;
+}
+.btn {
+  background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 6px; padding: 5px 11px; color: #555; font-size: 11px;
+  cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.btn:hover { background: rgba(0,0,0,0.08); }
+.btn.active { border-color: var(--c); color: var(--c); background: rgba(0,0,0,0.02); font-weight: 600; }
+.btn .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+#mode {
+  position: absolute; top: 80px; right: 16px; z-index: 10;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.mbtn {
+  background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 6px; padding: 6px 10px; color: #777; font-size: 10px;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.mbtn:hover { background: rgba(0,0,0,0.08); color: #333; }
+.mbtn.sel { background: rgba(192,85,10,0.08); border-color: #c0550a; color: #c0550a; }
+</style>
+</head>
+<body>
+<div id="hud">
+  <h1>FCC Coordination Cluster &middot; 3 Sheets &rarr; Baryon</h1>
+  <div class="sub">13 nodes &middot; 36 edges &middot; 38 faces (32&#9651; + 6&#9633;) &middot; Drag to rotate &middot; Scroll to zoom</div>
+  <div class="eq">m<sub>p</sub> / m<sub>e</sub> = dim(B) = 36 &times; 51 = 1836</div>
+</div>
+<div id="controls">
+  <div class="btn active" id="b_xy" style="--c:#C62828" onclick="toggle(this,'xy')"><span class="dot" style="background:#C62828"></span>xy-sheet</div>
+  <div class="btn active" id="b_xz" style="--c:#00796B" onclick="toggle(this,'xz')"><span class="dot" style="background:#00796B"></span>xz-sheet</div>
+  <div class="btn active" id="b_yz" style="--c:#1565C0" onclick="toggle(this,'yz')"><span class="dot" style="background:#1565C0"></span>yz-sheet</div>
+  <div class="btn active" id="b_void" style="--c:#E65100" onclick="toggle(this,'void')"><span class="dot" style="background:#E65100"></span>Baryon</div>
+  <div class="btn active" id="b_electron" style="--c:#F9A825" onclick="toggle(this,'electron')"><span class="dot" style="background:#F9A825"></span>Electron</div>
+  <div class="btn active" id="b_faces" style="--c:#7B1FA2" onclick="toggle(this,'faces')"><span class="dot" style="background:#7B1FA2"></span>Faces</div>
+</div>
+<div id="mode">
+  <div class="mbtn sel" onclick="setMode(0,this)">Full cluster</div>
+  <div class="mbtn" onclick="setMode(1,this)">Sheets only</div>
+  <div class="mbtn" onclick="setMode(2,this)">Baryon only</div>
+  <div class="mbtn" onclick="setMode(3,this)">Electron only</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setClearColor(0xffffff);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+var dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(5,8,5); scene.add(dl);
+var dl2 = new THREE.DirectionalLight(0x6688aa, 0.25); dl2.position.set(-3,-2,-5); scene.add(dl2);
+
+var S = [ [1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],
+          [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+          [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1] ];
+var NN = [[0,0,0]].concat(S);
+var SC = [0xC62828, 0x00796B, 0x1565C0];
+var SI = [[0,1,2,3],[4,5,6,7],[8,9,10,11]];
+var SNm = ['xy','xz','yz'];
+function dd(a,b){return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2])}
+var EE = []; for(var i=0;i<13;i++) for(var j=i+1;j<13;j++) if(Math.abs(dd(NN[i],NN[j])-2)<0.01) EE.push([i,j]);
+var adj={}; for(var i=0;i<13;i++) adj[i]=new Set(); EE.forEach(function(e){adj[e[0]].add(e[1]);adj[e[1]].add(e[0])});
+var tris=[]; for(var i=0;i<13;i++) adj[i].forEach(function(j){if(j>i) adj[i].forEach(function(k){if(k>j&&adj[j].has(k)) tris.push([i,j,k])})});
+function gs(i){for(var s=0;s<3;s++) if(SI[s].indexOf(i)>=0) return s; return -1;}
+
+var G = {};
+['xy','xz','yz','void','electron','faces','cross','origin'].forEach(function(k){G[k]=new THREE.Group();scene.add(G[k])});
+
+function sphere(p,r,c,g,em){
+  em=em||0.1;
+  var m=new THREE.Mesh(new THREE.SphereGeometry(r,24,24),new THREE.MeshPhongMaterial({color:c,emissive:c,emissiveIntensity:em,shininess:60}));
+  m.position.set(p[0],p[1],p[2]);g.add(m);return m;
+}
+function tube(a,b,r,c,g,op){
+  op=op||1;
+  var dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2];
+  var l=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  var dir=new THREE.Vector3(dx/l,dy/l,dz/l);
+  var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,8),new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op}));
+  m.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+  g.add(m);return m;
+}
+
+// Origin
+sphere([0,0,0],0.14,0x222222,G.origin,0.05);
+
+// Sheet nodes + radial edges
+for(var s=0;s<3;s++) SI[s].forEach(function(i){
+  sphere(S[i],0.09,SC[s],G[SNm[s]],0.15);
+  tube(NN[0],NN[i+1],0.025,SC[s],G[SNm[s]],0.6);
+});
+
+// Cross-sheet edges
+EE.forEach(function(e){if(e[0]>0&&e[1]>0) tube(NN[e[0]],NN[e[1]],0.013,0xbbbbbb,G.cross,0.25)});
+
+// Baryon void: cluster nodes 1,5,9
+var VN=[1,5,9];
+var VC=[(NN[0][0]+NN[1][0]+NN[5][0]+NN[9][0])/4,(NN[0][1]+NN[1][1]+NN[5][1]+NN[9][1])/4,(NN[0][2]+NN[1][2]+NN[5][2]+NN[9][2])/4];
+VN.forEach(function(v){tube(NN[0],NN[v],0.045,0xE65100,G.void);sphere(NN[v],0.13,0xE65100,G.void,0.25)});
+for(var a=0;a<3;a++) for(var b=a+1;b<3;b++) tube(NN[VN[a]],NN[VN[b]],0.04,0xE65100,G.void,0.7);
+var interstitial=sphere(VC,0.08,0x333333,G.void,0.3);
+// Bonds from interstitial to 4 bounding nodes
+[0].concat(VN).forEach(function(v){tube(VC,NN[v],0.022,0x555555,G.void,0.5)});
+
+// Electron
+tube(NN[0],NN[1],0.06,0xF9A825,G.electron);
+sphere(NN[0],0.065,0xF9A825,G.electron,0.3);
+sphere(NN[1],0.065,0xF9A825,G.electron,0.3);
+
+// Faces
+tris.forEach(function(t){
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(NN[t[0]].concat(NN[t[1]],NN[t[2]])),3));
+  g.computeVertexNormals();
+  var sn=t.filter(function(x){return x>0}).map(function(x){return gs(x-1)});
+  var ss=new Set(sn);
+  var col=ss.size>=3?0x7B1FA2:0xC62828;
+  G.faces.add(new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:col,transparent:true,opacity:0.06,side:THREE.DoubleSide,depthWrite:false})));
+});
+
+// Orbit
+var theta=0.55,phi=0.45,rad=5.2,drag=false,pm={x:0,y:0},autoR=true;
+function uc(){
+  camera.position.set(rad*Math.sin(phi)*Math.cos(theta),rad*Math.cos(phi),rad*Math.sin(phi)*Math.sin(theta));
+  camera.lookAt(0,0,0);
+}
+uc();
+
+var cv=renderer.domElement;
+cv.addEventListener('pointerdown',function(e){drag=true;pm={x:e.clientX,y:e.clientY};autoR=false});
+cv.addEventListener('pointermove',function(e){if(!drag)return;theta+=(e.clientX-pm.x)*0.007;phi=Math.max(0.1,Math.min(Math.PI-0.1,phi-(e.clientY-pm.y)*0.007));pm={x:e.clientX,y:e.clientY};uc()});
+cv.addEventListener('pointerup',function(){drag=false});
+cv.addEventListener('wheel',function(e){rad=Math.max(2,Math.min(10,rad+e.deltaY*0.004));uc()});
+
+window.toggle = function(el,key){el.classList.toggle('active');G[key].visible=el.classList.contains('active')};
+
+window.setMode = function(m,el){
+  document.querySelectorAll('.mbtn').forEach(function(b){b.classList.remove('sel')});
+  el.classList.add('sel');
+  var all=['xy','xz','yz','void','electron','faces','cross','origin'];
+  if(m===0) all.forEach(function(k){G[k].visible=true});
+  else if(m===1){all.forEach(function(k){G[k].visible=false});['xy','xz','yz','origin'].forEach(function(k){G[k].visible=true})}
+  else if(m===2){all.forEach(function(k){G[k].visible=false});['void','origin','cross'].forEach(function(k){G[k].visible=true})}
+  else if(m===3){all.forEach(function(k){G[k].visible=false});['electron','origin','xy'].forEach(function(k){G[k].visible=true})}
+  var map={b_xy:'xy',b_xz:'xz',b_yz:'yz',b_void:'void',b_electron:'electron',b_faces:'faces'};
+  Object.keys(map).forEach(function(id){var b=document.getElementById(id);if(b){if(G[map[id]].visible)b.classList.add('active');else b.classList.remove('active')}});
+};
+
+(function animate(){
+  requestAnimationFrame(animate);
+  if(autoR){theta+=0.002;uc()}
+  interstitial.scale.setScalar(1+0.18*Math.sin(Date.now()*0.003));
+  renderer.render(scene,camera);
+})();
+
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
