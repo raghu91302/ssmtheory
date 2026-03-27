@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;font-family:-apple-system,'Helvetica Neue',sans-serif;overflow:hidden}
+canvas{display:block}
+#hud{position:absolute;top:0;left:0;right:0;background:linear-gradient(180deg,rgba(255,255,255,0.97) 0%,rgba(255,255,255,0) 100%);padding:14px 18px 36px;z-index:10;pointer-events:none}
+#hud h1{font-size:15px;color:#1a1a2e;font-weight:700}
+#hud .sub{font-size:10px;color:#888;margin-top:3px}
+#hud .eq{font-size:16px;color:#c0550a;font-weight:700;margin-top:6px;font-family:Georgia,serif}
+#panel{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(255,255,255,0.97) 0%,rgba(255,255,255,0) 100%);padding:32px 12px 10px;z-index:10;text-align:center}
+.row{display:flex;flex-wrap:wrap;gap:5px 8px;justify-content:center;margin-bottom:6px}
+.btn{background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.13);border-radius:5px;padding:4px 10px;color:#666;font-size:10px;cursor:pointer;transition:all .2s;user-select:none}
+.btn:hover{background:rgba(0,0,0,0.08)}
+.btn.on{border-color:var(--c);color:var(--c);background:rgba(0,0,0,0.02);font-weight:600}
+.btn .d{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+#modes{position:absolute;top:76px;right:12px;z-index:10;display:flex;flex-direction:column;gap:5px}
+.mb{background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.1);border-radius:5px;padding:5px 9px;color:#888;font-size:9px;cursor:pointer;transition:all .2s;text-align:center}
+.mb:hover{background:rgba(0,0,0,0.08);color:#333}
+.mb.sel{background:rgba(192,85,10,0.08);border-color:#c0550a;color:#c0550a}
+#info{position:absolute;top:76px;left:12px;z-index:10;background:rgba(255,255,255,0.95);border:1px solid rgba(0,0,0,0.1);border-radius:8px;padding:10px 14px;font-size:11px;color:#555;max-width:260px;line-height:1.5;display:none}
+#info b{color:#1a1a2e}
+#info .val{font-size:18px;color:#c0550a;font-weight:700;font-family:Georgia,serif;margin:4px 0}
+</style>
+</head>
+<body>
+<div id="hud">
+  <h1>FCC Lattice Code &middot; Five Particle Mass Spectrum</h1>
+  <div class="sub">13 nodes &middot; 36 edges &middot; 38 faces &middot; Drag to rotate &middot; Scroll to zoom</div>
+  <div class="eq">m<sub>x</sub>/m<sub>e</sub> = C<sub>x</sub> &middot; kT ln2/c&sup2; &divide; C<sub>e</sub> &middot; kT ln2/c&sup2; = C<sub>x</sub></div>
+</div>
+<div id="info"></div>
+<div id="panel">
+  <div class="row">
+    <div class="btn on" id="b_xy" style="--c:#C62828" onclick="tog(this,'xy')"><span class="d" style="background:#C62828"></span>xy</div>
+    <div class="btn on" id="b_xz" style="--c:#00796B" onclick="tog(this,'xz')"><span class="d" style="background:#00796B"></span>xz</div>
+    <div class="btn on" id="b_yz" style="--c:#1565C0" onclick="tog(this,'yz')"><span class="d" style="background:#1565C0"></span>yz</div>
+    <div class="btn on" id="b_cross" style="--c:#999" onclick="tog(this,'cross')"><span class="d" style="background:#999"></span>Cross edges</div>
+    <div class="btn on" id="b_faces" style="--c:#7B1FA2" onclick="tog(this,'faces')"><span class="d" style="background:#7B1FA2"></span>Faces</div>
+  </div>
+  <div class="row">
+    <div class="btn on" id="b_electron" style="--c:#F9A825" onclick="tog(this,'electron')"><span class="d" style="background:#F9A825"></span>Electron</div>
+    <div class="btn on" id="b_muon" style="--c:#00ACC1" onclick="tog(this,'muon')"><span class="d" style="background:#00ACC1"></span>Muon</div>
+    <div class="btn on" id="b_pion" style="--c:#FF6D00" onclick="tog(this,'pion')"><span class="d" style="background:#FF6D00"></span>Pion</div>
+    <div class="btn on" id="b_proton" style="--c:#E65100" onclick="tog(this,'proton')"><span class="d" style="background:#E65100"></span>Proton</div>
+    <div class="btn on" id="b_neutron" style="--c:#D50000" onclick="tog(this,'neutron')"><span class="d" style="background:#D50000"></span>Neutron</div>
+  </div>
+</div>
+<div id="modes">
+  <div class="mb sel" onclick="mode(0,this)">All</div>
+  <div class="mb" onclick="mode(1,this)">Electron</div>
+  <div class="mb" onclick="mode(2,this)">Muon</div>
+  <div class="mb" onclick="mode(3,this)">Pion</div>
+  <div class="mb" onclick="mode(4,this)">Proton</div>
+  <div class="mb" onclick="mode(5,this)">Neutron</div>
+  <div class="mb" onclick="mode(6,this)">Sheets only</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,100);
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(devicePixelRatio);renderer.setClearColor(0xffffff);
+document.body.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,.7));
+var dl=new THREE.DirectionalLight(0xffffff,.6);dl.position.set(5,8,5);scene.add(dl);
+var dl2=new THREE.DirectionalLight(0x6688aa,.25);dl2.position.set(-3,-2,-5);scene.add(dl2);
+
+var S=[[1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],[1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],[0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]];
+var N=[[0,0,0]].concat(S);
+var SC=[0xC62828,0x00796B,0x1565C0];
+var SI=[[0,1,2,3],[4,5,6,7],[8,9,10,11]];
+var SN=['xy','xz','yz'];
+function d2(a,b){return(a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2])}
+var EE=[];for(var i=0;i<13;i++)for(var j=i+1;j<13;j++)if(Math.abs(d2(N[i],N[j])-2)<.01)EE.push([i,j]);
+var adj={};for(var i=0;i<13;i++)adj[i]=new Set();EE.forEach(function(e){adj[e[0]].add(e[1]);adj[e[1]].add(e[0])});
+function gs(i){for(var s=0;s<3;s++)if(SI[s].indexOf(i)>=0)return s;return-1}
+
+var G={};
+['xy','xz','yz','cross','faces','origin','electron','muon','pion','proton','neutron'].forEach(function(k){G[k]=new THREE.Group();scene.add(G[k])});
+
+function sph(p,r,c,g,em){em=em||.1;var m=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),new THREE.MeshPhongMaterial({color:c,emissive:c,emissiveIntensity:em,shininess:60}));m.position.set(p[0],p[1],p[2]);g.add(m);return m}
+function tub(a,b,r,c,g,op){op=op||1;var dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],l=Math.sqrt(dx*dx+dy*dy+dz*dz),dir=new THREE.Vector3(dx/l,dy/l,dz/l);var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,8),new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op}));m.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);g.add(m);return m}
+function tri(a,b,c,col,g,op){var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(N[a].concat(N[b],N[c])),3));geo.computeVertexNormals();g.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:col,transparent:true,opacity:op||.06,side:THREE.DoubleSide,depthWrite:false})))}
+
+// Origin
+sph([0,0,0],.14,0x222222,G.origin,.05);
+
+// Sheet nodes + radial edges
+for(var s=0;s<3;s++)SI[s].forEach(function(i){sph(S[i],.085,SC[s],G[SN[s]],.15);tub(N[0],N[i+1],.022,SC[s],G[SN[s]],.5)});
+
+// Cross edges
+EE.forEach(function(e){if(e[0]>0&&e[1]>0)tub(N[e[0]],N[e[1]],.012,0xbbbbbb,G.cross,.2)});
+
+// Faces
+var tris=[];for(var i=0;i<13;i++)adj[i].forEach(function(j){if(j>i)adj[i].forEach(function(k){if(k>j&&adj[j].has(k))tris.push([i,j,k])})});
+tris.forEach(function(t){var sn=t.filter(function(x){return x>0}).map(function(x){return gs(x-1)});var ss=new Set(sn);tri(t[0],t[1],t[2],ss.size>=3?0x7B1FA2:0xC62828,G.faces,.06)});
+
+// ---- ELECTRON: 1 edge on xy-sheet ----
+tub(N[0],N[1],.06,0xF9A825,G.electron);
+sph(N[0],.07,0xF9A825,G.electron,.3);
+sph(N[1],.07,0xF9A825,G.electron,.3);
+
+// ---- MUON: EM sector — highlight cross-sheet edges through square faces ----
+// Square faces connect nodes across different sheets
+// Highlight all cross-sheet edges in cyan
+EE.forEach(function(e){
+  if(e[0]>0&&e[1]>0){
+    var s0=gs(e[0]-1),s1=gs(e[1]-1);
+    if(s0!==s1) tub(N[e[0]],N[e[1]],.035,0x00ACC1,G.muon,.6);
+  }
+});
+// Highlight square face regions (the 6 squares)
+// Each square has 4 nodes from 2 sheets
+var sqs=[];
+for(var i=0;i<13;i++)for(var jj of adj[i])if(jj>i)for(var k of adj[jj])if(k!==i&&k>i&&!adj[i].has(k))for(var l of adj[k])if(adj[i].has(l)&&l!==jj&&l>jj&&!adj[jj].has(l)){var sq=[i,jj,k,l].sort(function(a,b){return a-b});if(!sqs.find(function(s){return s.join()===sq.join()}))sqs.push(sq)}
+sqs.forEach(function(sq){
+  tri(sq[0],sq[1],sq[2],0x00ACC1,G.muon,.1);
+  tri(sq[0],sq[2],sq[3],0x00ACC1,G.muon,.1);
+});
+
+// ---- PION: 2-sheet defect-antidefect (xy + xz) ----
+// Highlight xy and xz sheet nodes more prominently
+SI[0].forEach(function(i){sph(S[i],.1,0xFF6D00,G.pion,.25)});
+SI[1].forEach(function(i){sph(S[i],.1,0xFF6D00,G.pion,.25)});
+// Cross edges between xy and xz
+SI[0].forEach(function(i){SI[1].forEach(function(j){
+  if(Math.abs(d2(S[i],S[j])-2)<.01) tub(N[i+1],N[j+1],.04,0xFF6D00,G.pion,.7);
+})});
+// Radial edges for these 2 sheets
+SI[0].concat(SI[1]).forEach(function(i){tub(N[0],N[i+1],.025,0xFF6D00,G.pion,.4)});
+// Defect markers
+sph([.4,.4,.4],.06,0xFF6D00,G.pion,.4);
+sph([-.4,-.4,-.4],.06,0xFF6D00,G.pion,.4);
+// Connecting string
+tub([.4,.4,.4],[-.4,-.4,-.4],.015,0xFF6D00,G.pion,.5);
+
+// ---- PROTON: Y-junction at tet void, charged ----
+var VN=[1,5,9];
+var VC=[(N[0][0]+N[1][0]+N[5][0]+N[9][0])/4,(N[0][1]+N[1][1]+N[5][1]+N[9][1])/4,(N[0][2]+N[1][2]+N[5][2]+N[9][2])/4];
+VN.forEach(function(v){tub(N[0],N[v],.045,0xE65100,G.proton);sph(N[v],.13,0xE65100,G.proton,.25)});
+for(var a=0;a<3;a++)for(var b=a+1;b<3;b++)tub(N[VN[a]],N[VN[b]],.035,0xE65100,G.proton,.6);
+var interP=sph(VC,.07,0x333333,G.proton,.3);
+[0].concat(VN).forEach(function(v){tub(VC,N[v],.018,0x666666,G.proton,.4)});
+
+// ---- NEUTRON: Y-junction + 3 internal red flux tubes ----
+VN.forEach(function(v){tub(N[0],N[v],.045,0xE65100,G.neutron);sph(N[v],.13,0xE65100,G.neutron,.25)});
+for(var a=0;a<3;a++)for(var b=a+1;b<3;b++)tub(N[VN[a]],N[VN[b]],.035,0xE65100,G.neutron,.6);
+var interN=sph(VC,.07,0x333333,G.neutron,.3);
+tub(VC,N[0],.018,0x666666,G.neutron,.4);
+// THE 3 INTERNAL FLUX TUBES — bright red, thick
+VN.forEach(function(v){tub(VC,N[v],.05,0xD50000,G.neutron,.9)});
+
+// Orbit
+var theta=.55,phi=.45,rad=5.2,drag=false,pm={x:0,y:0},autoR=true;
+function uc(){camera.position.set(rad*Math.sin(phi)*Math.cos(theta),rad*Math.cos(phi),rad*Math.sin(phi)*Math.sin(theta));camera.lookAt(0,0,0)}
+uc();
+var cv=renderer.domElement;
+cv.addEventListener('pointerdown',function(e){drag=true;pm={x:e.clientX,y:e.clientY};autoR=false});
+cv.addEventListener('pointermove',function(e){if(!drag)return;theta+=(e.clientX-pm.x)*.007;phi=Math.max(.1,Math.min(Math.PI-.1,phi-(e.clientY-pm.y)*.007));pm={x:e.clientX,y:e.clientY};uc()});
+cv.addEventListener('pointerup',function(){drag=false});
+cv.addEventListener('wheel',function(e){rad=Math.max(2,Math.min(10,rad+e.deltaY*.004));uc()});
+
+// Info box content per particle
+var infos={
+  electron:'<b>Electron</b> &mdash; 1 sheet, F<sub>s</sub>=0<div class="val">C<sub>e</sub> = 1</div>Single edge error on xy-sheet. No faces &rarr; no hook errors &rarr; no FT overhead. Defines the mass unit.',
+  muon:'<b>Muon</b> &mdash; EM sector<div class="val">C<sub>&mu;</sub> = EF<sub>sq</sub> &minus; d&sup2; = 207</div>Colorless lepton coupling to 6 bipartite (square) faces. Cyan edges show EM propagation paths. Exp: 206.77 (0.11%)',
+  pion:'<b>Pion (&pi;&plusmn;)</b> &mdash; 2-sheet topological<div class="val">C<sub>&pi;</sub> = &chi;(&chi;+d)+d = 273</div>Quark-antiquark defect-antidefect pair. Orange: two coupled sheets with cross-sheet edges. Exp: 273.13 (0.05%)',
+  proton:'<b>Proton</b> &mdash; 3-sheet Y-junction<div class="val">C<sub>p</sub> = dim(B) = 1836</div>Interstitial defect at tetrahedral void. One quark per sheet (diamonds). Charged &rarr; external flux suffices. Exp: 1836.15 (0.008%)',
+  neutron:'<b>Neutron</b> &mdash; 3-sheet + internal<div class="val">C<sub>n</sub> = dim(B) + d = 1839</div>Same Y-junction but neutral. Red tubes: 3 internal flux edges must be verified (+3). Exp: 1838.68 (0.017%)'
+};
+
+window.tog=function(el,key){el.classList.toggle('on');G[key].visible=el.classList.contains('on')};
+
+function syncBtns(){
+  var map={b_xy:'xy',b_xz:'xz',b_yz:'yz',b_cross:'cross',b_faces:'faces',b_electron:'electron',b_muon:'muon',b_pion:'pion',b_proton:'proton',b_neutron:'neutron'};
+  Object.keys(map).forEach(function(id){var b=document.getElementById(id);if(b&&G[map[id]]){if(G[map[id]].visible)b.classList.add('on');else b.classList.remove('on')}});
+}
+
+function showInfo(key){
+  var el=document.getElementById('info');
+  if(key&&infos[key]){el.innerHTML=infos[key];el.style.display='block'}
+  else el.style.display='none';
+}
+
+window.mode=function(m,el){
+  document.querySelectorAll('.mb').forEach(function(b){b.classList.remove('sel')});
+  el.classList.add('sel');
+  var all=['xy','xz','yz','cross','faces','origin','electron','muon','pion','proton','neutron'];
+  // Hide all first
+  all.forEach(function(k){G[k].visible=false});
+  
+  if(m===0){all.forEach(function(k){G[k].visible=true});showInfo(null)}
+  else if(m===1){['xy','origin','electron'].forEach(function(k){G[k].visible=true});showInfo('electron')}
+  else if(m===2){['xy','xz','yz','origin','cross','muon'].forEach(function(k){G[k].visible=true});showInfo('muon')}
+  else if(m===3){['xy','xz','origin','pion'].forEach(function(k){G[k].visible=true});showInfo('pion')}
+  else if(m===4){['xy','xz','yz','origin','cross','proton'].forEach(function(k){G[k].visible=true});showInfo('proton')}
+  else if(m===5){['xy','xz','yz','origin','cross','neutron'].forEach(function(k){G[k].visible=true});showInfo('neutron')}
+  else if(m===6){['xy','xz','yz','origin'].forEach(function(k){G[k].visible=true});showInfo(null)}
+  syncBtns();
+};
+
+(function animate(){
+  requestAnimationFrame(animate);
+  if(autoR){theta+=.0015;uc()}
+  interP.scale.setScalar(1+.15*Math.sin(Date.now()*.003));
+  interN.scale.setScalar(1+.15*Math.sin(Date.now()*.003));
+  renderer.render(scene,camera);
+})();
+
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
