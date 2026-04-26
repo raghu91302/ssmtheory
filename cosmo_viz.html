@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Big Bang: K=6 Sheets → K=12 FCC Cuboctahedral</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#fff;font-family:'Segoe UI',Arial,sans-serif;color:#1a2040;overflow:hidden;}
+canvas{display:block;}
+#topbar{position:absolute;top:0;left:0;right:0;background:#fff;
+  border-bottom:1.5px solid #d8dff0;padding:8px 20px;
+  display:flex;justify-content:space-between;align-items:center;pointer-events:none;}
+h1{font-size:0.90rem;font-weight:700;color:#1a2040;}
+h2{font-size:0.67rem;color:#5566aa;font-weight:400;margin-top:2px;}
+#stage-label{position:absolute;top:58px;left:50%;transform:translateX(-50%);
+  background:#fff;border:1.5px solid #d0d8ee;border-radius:8px;
+  padding:8px 20px;text-align:center;pointer-events:none;
+  box-shadow:0 2px 10px rgba(0,30,80,.08);min-width:320px;}
+#stage-label .title{font-size:1.0rem;font-weight:700;color:#1a2040;}
+#stage-label .sub{font-size:0.72rem;color:#5566aa;margin-top:3px;}
+#bang-flash{position:absolute;top:0;left:0;right:0;bottom:0;
+  background:rgba(255,80,0,0);pointer-events:none;transition:background 0.3s;}
+#controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;pointer-events:auto;}
+button{background:#f0f2fa;border:1px solid #b8c4e0;color:#2a3a80;
+  border-radius:5px;padding:5px 13px;font-size:0.72rem;font-weight:500;
+  cursor:pointer;transition:all .12s;}
+button:hover{background:#e0e6f8;}
+button.act{background:#2a3a80;color:#fff;border-color:#2a3a80;}
+button.bang{background:#dd3311;color:#fff;border-color:#dd3311;font-weight:700;}
+#stats{position:absolute;bottom:52px;left:0;right:0;
+  display:flex;justify-content:center;gap:36px;pointer-events:none;}
+.stat{text-align:center;}
+.sv{font-size:1.35rem;font-weight:700;color:#1a2040;}
+.sl{font-size:0.62rem;color:#5566aa;letter-spacing:.07em;text-transform:uppercase;}
+#legend{position:absolute;top:58px;right:14px;
+  background:#fff;border:1px solid #d0d8ee;border-radius:7px;
+  padding:9px 13px;box-shadow:0 1px 8px rgba(0,20,80,.07);
+  font-size:0.70rem;color:#1a2040;pointer-events:auto;}
+.lr{display:flex;align-items:center;gap:7px;margin-bottom:5px;line-height:1.3;}
+.lr:last-child{margin-bottom:0;}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.lsw{width:18px;height:2px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="bang-flash"></div>
+
+<div id="topbar">
+  <div>
+    <h1>The Big Bang as a QEC Phase Transition: K=6 Sheets → K=12 FCC Cuboctahedral</h1>
+    <h2>Bell pair → Triangle → K=6 hexagonal sheet (pre-Bang era) → P=e⁻³ Lift → K=12 FCC (Big Bang) → [[192,130,3]] → particles</h2>
+  </div>
+  <div style="font-size:0.67rem;color:#8899bb;">drag · scroll</div>
+</div>
+
+<div id="stage-label">
+  <div class="title" id="stg-title">Stage 1: Bell Pair (Pre-Universe)</div>
+  <div class="sub" id="stg-sub">Minimum bipartite entangled state · [[2,0,2]] · timeless</div>
+</div>
+
+<div id="legend">
+  <div style="font-weight:700;font-size:0.73rem;margin-bottom:6px;">Legend</div>
+  <div class="lr"><div class="dot" style="background:#4466cc;"></div>Bell pair / Sheet A nodes</div>
+  <div class="lr"><div class="dot" style="background:#22aa66;"></div>Sheet B nodes (K=6)</div>
+  <div class="lr"><div class="dot" style="background:#dd3311;"></div>K=12 FCC nodes (Big Bang)</div>
+  <div class="lr"><div class="lsw" style="background:#dd3311;"></div>Cuboctahedral cage edges</div>
+  <div class="lr"><div class="lsw" style="background:#c89000;"></div>Inter-sheet Lift bonds</div>
+</div>
+
+<div id="stats">
+  <div class="stat"><div class="sv" id="s-k">—</div><div class="sl">coordination</div></div>
+  <div class="stat"><div class="sv" id="s-nodes">—</div><div class="sl">nodes</div></div>
+  <div class="stat"><div class="sv" id="s-dim">—</div><div class="sl">dimension</div></div>
+  <div class="stat"><div class="sv" id="s-code">—</div><div class="sl">code</div></div>
+</div>
+
+<div id="controls">
+  <button onclick="showStage(0)" id="b0" class="act">1. Bell Pair</button>
+  <button onclick="showStage(1)" id="b1">2. Triangle</button>
+  <button onclick="showStage(2)" id="b2">3. K=6 Sheet</button>
+  <button onclick="showStage(3)" id="b3" class="bang">☛ BIG BANG: K=12</button>
+  <button onclick="autoPlay()" id="bauto">▶ Auto-play</button>
+  <button onclick="toggleRot()" id="brot" class="act">Rotate</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const canvas=document.getElementById('c');
+const R=new THREE.WebGLRenderer({canvas,antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+R.setClearColor(0xffffff,1);
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(40,1,0.1,200);
+cam.position.set(0,3,16); cam.lookAt(0,0,0);
+scene.add(new THREE.AmbientLight(0xffffff,.80));
+const d1=new THREE.DirectionalLight(0xffffff,.90); d1.position.set(6,9,7); scene.add(d1);
+const d2=new THREE.DirectionalLight(0xdde8ff,.40); d2.position.set(-5,-4,-5); scene.add(d2);
+
+const NN=[[1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],
+          [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+          [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]];
+const CE=[];
+for(let i=0;i<12;i++) for(let j=i+1;j<12;j++){
+  const d2s=NN[i].reduce((s,v,k)=>(s+(v-NN[j][k])**2),0);
+  if(Math.abs(d2s-2)<.01) CE.push([i,j]);
+}
+const H=Math.sqrt(2/3);
+
+function v3(x,y,z){return new THREE.Vector3(x,y,z);}
+function sph(x,y,z,r,col,op=1){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,14,14),
+    new THREE.MeshPhongMaterial({color:col,transparent:op<1,opacity:op,
+      specular:0xffffff,shininess:50}));
+  m.position.set(x,y,z); return m;
+}
+function cyl(v1,v2,r,col,op=1){
+  const dir=v2.clone().sub(v1),len=dir.length();
+  const g=new THREE.CylinderGeometry(r,r,len,8);
+  const m=new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:col,
+    transparent:op<1,opacity:op,shininess:30}));
+  m.position.copy(v1.clone().add(v2).multiplyScalar(.5));
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+  return m;
+}
+function line(v1,v2,col,op=1){
+  const g=new THREE.BufferGeometry().setFromPoints([v1,v2]);
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color:col,transparent:op<1,opacity:op}));
+}
+
+const grp=new THREE.Group(); scene.add(grp);
+
+const STAGES=[
+  {title:'Stage 1: Bell Pair (Pre-Universe)',
+   sub:'Minimum bipartite entangled state · [[2,0,2]] · timeless',
+   k:'1',nodes:'2',dim:'0D',code:'[[2,0,2]]'},
+  {title:'Stage 2: Triangle (First Causal Loop)',
+   sub:'Minimal gauge-invariant plaquette · CSS stabilizer seed',
+   k:'2',nodes:'3',dim:'2D seed',code:'1 stabilizer'},
+  {title:'Stage 3: K=6 Hexagonal Sheet (Pre-Bang Era)',
+   sub:'2D QEC-stable ground state · rapid lateral expansion',
+   k:'6',nodes:'~N',dim:'2D',code:'K=6 lattice'},
+  {title:'☛ THE BIG BANG: K=12 FCC Cuboctahedral',
+   sub:'3 sheets + Lift (P=e⁻³) → [[192,130,3]] CSS → particle spectrum',
+   k:'12',nodes:'13',dim:'3D',code:'[[192,130,3]]'},
+];
+
+function buildStage(s){
+  while(grp.children.length) grp.remove(grp.children[0]);
+
+  if(s===0){ // Bell pair
+    grp.add(sph(-2,0,0,.25,0x4466cc));
+    grp.add(sph( 2,0,0,.25,0x4466cc));
+    grp.add(cyl(v3(-2,0,0),v3(2,0,0),.06,0x333333));
+    grp.add(sph(0,.6,0,.04,0xaaaaaa));
+    // entanglement squiggly visual
+    for(let i=0;i<20;i++){
+      const t=i/19*4-2;
+      const y=Math.sin(i*1.2)*.3;
+      if(i>0){
+        const t0=(i-1)/19*4-2, y0=Math.sin((i-1)*1.2)*.3;
+        grp.add(line(v3(t0,y0,0),v3(t,y,0),0x8899ff,.6));
+      }
+    }
+  }
+  else if(s===1){ // Triangle
+    const pts=[[-1.2,-.7,0],[1.2,-.7,0],[0,1.2,0]];
+    for(let i=0;i<3;i++){
+      const j=(i+1)%3;
+      grp.add(cyl(new THREE.Vector3(...pts[i]),new THREE.Vector3(...pts[j]),.06,0x2288aa));
+      grp.add(sph(...pts[i],.28,0x2288aa));
+    }
+    // Fill
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(
+      new Float32Array(pts.flat()),3));
+    geo.setIndex([0,1,2]);
+    grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial(
+      {color:0x2288aa,transparent:true,opacity:.10,side:THREE.DoubleSide})));
+  }
+  else if(s===2){ // K=6 sheet
+    const L=1.2, nodes=[];
+    for(let i=-3;i<=3;i++) for(let j=-3;j<=3;j++){
+      const x=i*L+j*L*.5, y=j*L*Math.sqrt(3)/2;
+      if(Math.abs(x)<3.6&&Math.abs(y)<3.0) nodes.push([x,y,0]);
+    }
+    for(let a=0;a<nodes.length;a++) for(let b=a+1;b<nodes.length;b++){
+      const dx=nodes[a][0]-nodes[b][0],dy=nodes[a][1]-nodes[b][1];
+      if(Math.abs(Math.sqrt(dx*dx+dy*dy)-L)<.04)
+        grp.add(line(new THREE.Vector3(...nodes[a]),new THREE.Vector3(...nodes[b]),0x22aa66,.55));
+    }
+    nodes.forEach(n=>{
+      const k=nodes.filter(m=>Math.abs(Math.sqrt((m[0]-n[0])**2+(m[1]-n[1])**2)-L)<.04).length;
+      grp.add(sph(...n,.12+(k>=6?.06:0),k>=6?0x22aa66:0x88cc88));
+    });
+  }
+  else{ // Big Bang: 3 sheets + cuboctahedral
+    const L=1.1;
+    const shCols=[0x4466cc,0x22aa66,0x6644cc];
+    for(let si=0;si<3;si++){
+      const sz=si*H*L*2;
+      const nds=[];
+      for(let i=-2;i<=2;i++) for(let j=-2;j<=2;j++){
+        const x=i*L+j*L*.5, y=j*L*Math.sqrt(3)/2;
+        if(Math.abs(x)<2.5&&Math.abs(y)<2.0) nds.push([x,y,sz]);
+      }
+      for(let a=0;a<nds.length;a++) for(let b=a+1;b<nds.length;b++){
+        const dx=nds[a][0]-nds[b][0],dy=nds[a][1]-nds[b][1];
+        if(Math.abs(Math.sqrt(dx*dx+dy*dy)-L)<.04)
+          grp.add(line(new THREE.Vector3(...nds[a]),new THREE.Vector3(...nds[b]),shCols[si],.40));
+      }
+      nds.forEach(n=>grp.add(sph(...n,.11,shCols[si])));
+      // Inter-sheet lift bonds
+      if(si<2){
+        const sz2=(si+1)*H*L*2;
+        [[0,0],[L*.5,L*Math.sqrt(3)/2],[L*-.5,L*Math.sqrt(3)/2]].forEach(([ox,oy])=>{
+          grp.add(cyl(v3(ox,oy,sz),v3(ox,oy,sz2),.04,0xcc8800,.7));
+        });
+      }
+    }
+    // Cuboctahedral cage centred
+    const sc=.9, cz=H*L*2;
+    CE.forEach(([a,b])=>{
+      grp.add(line(
+        v3(NN[a][0]*sc,NN[a][1]*sc,NN[a][2]*sc*H*L*2+cz),
+        v3(NN[b][0]*sc,NN[b][1]*sc,NN[b][2]*sc*H*L*2+cz),
+        0xdd3311,.85));
+    });
+    NN.forEach(([x,y,z])=>{
+      grp.add(sph(x*sc,y*sc,z*sc*H*L*2+cz,.17,0xdd3311));
+    });
+    grp.add(sph(0,0,cz,.22,0xee3311));
+    // Big Bang flash
+    document.getElementById('bang-flash').style.background='rgba(255,80,0,0.18)';
+    setTimeout(()=>{document.getElementById('bang-flash').style.background='rgba(255,80,0,0)';},600);
+  }
+
+  const st=STAGES[s];
+  document.getElementById('stg-title').textContent=st.title;
+  document.getElementById('stg-sub').textContent=st.sub;
+  document.getElementById('s-k').textContent=st.k;
+  document.getElementById('s-nodes').textContent=st.nodes;
+  document.getElementById('s-dim').textContent=st.dim;
+  document.getElementById('s-code').textContent=st.code;
+  document.getElementById('stg-title').style.color=s===3?'#dd3311':'#1a2040';
+  ['b0','b1','b2','b3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.classList.toggle('act',i===s&&i<3);
+    el.classList.toggle('bang',i===s&&i===3);
+  });
+}
+
+function showStage(s){curStage=s;buildStage(s);}
+let curStage=0,autoRot=true,autoPlaying=false;
+
+function toggleRot(){autoRot=!autoRot;document.getElementById('brot').classList.toggle('act',autoRot);}
+
+let autoTimer=null;
+function autoPlay(){
+  if(autoPlaying){clearInterval(autoTimer);autoPlaying=false;
+    document.getElementById('bauto').textContent='▶ Auto-play';return;}
+  autoPlaying=true;document.getElementById('bauto').textContent='■ Stop';
+  autoTimer=setInterval(()=>{curStage=(curStage+1)%4;buildStage(curStage);},2800);
+}
+
+let drag=false,px=0,py=0;
+canvas.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.clientX-px)*.007;
+  grp.rotation.x+=(e.clientY-py)*.007;
+  px=e.clientX;py=e.clientY;
+});
+canvas.addEventListener('wheel',e=>{
+  cam.position.z=Math.max(4,Math.min(32,cam.position.z+e.deltaY*.018));e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchstart',e=>{drag=true;px=e.touches[0].clientX;py=e.touches[0].clientY;});
+addEventListener('touchend',()=>drag=false);
+addEventListener('touchmove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.touches[0].clientX-px)*.01;
+  grp.rotation.x+=(e.touches[0].clientY-py)*.01;
+  px=e.touches[0].clientX;py=e.touches[0].clientY;
+},{passive:false});
+
+function resize(){const W=innerWidth,H=innerHeight;R.setSize(W,H);cam.aspect=W/H;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+
+buildStage(0);
+let t=0;
+(function loop(){
+  requestAnimationFrame(loop);t+=.004;
+  if(autoRot&&!drag){grp.rotation.y=t*.28;grp.rotation.x=Math.sin(t*.18)*.08;}
+  R.render(scene,cam);
+})();
+</script>
+</body>
+</html>
