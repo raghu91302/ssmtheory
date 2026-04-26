@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Nuclear Binding — Overlapping Cuboctahedral Cages</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#ffffff;font-family:'Segoe UI',Arial,sans-serif;color:#1a2040;overflow:hidden;}
+canvas{display:block;}
+#topbar{
+  position:absolute;top:0;left:0;right:0;background:#fff;
+  border-bottom:1.5px solid #d8dff0;padding:8px 20px;
+  display:flex;justify-content:space-between;align-items:center;pointer-events:none;
+}
+h1{font-size:0.90rem;font-weight:700;color:#1a2040;}
+h2{font-size:0.67rem;color:#5566aa;font-weight:400;margin-top:2px;}
+#panels{position:absolute;top:58px;left:14px;display:flex;flex-direction:column;gap:9px;pointer-events:auto;}
+.panel{background:#fff;border:1px solid #d0d8ee;border-radius:7px;padding:9px 13px;
+  box-shadow:0 1px 8px rgba(0,20,80,.07);font-size:0.70rem;color:#1a2040;min-width:195px;}
+.pt{font-weight:700;font-size:0.72rem;margin-bottom:6px;}
+.lr{display:flex;align-items:center;gap:7px;margin-bottom:4px;line-height:1.3;}
+.lr:last-child{margin-bottom:0;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.sq{width:11px;height:11px;flex-shrink:0;border-radius:1px;}
+.lsw{width:18px;height:2px;flex-shrink:0;}
+.eq{font-family:Georgia,serif;font-size:0.78rem;margin:2px 0;}
+.b{color:#b07800;font-weight:700;}.nb{color:#999;}
+#stats{position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:center;gap:32px;pointer-events:none;}
+.stat{text-align:center;}
+.sv{font-size:1.45rem;font-weight:700;color:#1a2040;}
+.sl{font-size:0.61rem;color:#5566aa;letter-spacing:.07em;text-transform:uppercase;margin-top:1px;}
+#ctrl{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:7px;pointer-events:auto;}
+button{background:#f0f2fa;border:1px solid #b8c4e0;color:#2a3a80;border-radius:5px;
+  padding:4px 11px;font-size:0.70rem;font-weight:500;cursor:pointer;transition:all .12s;}
+button:hover{background:#e0e6f8;}
+button.act{background:#2a3a80;color:#fff;border-color:#2a3a80;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="topbar">
+  <div>
+    <h1>Nuclear Binding — Overlapping Cuboctahedral Cages (FCC Max-Cut Deduplication)</h1>
+    <h2>Each nucleon is a cuboctahedral defect. Adjacent p-n cages share 4 stabilizer sites (gold square face) — parity 1⊕0=1 → deduplication → binding.</h2>
+  </div>
+  <div style="font-size:0.67rem;color:#8899bb;">C<sub>p</sub>=f₁×(f₀+f₂)=36×51=<b>1836</b> · drag·scroll</div>
+</div>
+
+<div id="panels">
+  <div class="panel">
+    <div class="pt">Boundary Closure (Axiom 4)</div>
+    <div class="eq"><span class="b">p-n: 1⊕0=1 → shared boundary ✓</span></div>
+    <div class="eq"><span class="nb">p-p: 1⊕1=0 → boundary dissolves ✗</span></div>
+    <div class="eq"><span class="nb">n-n: 0⊕0=0 → boundary dissolves ✗</span></div>
+  </div>
+  <div class="panel">
+    <div class="pt">Legend</div>
+    <div class="lr"><div class="dot" style="background:#cc2233;border:1.5px solid #dd3344;"></div>Proton centre (p=1)</div>
+    <div class="lr"><div class="dot" style="background:#2244cc;border:1.5px solid #3355dd;"></div>Neutron centre (p=0)</div>
+    <div class="lr"><div class="lsw" style="background:#cc2233;opacity:.5;"></div>Proton cuboctahedral cage</div>
+    <div class="lr"><div class="lsw" style="background:#2244cc;opacity:.5;"></div>Neutron cuboctahedral cage</div>
+    <div class="lr"><div class="sq" style="background:rgba(200,140,0,.18);border:1.5px solid #cc8800;"></div>Shared boundary (p-n, binding)</div>
+    <div class="lr"><div class="sq" style="background:rgba(160,170,200,.1);border:1px dashed #aab0cc;"></div>Shared boundary (p-p/n-n, none)</div>
+  </div>
+</div>
+
+<div id="stats">
+  <div class="stat"><div class="sv" id="s-pn">—</div><div class="sl">p-n bonds</div></div>
+  <div class="stat"><div class="sv" id="s-shared">—</div><div class="sl">shared faces</div></div>
+  <div class="stat"><div class="sv" id="s-frac">—</div><div class="sl">binding fraction</div></div>
+  <div class="stat"><div class="sv" id="s-name">²H</div><div class="sl">nucleus</div></div>
+</div>
+
+<div id="ctrl">
+  <button onclick="setN(2,1,'²H')" id="b2" class="act">²H (deuteron)</button>
+  <button onclick="setN(4,2,'⁴He')" id="b4">⁴He</button>
+  <button onclick="setN(12,6,'¹²C')" id="b12">¹²C</button>
+  <button onclick="setN(16,8,'¹⁶O')" id="b16">¹⁶O</button>
+  <button onclick="toggleRot()" id="brot" class="act">Auto-rotate</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── renderer ─────────────────────────────────────────────────
+const canvas=document.getElementById('c');
+const R=new THREE.WebGLRenderer({canvas,antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+R.setClearColor(0xffffff,1);
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(40,1,0.1,200);
+cam.position.set(0,2,16); cam.lookAt(0,0,0);
+scene.add(new THREE.AmbientLight(0xffffff,.78));
+const d1=new THREE.DirectionalLight(0xffffff,.85); d1.position.set(6,9,7); scene.add(d1);
+const d2=new THREE.DirectionalLight(0xdde8ff,.45); d2.position.set(-5,-4,-5); scene.add(d2);
+
+// ── FCC ──────────────────────────────────────────────────────
+const NN=[[1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],
+          [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+          [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]];
+
+function cluster(A){
+  const pts=[]; let r=1;
+  while(pts.length<A){
+    for(let x=-r;x<=r;x++) for(let y=-r;y<=r;y++) for(let z=-r;z<=r;z++)
+      if((x+y+z)%2===0&&!pts.some(p=>p[0]===x&&p[1]===y&&p[2]===z)) pts.push([x,y,z]);
+    r++;
+  }
+  pts.sort((a,b)=>a[0]**2+a[1]**2+a[2]**2-(b[0]**2+b[1]**2+b[2]**2));
+  return pts.slice(0,A);
+}
+function adjList(coords){
+  const cs={},a=[];
+  coords.forEach(([x,y,z],i)=>{cs[`${x},${y},${z}`]=i;a.push([]);});
+  coords.forEach(([x,y,z],i)=>NN.forEach(([dx,dy,dz])=>{
+    const k=`${x+dx},${y+dy},${z+dz}`; if(cs[k]!=null) a[i].push(cs[k]);
+  }));
+  return a;
+}
+function maxcut(a,A,Z,restarts=14,iters=4000){
+  let best=0,bs=new Int8Array(A);
+  for(let r=0;r<restarts;r++){
+    const s=new Int8Array(A);
+    [...Array(A).keys()].sort(()=>Math.random()-.5).slice(0,Z).forEach(i=>s[i]=1);
+    let cut=0;
+    for(let i=0;i<A;i++) for(const j of a[i]) if(j>i&&s[i]!==s[j]) cut++;
+    for(let it=0;it<iters;it++){
+      const p=[],n=[];
+      for(let i=0;i<A;i++) (s[i]?p:n).push(i);
+      if(!p.length||!n.length) break;
+      const pi=p[Math.floor(Math.random()*p.length)];
+      const ni=n[Math.floor(Math.random()*n.length)];
+      let d=0;
+      for(const j of a[pi]) if(j!==ni) d+=(s[j]?1:-1);
+      for(const j of a[ni]) if(j!==pi) d+=(s[j]?-1:1);
+      if(d>0||(d===0&&Math.random()<.2)){s[pi]=0;s[ni]=1;cut+=d;}
+      if(cut>best){best=cut;bs=s.slice();}
+    }
+  }
+  return{pn:best,s:bs};
+}
+
+// Shared boundary between two adjacent FCC nodes
+function sharedVerts(posA, posB){
+  // Cage A vertices
+  const cA=new Set(NN.map(([dx,dy,dz])=>`${posA[0]+dx},${posA[1]+dy},${posA[2]+dz}`));
+  // Cage B vertices
+  const shared=[];
+  NN.forEach(([dx,dy,dz])=>{
+    const k=`${posB[0]+dx},${posB[1]+dy},${posB[2]+dz}`;
+    if(cA.has(k)) shared.push([posB[0]+dx,posB[1]+dy,posB[2]+dz]);
+  });
+  return shared; // typically 4 shared vertices
+}
+
+// Cuboctahedral cage edges
+const CE=[];
+for(let i=0;i<12;i++) for(let j=i+1;j<12;j++){
+  const d2=(NN[i][0]-NN[j][0])**2+(NN[i][1]-NN[j][1])**2+(NN[i][2]-NN[j][2])**2;
+  if(Math.abs(d2-2)<.01) CE.push([i,j]);
+}
+
+// Helpers
+function cyl(v1,v2,r,mat){
+  const dir=v2.clone().sub(v1), len=dir.length();
+  const g=new THREE.CylinderGeometry(r,r,len,7);
+  const m=new THREE.Mesh(g,mat);
+  m.position.copy(v1.clone().add(v2).multiplyScalar(.5));
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+  return m;
+}
+function v3(arr,sc){return new THREE.Vector3(arr[0]*sc,arr[1]*sc,arr[2]*sc);}
+
+// ── scene ─────────────────────────────────────────────────────
+const grp=new THREE.Group(); scene.add(grp);
+let autoRot=true;
+
+function build(A,Z,name){
+  while(grp.children.length) grp.remove(grp.children[0]);
+
+  const coords=cluster(A), adj=adjList(coords), {pn,s}=maxcut(adj,A,Z);
+  const sc=A<=2?3.0:A<=4?2.3:A<=12?1.65:1.30;
+  const nr=0.085*sc; // nucleon radius — very small
+
+  // ── per-nucleon cuboctahedral cage ────────────────────────
+  coords.forEach((pos,i)=>{
+    const col=s[i]===1?0xcc2233:0x2244cc;
+    const mat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.32});
+    CE.forEach(([a,b])=>{
+      const va=v3([pos[0]+NN[a][0],pos[1]+NN[a][1],pos[2]+NN[a][2]],sc);
+      const vb=v3([pos[0]+NN[b][0],pos[1]+NN[b][1],pos[2]+NN[b][2]],sc);
+      const geo=new THREE.BufferGeometry().setFromPoints([va,vb]);
+      grp.add(new THREE.Line(geo,mat));
+    });
+  });
+
+  // ── shared boundary faces (p-n = gold, other = faint grey) ─
+  let sharedCount=0;
+  for(let i=0;i<A;i++){
+    for(const j of adj[i]){
+      if(j<=i) continue;
+      const sv=sharedVerts(coords[i],coords[j]);
+      if(sv.length<4) continue;
+      const isPN=s[i]!==s[j];
+      sharedCount++;
+
+      // Draw the 4 shared vertices as small spheres
+      const vCol=isPN?0xcc8800:0xa0a8c0;
+      const vMat=new THREE.MeshPhongMaterial({color:vCol,transparent:true,
+        opacity:isPN?0.85:0.18});
+      const vGeo=new THREE.SphereGeometry(nr*0.65,8,8);
+      sv.forEach(p=>{
+        const m=new THREE.Mesh(vGeo,vMat.clone());
+        m.position.copy(v3(p,sc));
+        grp.add(m);
+      });
+
+      // Draw the square edges between shared vertices
+      const edgeMat=new THREE.LineBasicMaterial({
+        color:isPN?0xcc8800:0x9099bb,
+        transparent:true,opacity:isPN?0.75:0.15,
+        linewidth:2
+      });
+      for(let a=0;a<sv.length;a++) for(let b=a+1;b<sv.length;b++){
+        const[ax,ay,az]=sv[a],[bx,by,bz]=sv[b];
+        const d2=(ax-bx)**2+(ay-by)**2+(az-bz)**2;
+        if(Math.abs(d2-2)<0.01){
+          const geo=new THREE.BufferGeometry().setFromPoints([v3(sv[a],sc),v3(sv[b],sc)]);
+          grp.add(new THREE.Line(geo,edgeMat));
+        }
+      }
+
+      // Filled square face for p-n bonds
+      if(isPN&&sv.length>=4){
+        // Find the 4-cycle order
+        const order=[0];
+        const used=new Set([0]);
+        while(order.length<sv.length){
+          const last=order[order.length-1];
+          let found=false;
+          for(let k=0;k<sv.length;k++){
+            if(used.has(k)) continue;
+            const[ax,ay,az]=sv[last],[bx,by,bz]=sv[k];
+            const d2=(ax-bx)**2+(ay-by)**2+(az-bz)**2;
+            if(Math.abs(d2-2)<0.01){order.push(k);used.add(k);found=true;break;}
+          }
+          if(!found) break;
+        }
+        if(order.length===4){
+          const pts=order.map(k=>v3(sv[k],sc));
+          const geo=new THREE.BufferGeometry().setFromPoints([pts[0],pts[1],pts[2],pts[3]]);
+          const indices=new Uint16Array([0,1,2,0,2,3]);
+          geo.setIndex(new THREE.BufferAttribute(indices,1));
+          geo.computeVertexNormals();
+          grp.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({
+            color:0xffcc00,transparent:true,opacity:0.10,side:THREE.DoubleSide
+          })));
+        }
+      }
+    }
+  }
+
+  // ── nucleon centres ───────────────────────────────────────
+  const matP=new THREE.MeshPhongMaterial({color:0xcc2233,specular:0xffaaaa,shininess:70});
+  const matN=new THREE.MeshPhongMaterial({color:0x2244cc,specular:0xaabbff,shininess:70});
+  const nGeo=new THREE.SphereGeometry(nr,14,14);
+  coords.forEach((pos,i)=>{
+    const m=new THREE.Mesh(nGeo,(s[i]?matP:matN).clone());
+    m.position.copy(v3(pos,sc));
+    grp.add(m);
+  });
+
+  // ── stats ────────────────────────────────────────────────
+  let totBonds=0;
+  for(let i=0;i<A;i++) for(const j of adj[i]) if(j>i) totBonds++;
+  document.getElementById('s-pn').textContent=pn;
+  document.getElementById('s-shared').textContent=sharedCount;
+  document.getElementById('s-frac').textContent=Math.round(100*pn/totBonds)+'%';
+  document.getElementById('s-name').textContent=name;
+
+  ['b2','b4','b12','b16'].forEach(id=>document.getElementById(id)?.classList.remove('act'));
+  const map={2:'b2',4:'b4',12:'b12',16:'b16'};
+  if(map[A]) document.getElementById(map[A]).classList.add('act');
+}
+
+function setN(A,Z,name){build(A,Z,name);}
+function toggleRot(){autoRot=!autoRot;document.getElementById('brot').classList.toggle('act',autoRot);}
+
+// ── drag / scroll ─────────────────────────────────────────────
+let drag=false,px=0,py=0;
+canvas.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.clientX-px)*.007;
+  grp.rotation.x+=(e.clientY-py)*.007;
+  px=e.clientX;py=e.clientY;
+});
+canvas.addEventListener('wheel',e=>{
+  cam.position.z=Math.max(3,Math.min(36,cam.position.z+e.deltaY*.018));
+  e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchstart',e=>{drag=true;px=e.touches[0].clientX;py=e.touches[0].clientY;});
+addEventListener('touchend',()=>drag=false);
+addEventListener('touchmove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.touches[0].clientX-px)*.01;
+  grp.rotation.x+=(e.touches[0].clientY-py)*.01;
+  px=e.touches[0].clientX;py=e.touches[0].clientY;
+},{passive:false});
+
+// ── resize ────────────────────────────────────────────────────
+function resize(){
+  const W=innerWidth,H=innerHeight;
+  R.setSize(W,H);cam.aspect=W/H;cam.updateProjectionMatrix();
+}
+addEventListener('resize',resize);resize();
+
+// ── init ──────────────────────────────────────────────────────
+build(2,1,'²H');
+let t=0;
+(function loop(){
+  requestAnimationFrame(loop);t+=.004;
+  if(autoRot&&!drag){grp.rotation.y=t*.32;grp.rotation.x=Math.sin(t*.2)*.09;}
+  R.render(scene,cam);
+})();
+</script>
+</body>
+</html>
