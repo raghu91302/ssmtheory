@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>K=12 Gauge Topology — Standard Model from FCC Vacuum</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#ffffff; font-family: 'Courier New', monospace; overflow:hidden; color:#1a2840; }
+canvas { display:block; }
+
+.panel {
+  background:rgba(248,250,255,0.92); border:1px solid rgba(60,90,180,0.20);
+  border-radius:7px; padding:12px 14px; margin-bottom:9px;
+  backdrop-filter:blur(4px);
+}
+.panel-title {
+  font-size:10px; letter-spacing:0.18em; text-transform:uppercase;
+  color:#3366aa; margin-bottom:9px; border-bottom:1px solid rgba(80,120,200,0.18);
+  padding-bottom:6px;
+}
+.sector-row { display:flex; align-items:flex-start; gap:9px; margin-bottom:8px; }
+.sector-row:last-child { margin-bottom:0; }
+.swatch { width:12px; height:12px; border-radius:2px; flex-shrink:0; margin-top:2px; }
+.sw-su3 { background:#e05030; box-shadow:0 0 6px rgba(220,80,40,0.6); }
+.sw-ew  { background:#3060d8; box-shadow:0 0 6px rgba(40,80,220,0.6); }
+.sw-node { background:#e8b830; border-radius:50%; box-shadow:0 0 6px rgba(220,180,40,0.6); }
+.sector-info { font-size:10.5px; line-height:1.6; }
+.sector-name { font-weight:bold; color:#1a2840; font-size:11px; }
+.sector-sub  { color:#4a6080; font-size:10px; }
+
+#ui { position:absolute; top:14px; left:14px; width:260px; pointer-events:auto; }
+#eqs { position:absolute; top:14px; right:14px; width:245px; pointer-events:auto; }
+.eq-row { margin-bottom:7px; font-size:10.5px; }
+.eq-label { color:#556677; font-size:9.5px; letter-spacing:0.08em; }
+.eq-val { color:#1a7a20; font-size:11px; font-weight:bold; }
+.eq-exp { color:#445566; font-size:9.5px; }
+.eq-dev { color:#885500; font-size:9.5px; }
+
+#modes {
+  position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+  display:flex; gap:8px; pointer-events:auto;
+}
+.mbtn {
+  background:rgba(255,255,255,0.92); border:1px solid rgba(60,100,200,0.35);
+  color:#1a3a80; padding:6px 16px; font-size:10px; letter-spacing:0.12em;
+  text-transform:uppercase; cursor:pointer; border-radius:4px;
+  font-family:inherit; transition:all 0.15s;
+  box-shadow:0 1px 4px rgba(0,0,60,0.10);
+}
+.mbtn:hover { background:rgba(225,232,255,1.0); color:#0a2060; border-color:rgba(60,100,200,0.55); }
+.mbtn.active { background:rgba(40,80,200,0.92); color:#ffffff; border-color:rgba(40,80,200,0.9); box-shadow:0 1px 6px rgba(40,80,200,0.30); }
+
+#hint {
+  position:absolute; bottom:50px; left:50%; transform:translateX(-50%);
+  font-size:9px; color:rgba(40,60,110,0.55); letter-spacing:0.12em;
+  text-transform:uppercase; pointer-events:none;
+}
+#mode-label {
+  position:absolute; top:14px; left:50%; transform:translateX(-50%);
+  font-size:9.5px; letter-spacing:0.22em; text-transform:uppercase;
+  color:rgba(30,60,130,0.60); pointer-events:none; white-space:nowrap;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div class="panel">
+    <div class="panel-title">K=12 Gauge Sectors</div>
+    <div class="sector-row">
+      <div class="swatch sw-su3"></div>
+      <div class="sector-info">
+        <div class="sector-name">SU(3)<sub>C</sub> — Strong Force</div>
+        <div class="sector-sub">8 triangular faces · non-bipartite (L=3)<br>Geometric frustration → confinement<br>8 gluon generators</div>
+      </div>
+    </div>
+    <div class="sector-row" style="margin-top:6px">
+      <div class="swatch sw-ew"></div>
+      <div class="sector-info">
+        <div class="sector-name">SU(2)×U(1)<sub>Y</sub> — Electroweak</div>
+        <div class="sector-sub">6 square faces · bipartite (L=4)<br>Flux screening → W±, Z, γ<br>3/13 partition → sin²θ<sub>W</sub></div>
+      </div>
+    </div>
+    <div class="sector-row" style="margin-top:6px">
+      <div class="swatch sw-node"></div>
+      <div class="sector-info">
+        <div class="sector-name">13-node coordination cluster</div>
+        <div class="sector-sub">f-vector: (f₀,f₁,f₂) = (13,36,38)<br>dim(B) = 36×51 = 1836 = C<sub>p</sub></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="partition-panel" style="display:none">
+    <div class="panel-title">3/13 Partition</div>
+    <div class="sector-row">
+      <div class="swatch" style="background:#40b8e8;border-radius:50%;box-shadow:0 0 5px rgba(40,180,220,0.5);"></div>
+      <div class="sector-info">
+        <div class="sector-name">3 Weak channels → SU(2)<sub>L</sub></div>
+        <div class="sector-sub">3 spatial rotation planes<br>sin²θ<sub>W</sub> = 3/13 ≈ 0.23077</div>
+      </div>
+    </div>
+    <div class="sector-row" style="margin-top:4px">
+      <div class="swatch" style="background:#40c870;border-radius:50%;"></div>
+      <div class="sector-info">
+        <div class="sector-name">10 channels → U(1)<sub>Y</sub></div>
+        <div class="sector-sub">Remaining hypercharge modes<br>3 + 10 = 13 ✓</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="abc-panel" style="display:none">
+    <div class="panel-title">ABC Stacking → 3 Generations</div>
+    <div class="sector-row">
+      <div class="swatch" style="background:#ff6644;border-radius:50%;"></div>
+      <div class="sector-info"><div class="sector-name">Layer A — Generation 1 (u,d,e,ν<sub>e</sub>)</div></div>
+    </div>
+    <div class="sector-row">
+      <div class="swatch" style="background:#44cc44;border-radius:50%;"></div>
+      <div class="sector-info"><div class="sector-name">Layer B — Generation 2 (c,s,μ,ν<sub>μ</sub>)</div></div>
+    </div>
+    <div class="sector-row">
+      <div class="swatch" style="background:#4488ff;border-radius:50%;"></div>
+      <div class="sector-info"><div class="sector-name">Layer C — Generation 3 (t,b,τ,ν<sub>τ</sub>)</div></div>
+    </div>
+    <div class="sector-sub" style="padding-left:21px;margin-top:4px;font-size:9.5px;color:#556677;">
+      Period(ABCABC…) = 3 → N<sub>gen</sub> = 3 exactly<br>
+      A' ≡ A: 4th layer is topologically Gen 1
+    </div>
+  </div>
+</div>
+
+<div id="eqs">
+  <div class="panel">
+    <div class="panel-title">Parameter-Free Predictions</div>
+    <div class="eq-row">
+      <div class="eq-label">ELECTROWEAK MIXING ANGLE</div>
+      <div class="eq-val">sin²θ<sub>W</sub> = 3/13 ≈ 0.23077</div>
+      <div class="eq-exp">exp (Z-pole): 0.23122 ± 0.00004</div>
+      <div class="eq-dev">deviation: 0.19%</div>
+    </div>
+    <div class="eq-row">
+      <div class="eq-label">CABIBBO ANGLE</div>
+      <div class="eq-val">θ<sub>C</sub> = arctan(3/13) = 12.995°</div>
+      <div class="eq-exp">exp: 13.02° ± 0.02°</div>
+      <div class="eq-dev">deviation: 0.15%</div>
+    </div>
+    <div class="eq-row">
+      <div class="eq-label">W BOSON MASS</div>
+      <div class="eq-val">M<sub>W</sub> = M<sub>Z</sub>√(10/13) ≈ 79.98 GeV</div>
+      <div class="eq-exp">exp: 80.377 ± 0.012 GeV</div>
+      <div class="eq-dev">deviation: 0.50%</div>
+    </div>
+    <div class="eq-row">
+      <div class="eq-label">GAUGE BOSON COUNT</div>
+      <div class="eq-val">8 gluons + W⁺W⁻Zγ = 12 bonds</div>
+      <div class="eq-exp">K=12: STOR=8 (△), STR=4 (□)</div>
+    </div>
+    <div class="eq-row" style="margin-bottom:0">
+      <div class="eq-label">FERMION GENERATIONS</div>
+      <div class="eq-val">N<sub>gen</sub> = period(ABC) = 3</div>
+      <div class="eq-exp">exact topological invariant of FCC ℝ³</div>
+    </div>
+  </div>
+</div>
+
+<div id="mode-label">Gauge Topology — K=12 FCC Vacuum</div>
+<div id="hint">Drag to rotate · Scroll to zoom</div>
+
+<div id="modes">
+  <button class="mbtn active" id="btn-gauge" onclick="setMode('gauge')">Gauge Sectors</button>
+  <button class="mbtn" id="btn-part"  onclick="setMode('partition')">3/13 Partition</button>
+  <button class="mbtn" id="btn-abc"   onclick="setMode('abc')">ABC Stacking</button>
+  <button class="mbtn active" id="btn-rot"   onclick="toggleRot()">Auto-Rotate</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── Cuboctahedron geometry ─────────────────────────────────────────────────
+const S = 2.2;
+const RAW = [
+  [ 1, 1, 0],[ 1,-1, 0],[-1, 1, 0],[-1,-1, 0],
+  [ 1, 0, 1],[ 1, 0,-1],[-1, 0, 1],[-1, 0,-1],
+  [ 0, 1, 1],[ 0, 1,-1],[ 0,-1, 1],[ 0,-1,-1]
+];
+const V = RAW.map(v => new THREE.Vector3(v[0]*S, v[1]*S, v[2]*S));
+
+const TRI = [
+  [0,4,8],[0,5,9],[3,6,10],[3,7,11],
+  [1,4,10],[1,5,11],[2,6,8],[2,7,9]
+];
+const SQ = [
+  [0,4,1,5],[2,6,3,7],
+  [0,8,2,9],[1,10,3,11],
+  [4,8,6,10],[5,9,7,11]
+];
+
+// All cage edges (outer-outer, dot product = 1)
+const EDGES = [];
+for(let i=0;i<12;i++) for(let j=i+1;j<12;j++) {
+  const d = RAW[i][0]*RAW[j][0]+RAW[i][1]*RAW[j][1]+RAW[i][2]*RAW[j][2];
+  if(Math.abs(d-1)<0.01) EDGES.push([i,j]);
+}
+
+const SU2_NODES = [0,3,8];
+const ABC_LAYERS = [
+  {nodes:[0,1,2,3], color:0xff6644},
+  {nodes:[4,5,6,7], color:0x44cc44},
+  {nodes:[8,9,10,11], color:0x4488ff}
+];
+
+// ── Three.js ──────────────────────────────────────────────────────────────
+const W0=innerWidth, H0=innerHeight;
+const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setSize(W0,H0); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0xffffff,1);
+
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(40,W0/H0,0.1,200);
+cam.position.set(0,1.5,18); cam.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.85));
+const d1=new THREE.DirectionalLight(0x445566,0.65); d1.position.set(5,8,6); scene.add(d1);
+const d2=new THREE.DirectionalLight(0x776655,0.25); d2.position.set(-5,-4,-5); scene.add(d2);
+const d3=new THREE.DirectionalLight(0xaabbcc,0.20); d3.position.set(0,0,-8); scene.add(d3);
+
+const grp=new THREE.Group(); scene.add(grp);
+
+// Starfield
+const sg=new THREE.BufferGeometry();
+const sp=new Float32Array(2700);
+for(let i=0;i<2700;i++) sp[i]=(Math.random()-.5)*180;
+sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+// no starfield on white background
+
+// ── Build helpers ──────────────────────────────────────────────────────────
+function cyl(v1,v2,r,mat){
+  const dir=v2.clone().sub(v1), len=dir.length();
+  const g=new THREE.CylinderGeometry(r,r,len,7,1);
+  const m=new THREE.Mesh(g,mat);
+  m.position.copy(v1.clone().add(v2).multiplyScalar(.5));
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+  return m;
+}
+function triGeo(a,b,c){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([
+    a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z]),3));
+  g.computeVertexNormals(); return g;
+}
+function quadGeo(a,b,c,d){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([
+    a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,
+    a.x,a.y,a.z,c.x,c.y,c.z,d.x,d.y,d.z]),3));
+  g.computeVertexNormals(); return g;
+}
+
+// ── Scene rebuild ──────────────────────────────────────────────────────────
+let nodes=[], faces=[];
+
+function build(mode){
+  while(grp.children.length) grp.remove(grp.children[0]);
+  nodes=[]; faces=[];
+
+  const nGeo=new THREE.SphereGeometry(0.18,16,16);
+  const cGeo=new THREE.SphereGeometry(0.24,16,16);
+
+  // Center node (vacuum ground state)
+  const cMat=new THREE.MeshPhongMaterial({color:0xe8b830,emissive:0x442200,shininess:90});
+  const cMesh=new THREE.Mesh(cGeo,cMat);
+  grp.add(cMesh);
+  nodes.push({mesh:cMesh,type:'center'});
+
+  // Hub edges (center to outer)
+  V.forEach(v=>{
+    const mat=new THREE.MeshPhongMaterial({color:0x334466,transparent:true,opacity:0.18});
+    grp.add(cyl(new THREE.Vector3(0,0,0),v,0.024,mat));
+  });
+
+  // Cage edges (outer-outer)
+  EDGES.forEach(([i,j])=>{
+    const mat=new THREE.MeshPhongMaterial({color:0x223388,transparent:true,opacity:0.55,shininess:20});
+    const e=cyl(V[i],V[j],0.032,mat);
+    grp.add(e);
+  });
+
+  // Outer nodes
+  V.forEach((v,i)=>{
+    let mat;
+    if(mode==='partition'){
+      mat=SU2_NODES.includes(i)
+        ? new THREE.MeshPhongMaterial({color:0x40b8e8,emissive:0x001840,shininess:70})
+        : new THREE.MeshPhongMaterial({color:0x40c870,emissive:0x001a0a,shininess:50});
+    } else if(mode==='abc'){
+      const lyr=ABC_LAYERS.find(l=>l.nodes.includes(i));
+      mat=new THREE.MeshPhongMaterial({color:lyr.color,emissive:0x0a0800,shininess:55});
+    } else {
+      mat=new THREE.MeshPhongMaterial({color:0x4455aa,emissive:0x080a18,shininess:50});
+    }
+    const m=new THREE.Mesh(nGeo,mat.clone());
+    m.position.copy(v); grp.add(m);
+    nodes.push({mesh:m,type:'outer',idx:i,mode});
+  });
+
+  if(mode!=='abc'){
+    // Triangular faces — SU(3) red/amber
+    TRI.forEach(([a,b,c],fi)=>{
+      const fMat=new THREE.MeshBasicMaterial({
+        color:0xe04820,transparent:true,opacity:0.07,
+        side:THREE.DoubleSide,depthWrite:false});
+      const fm=new THREE.Mesh(triGeo(V[a],V[b],V[c]),fMat);
+      grp.add(fm);
+      faces.push({mesh:fm,type:'tri',idx:fi});
+
+      [[a,b],[b,c],[c,a]].forEach(([p,q])=>{
+        const eMat=new THREE.MeshPhongMaterial({
+          color:0xd04010,emissive:0x380800,
+          transparent:true,opacity:0.55,shininess:30});
+        const em=cyl(V[p],V[q],0.046,eMat.clone());
+        grp.add(em);
+        faces.push({mesh:em,type:'tri-e',idx:fi});
+      });
+    });
+
+    // Square faces — EW blue
+    SQ.forEach(([a,b,c,d],fi)=>{
+      const fMat=new THREE.MeshBasicMaterial({
+        color:0x2060d0,transparent:true,opacity:0.07,
+        side:THREE.DoubleSide,depthWrite:false});
+      const fm=new THREE.Mesh(quadGeo(V[a],V[b],V[c],V[d]),fMat);
+      grp.add(fm);
+      faces.push({mesh:fm,type:'sq',idx:fi});
+
+      [[a,b],[b,c],[c,d],[d,a]].forEach(([p,q])=>{
+        const eMat=new THREE.MeshPhongMaterial({
+          color:0x2860d0,emissive:0x001030,
+          transparent:true,opacity:0.45,shininess:40});
+        const em=cyl(V[p],V[q],0.042,eMat.clone());
+        grp.add(em);
+        faces.push({mesh:em,type:'sq-e',idx:fi});
+      });
+    });
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────────────────
+let curMode='gauge', autoRot=true, abcCycle=0;
+
+const LABELS = {
+  gauge:'Gauge Topology — K=12 FCC Vacuum',
+  partition:'3/13 Partition — sin²θW = 3/13',
+  abc:'ABC Stacking — N_gen = period(ABC) = 3'
+};
+
+function setMode(m){
+  curMode=m; build(m);
+  document.getElementById('mode-label').textContent=LABELS[m];
+  document.getElementById('partition-panel').style.display=(m==='partition')?'block':'none';
+  document.getElementById('abc-panel').style.display=(m==='abc')?'block':'none';
+  ['gauge','part','abc'].forEach(id=>{
+    const el=document.getElementById('btn-'+id);
+    if(el) el.classList.toggle('active',
+      (id==='gauge'&&m==='gauge')||(id==='part'&&m==='partition')||(id==='abc'&&m==='abc'));
+  });
+}
+
+function toggleRot(){
+  autoRot=!autoRot;
+  document.getElementById('btn-rot').classList.toggle('active',autoRot);
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────
+let drag=false,px=0,py=0;
+renderer.domElement.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.clientX-px)*.007;
+  grp.rotation.x+=(e.clientY-py)*.007;
+  px=e.clientX;py=e.clientY;
+});
+renderer.domElement.addEventListener('wheel',e=>{
+  cam.position.z=Math.max(5,Math.min(30,cam.position.z+e.deltaY*.018));
+  e.preventDefault();
+},{passive:false});
+renderer.domElement.addEventListener('touchstart',e=>{drag=true;px=e.touches[0].clientX;py=e.touches[0].clientY;});
+addEventListener('touchend',()=>drag=false);
+addEventListener('touchmove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.touches[0].clientX-px)*.01;
+  grp.rotation.x+=(e.touches[0].clientY-py)*.01;
+  px=e.touches[0].clientX;py=e.touches[0].clientY;
+});
+addEventListener('resize',()=>{
+  const W=innerWidth,H=innerHeight;
+  renderer.setSize(W,H);cam.aspect=W/H;cam.updateProjectionMatrix();
+});
+
+// ── Animate ────────────────────────────────────────────────────────────────
+let t=0;
+build('gauge');
+
+(function loop(){
+  requestAnimationFrame(loop);
+  t+=0.016;
+
+  if(autoRot&&!drag){
+    grp.rotation.y=t*.28;
+    grp.rotation.x=Math.sin(t*.17)*.09;
+  }
+
+  // Face animations
+  faces.forEach(({mesh,type,idx})=>{
+    if(!mesh.material) return;
+    const mat=mesh.material;
+    if(type==='tri'){
+      const ph=(idx/8)*Math.PI*2;
+      const pulse=.5+.5*Math.sin(t*1.7+ph);
+      mat.opacity=.04+.18*pulse;
+    }
+    if(type==='tri-e'){
+      const ph=(idx/8)*Math.PI*2;
+      const pulse=.5+.5*Math.sin(t*1.7+ph);
+      mat.opacity=.28+.50*pulse;
+      mat.emissive.setRGB(.22*pulse,.05*pulse,0);
+    }
+    if(type==='sq'){
+      const ph=Math.PI+(idx/6)*Math.PI*2;
+      const pulse=.5+.5*Math.sin(t*.9+ph);
+      mat.opacity=.04+.18*pulse;
+    }
+    if(type==='sq-e'){
+      const ph=Math.PI+(idx/6)*Math.PI*2;
+      const pulse=.5+.5*Math.sin(t*.9+ph);
+      mat.opacity=.22+.38*pulse;
+      mat.emissive.setRGB(0,.04*pulse,.18*pulse);
+    }
+  });
+
+  // Node animations
+  nodes.forEach(({mesh,type,idx,mode})=>{
+    if(!mesh.material) return;
+    if(type==='center'){
+      const cp=.5+.5*Math.sin(t*.65);
+      mesh.material.emissive.setRGB(.2+.12*cp,.07+.05*cp,0);
+    }
+    if(type==='outer'&&mode==='partition'){
+      if(SU2_NODES.includes(idx)){
+        const pulse=.5+.5*Math.sin(t*2.3);
+        mesh.material.emissive.setRGB(0,.12*pulse+.05,.30*pulse+.15);
+      }
+    }
+    if(type==='outer'&&mode==='abc'){
+      const lyrIdx=ABC_LAYERS.findIndex(l=>l.nodes.includes(idx));
+      if(lyrIdx>=0){
+        abcCycle=(abcCycle+0)%3;
+        const phase=(t*.35-lyrIdx+9)%3;
+        const br=Math.max(0,Math.cos(phase*Math.PI*2/3));
+        const col=new THREE.Color(ABC_LAYERS[lyrIdx].color);
+        mesh.material.emissive.setRGB(col.r*.35*br,col.g*.35*br,col.b*.35*br);
+        mesh.material.opacity=0.5+0.5*br;
+        mesh.material.transparent=true;
+      }
+    }
+  });
+
+  renderer.render(scene,cam);
+})();
+</script>
+</body>
+</html>
