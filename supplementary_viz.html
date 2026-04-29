@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SSM Decoherence Thresholds — K=12 Metric Wall</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#fff; font-family: 'Georgia', serif; overflow:hidden; }
+canvas { display:block; }
+
+/* ── Left info panel ─────────────────────────────────────────── */
+#panel {
+  position:absolute; top:16px; left:16px; width:280px;
+  pointer-events:auto;
+}
+.card {
+  background:rgba(252,252,252,0.94);
+  border:1px solid #ddd; border-radius:6px;
+  padding:12px 14px; margin-bottom:8px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.07);
+}
+.card-title {
+  font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase;
+  color:#666; margin-bottom:8px;
+  border-bottom:1px solid #eee; padding-bottom:5px;
+}
+.eq { font-size:12px; color:#1a1a1a; line-height:1.65; }
+.eq sub { font-size:9px; }
+.hi { color:#d04418; font-weight:bold; }
+.bl { color:#1a60d0; font-weight:bold; }
+.sm { font-size:10.5px; color:#555; }
+
+/* ── Slider panel ────────────────────────────────────────────── */
+#slider-panel {
+  position:absolute; bottom:80px; left:50%;
+  transform:translateX(-50%);
+  width:440px; text-align:center; pointer-events:auto;
+}
+.slider-label {
+  font-size:11px; letter-spacing:0.08em; color:#444;
+  margin-bottom:6px;
+}
+#mass-slider {
+  width:100%; accent-color:#d04418; cursor:pointer;
+}
+#mass-display {
+  font-size:13px; color:#1a1a1a; margin-top:4px;
+  font-style:italic;
+}
+#regime-label {
+  font-size:11px; margin-top:5px; font-weight:bold;
+  padding:3px 10px; border-radius:3px; display:inline-block;
+}
+
+/* ── Bottom buttons ──────────────────────────────────────────── */
+#controls {
+  position:absolute; bottom:22px; left:50%;
+  transform:translateX(-50%);
+  display:flex; gap:8px; pointer-events:auto;
+}
+.btn {
+  background:#fff; border:1px solid #bbb;
+  color:#333; padding:6px 16px; font-size:10px;
+  letter-spacing:0.1em; text-transform:uppercase;
+  cursor:pointer; border-radius:4px; font-family:inherit;
+  transition:all 0.12s;
+}
+.btn:hover { background:#f0f0f0; border-color:#888; }
+.btn.active { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+
+/* ── Hint ────────────────────────────────────────────────────── */
+#hint {
+  position:absolute; bottom:58px; right:16px;
+  font-size:9px; color:#aaa; letter-spacing:0.1em;
+  text-transform:uppercase; pointer-events:none;
+}
+
+/* ── Mode label ──────────────────────────────────────────────── */
+#mode-label {
+  position:absolute; top:16px; left:50%;
+  transform:translateX(-50%);
+  font-size:10px; letter-spacing:0.2em; text-transform:uppercase;
+  color:#999; pointer-events:none; white-space:nowrap;
+}
+
+/* ── Rate plot overlay ───────────────────────────────────────── */
+#rate-canvas {
+  position:absolute; top:16px; right:16px;
+  width:260px; height:200px;
+  border:1px solid #ddd; border-radius:6px;
+  background:rgba(252,252,252,0.94);
+  box-shadow:0 1px 4px rgba(0,0,0,0.07);
+}
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+<canvas id="rate-canvas"></canvas>
+
+<!-- Left panel -->
+<div id="panel">
+  <div class="card">
+    <div class="card-title">Metric Wall — K=12 Geometry</div>
+    <div class="eq">
+      Triangular face edge: <span class="hi">L</span><br>
+      Circumradius of face: <span class="bl">r<sub>min</sub> = L/√3</span><br>
+      <span class="sm">A wavepacket at face centre with λ<sub>c</sub> = L/√3<br>
+      simultaneously resolves all 3 vertices.<br>
+      Further compression forbidden by topology.</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Two-Step Thresholds</div>
+    <div class="eq">
+      <span class="hi">m<sub>soft</sub> = ℏ/(Lc) ≈ 11.8 µg</span><br>
+      <span class="sm">λ<sub>c</sub> = L — lattice onset</span><br><br>
+      <span class="bl">m<sub>hard</sub> = √3 · m<sub>soft</sub> ≈ 20.5 µg</span><br>
+      <span class="sm">λ<sub>c</sub> = L/√3 — topological cutoff</span><br><br>
+      Ratio: m<sub>hard</sub>/m<sub>soft</sub> = √3 (exact)
+    </div>
+  </div>
+  <div class="card" id="regime-card">
+    <div class="card-title">Current Regime</div>
+    <div class="eq" id="regime-desc">Drag slider to explore mass regimes</div>
+  </div>
+</div>
+
+<!-- Mode label -->
+<div id="mode-label">K=12 Cuboctahedron — Metric Wall Visualisation</div>
+
+<!-- Slider -->
+<div id="slider-panel">
+  <div class="slider-label">Centre-of-mass mass (µg)</div>
+  <input type="range" id="mass-slider" min="5" max="28" step="0.1" value="8">
+  <div id="mass-display">m = 8.0 µg</div>
+  <div id="regime-label">Regime I: Exact Schrödinger</div>
+</div>
+
+<!-- Buttons -->
+<div id="controls">
+  <button class="btn active" id="btn-full" onclick="setView('full')">Full Cell</button>
+  <button class="btn" id="btn-face" onclick="setView('face')">Triangle Face</button>
+  <button class="btn" id="btn-wave" onclick="setView('wave')">Wavepacket</button>
+  <button class="btn active" id="btn-rot" onclick="toggleRot()">Auto-Rotate</button>
+</div>
+
+<div id="hint">Drag · Scroll · Slider</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── Constants ──────────────────────────────────────────────────────────
+const M_SOFT = 11.81, M_HARD = 20.45;
+const L = 2.2;  // scene units
+const R_MIN = L / Math.sqrt(3); // circumradius of triangular face
+
+// ── Three.js setup ─────────────────────────────────────────────────────
+const c3d = document.getElementById('c3d');
+const renderer = new THREE.WebGLRenderer({canvas:c3d, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0xffffff, 1);
+
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+cam.position.set(0, 1.5, 16);
+cam.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const d1 = new THREE.DirectionalLight(0x334466, 0.9); d1.position.set(5,8,6); scene.add(d1);
+const d2 = new THREE.DirectionalLight(0x664433, 0.3); d2.position.set(-5,-4,-5); scene.add(d2);
+
+// ── Cuboctahedron geometry ─────────────────────────────────────────────
+const S = L / Math.sqrt(2);
+const RAW = [
+  [1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],
+  [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+  [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]
+].map(v => new THREE.Vector3(v[0]*S, v[1]*S, v[2]*S));
+
+// 8 triangular faces
+const TRI_FACES = [
+  [0,4,8],[0,5,9],[3,6,10],[3,7,11],
+  [1,4,10],[1,5,11],[2,6,8],[2,7,9]
+];
+// 6 square faces
+const SQ_FACES = [
+  [0,4,1,5],[2,6,3,7],
+  [0,8,2,9],[1,10,3,11],
+  [4,8,6,10],[5,9,7,11]
+];
+
+// Outer-outer edges (dot product = 1 in unit coords)
+const EDGES = [];
+const raw_unit = [[1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],
+  [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+  [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]];
+for(let i=0;i<12;i++) for(let j=i+1;j<12;j++){
+  const d = raw_unit[i][0]*raw_unit[j][0]+raw_unit[i][1]*raw_unit[j][1]+raw_unit[i][2]*raw_unit[j][2];
+  if(Math.abs(d-1)<0.01) EDGES.push([i,j]);
+}
+
+// Pick one triangular face to highlight (face 0 = vertices 0,4,8)
+const HIGHLIGHT_FACE = [0,4,8];
+
+// ── Helpers ────────────────────────────────────────────────────────────
+const grp = new THREE.Group(); scene.add(grp);
+let nodeMeshes=[], waveMesh=null, circumRing=null, circumLines=[];
+let view = 'full', autoRot = true;
+let currentMass = 8.0;
+
+function cyl(v1,v2,r,mat){
+  const dir=v2.clone().sub(v1), len=dir.length();
+  const g=new THREE.CylinderGeometry(r,r,len,7,1);
+  const m=new THREE.Mesh(g,mat);
+  m.position.copy(v1.clone().add(v2).multiplyScalar(0.5));
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+  return m;
+}
+function triGeo(a,b,c){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([
+    a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z]),3));
+  g.computeVertexNormals(); return g;
+}
+
+function buildScene(){
+  while(grp.children.length) grp.remove(grp.children[0]);
+  nodeMeshes=[]; circumLines=[];
+
+  const nGeo=new THREE.SphereGeometry(0.18,16,16);
+  const cGeo=new THREE.SphereGeometry(0.22,16,16);
+  const DARK=[0x223355,0x334466,0x445577];
+
+  // Central node
+  const cMat=new THREE.MeshPhongMaterial({color:0xe0b020,emissive:0x441800,shininess:80});
+  grp.add(new THREE.Mesh(cGeo, cMat));
+
+  // Hub edges
+  RAW.forEach(v=>{
+    const mat=new THREE.MeshPhongMaterial({color:0x99aabb,transparent:true,opacity:0.22});
+    grp.add(cyl(new THREE.Vector3(0,0,0),v,0.022,mat));
+  });
+
+  // Cage edges
+  EDGES.forEach(([i,j])=>{
+    // Check if both vertices are in highlight face
+    const onFace = HIGHLIGHT_FACE.includes(i) && HIGHLIGHT_FACE.includes(j);
+    const mat=new THREE.MeshPhongMaterial({
+      color: onFace ? 0xd04418 : 0x5566aa,
+      transparent:true,
+      opacity: onFace ? 0.8 : 0.35,
+      shininess: onFace ? 60 : 20
+    });
+    grp.add(cyl(RAW[i],RAW[j],onFace?0.052:0.028,mat));
+  });
+
+  // Triangular faces
+  TRI_FACES.forEach((face,fi)=>{
+    const isHighlight = JSON.stringify(face.slice().sort()) === JSON.stringify(HIGHLIGHT_FACE.slice().sort());
+    const mat=new THREE.MeshBasicMaterial({
+      color: isHighlight ? 0xd04418 : 0x885533,
+      transparent:true,
+      opacity: isHighlight ? 0.22 : 0.06,
+      side:THREE.DoubleSide,depthWrite:false
+    });
+    grp.add(new THREE.Mesh(triGeo(RAW[face[0]],RAW[face[1]],RAW[face[2]]),mat));
+  });
+
+  // Square faces
+  SQ_FACES.forEach(([a,b,c,d])=>{
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([
+      RAW[a].x,RAW[a].y,RAW[a].z,RAW[b].x,RAW[b].y,RAW[b].z,RAW[c].x,RAW[c].y,RAW[c].z,
+      RAW[a].x,RAW[a].y,RAW[a].z,RAW[c].x,RAW[c].y,RAW[c].z,RAW[d].x,RAW[d].y,RAW[d].z
+    ]),3));
+    g.computeVertexNormals();
+    const mat=new THREE.MeshBasicMaterial({
+      color:0x1a50c0,transparent:true,opacity:0.055,side:THREE.DoubleSide,depthWrite:false
+    });
+    grp.add(new THREE.Mesh(g,mat));
+  });
+
+  // Outer nodes
+  RAW.forEach((v,i)=>{
+    const onFace = HIGHLIGHT_FACE.includes(i);
+    const mat=new THREE.MeshPhongMaterial({
+      color: onFace ? 0xd04418 : 0x6677aa,
+      emissive: onFace ? 0x330800 : 0x080a18,
+      shininess: onFace ? 70 : 40
+    });
+    const m=new THREE.Mesh(nGeo,mat.clone());
+    m.position.copy(v);
+    grp.add(m);
+    nodeMeshes.push({mesh:m,idx:i,onFace});
+  });
+
+  // Face centroid
+  const fc = RAW[HIGHLIGHT_FACE[0]].clone()
+    .add(RAW[HIGHLIGHT_FACE[1]])
+    .add(RAW[HIGHLIGHT_FACE[2]])
+    .multiplyScalar(1/3);
+
+  // Circumradius ring on the triangular face
+  const ringGeo = new THREE.TorusGeometry(R_MIN, 0.028, 8, 64);
+  // Rotate to lie in the face plane
+  const faceNorm = new THREE.Vector3().crossVectors(
+    RAW[HIGHLIGHT_FACE[1]].clone().sub(RAW[HIGHLIGHT_FACE[0]]),
+    RAW[HIGHLIGHT_FACE[2]].clone().sub(RAW[HIGHLIGHT_FACE[0]])
+  ).normalize();
+  const ringMat = new THREE.MeshPhongMaterial({color:0x1a60d0,emissive:0x001040,shininess:60,transparent:true,opacity:0.85});
+  circumRing = new THREE.Mesh(ringGeo, ringMat);
+  circumRing.position.copy(fc);
+  circumRing.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), faceNorm);
+  grp.add(circumRing);
+
+  // Lines from face centroid to each vertex (circumradii)
+  HIGHLIGHT_FACE.forEach(vi=>{
+    const mat=new THREE.MeshPhongMaterial({color:0x1a60d0,transparent:true,opacity:0.7,shininess:30});
+    const line = cyl(fc, RAW[vi], 0.018, mat);
+    grp.add(line);
+    circumLines.push(line);
+  });
+
+  // Face centroid dot
+  const fcDot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.09,12,12),
+    new THREE.MeshPhongMaterial({color:0x1a60d0,emissive:0x001040,shininess:80})
+  );
+  fcDot.position.copy(fc);
+  grp.add(fcDot);
+
+  // Wavepacket sphere (updated by slider)
+  const waveMat = new THREE.MeshPhongMaterial({
+    color:0x22aa55, emissive:0x003310,
+    transparent:true, opacity:0.35, shininess:40
+  });
+  waveMesh = new THREE.Mesh(new THREE.SphereGeometry(1,32,32), waveMat);
+  waveMesh.position.copy(fc);
+  grp.add(waveMesh);
+  updateWavepacket();
+}
+
+function lambdaC(m_ug){
+  // λ_c / L = m_soft / m  (in scene units, λ_c is proportional to m_soft/m * L)
+  return (M_SOFT / m_ug) * L;
+}
+
+function updateWavepacket(){
+  if(!waveMesh) return;
+  const lc = lambdaC(currentMass);
+  waveMesh.scale.setScalar(lc);
+
+  // Color by regime
+  let col, emi, opa;
+  if(currentMass <= M_SOFT){
+    col=0x22aa55; emi=0x003310; opa=0.30; // green = coherent
+  } else if(currentMass < M_HARD){
+    // interpolate green → orange
+    const t=(currentMass-M_SOFT)/(M_HARD-M_SOFT);
+    col=new THREE.Color(0.1+0.8*t, 0.65-0.4*t, 0.05).getHex();
+    emi=0x110400; opa=0.30+0.15*t;
+  } else {
+    col=0xcc2222; emi=0x330000; opa=0.20; // red = collapsed
+  }
+  waveMesh.material.color.setHex(col);
+  waveMesh.material.emissive.setHex(emi);
+  waveMesh.material.opacity=opa;
+
+  // Update regime display
+  const mstr = currentMass.toFixed(1);
+  const lcStr = (lc / L).toFixed(3);
+  const regLabel = document.getElementById('regime-label');
+  const regDesc  = document.getElementById('regime-desc');
+
+  if(currentMass <= M_SOFT){
+    regLabel.style.background='#e8f5e9'; regLabel.style.color='#1b5e20';
+    regLabel.textContent='Regime I: Exact Schrödinger';
+    regDesc.innerHTML=`λ<sub>c</sub>/L = ${lcStr} > 1<br>Lattice transparent.<br>Coherence preserved exactly.`;
+  } else if(currentMass < M_HARD){
+    regLabel.style.background='#fff8e1'; regLabel.style.color='#e65100';
+    regLabel.textContent='Grey Zone: Lattice Corrections Active';
+    const eps = ((currentMass-M_SOFT)/M_SOFT);
+    regDesc.innerHTML=`λ<sub>c</sub>/L = ${lcStr} (< 1, > 1/√3)<br>ε = ${eps.toFixed(3)}<br>Γ ∝ ε² = ${(eps*eps).toFixed(3)} Γ₀<br>Coherence survives (below m<sub>hard</sub>).`;
+  } else {
+    regLabel.style.background='#ffebee'; regLabel.style.color='#b71c1c';
+    regLabel.textContent='Regime III: Topological Cutoff';
+    regDesc.innerHTML=`λ<sub>c</sub>/L = ${lcStr} ≤ 1/√3<br>Wavepacket hits metric wall.<br>Superposition destroyed.`;
+  }
+  document.getElementById('mass-display').textContent=`m = ${mstr} µg`;
+}
+
+// ── Rate plot (2D canvas) ──────────────────────────────────────────────
+const rc = document.getElementById('rate-canvas');
+const rctx = rc.getContext('2d');
+rc.width = 260; rc.height = 200;
+
+function drawRate(){
+  const W=rc.width, H=rc.height;
+  rctx.clearRect(0,0,W,H);
+
+  // Background
+  rctx.fillStyle='rgba(252,252,252,0.0)';
+  rctx.fillRect(0,0,W,H);
+
+  // Title
+  rctx.fillStyle='#666';
+  rctx.font='9px Georgia';
+  rctx.letterSpacing='1px';
+  rctx.fillText('DECOHERENCE RATE  Γ(m)', 12, 16);
+  rctx.letterSpacing='0px';
+
+  const PAD={l:36,r:14,t:24,b:32};
+  const pw=W-PAD.l-PAD.r, ph=H-PAD.t-PAD.b;
+
+  // Grey zone
+  const x1=toX(M_SOFT), x2=toX(M_HARD);
+  rctx.fillStyle='rgba(220,210,120,0.25)';
+  rctx.fillRect(x1,PAD.t,x2-x1,ph);
+
+  // Axes
+  rctx.strokeStyle='#888'; rctx.lineWidth=1;
+  rctx.beginPath();
+  rctx.moveTo(PAD.l,PAD.t); rctx.lineTo(PAD.l,PAD.t+ph); rctx.lineTo(PAD.l+pw,PAD.t+ph);
+  rctx.stroke();
+
+  function toX(m){ return PAD.l + (m-5)/(30-5)*pw; }
+  function toY(g){ return PAD.t+ph - Math.min(g,1)*ph; }
+
+  // Axis labels
+  rctx.fillStyle='#666'; rctx.font='9px Georgia';
+  rctx.fillText('m (µg)', PAD.l+pw/2-10, H-6);
+  rctx.save(); rctx.translate(11,PAD.t+ph/2+15); rctx.rotate(-Math.PI/2);
+  rctx.fillText('Γ/Γ₀', 0, 0); rctx.restore();
+
+  // Tick marks
+  [10,15,20,25].forEach(m=>{
+    const x=toX(m);
+    rctx.strokeStyle='#bbb'; rctx.lineWidth=0.5;
+    rctx.beginPath(); rctx.moveTo(x,PAD.t+ph); rctx.lineTo(x,PAD.t+ph+4); rctx.stroke();
+    rctx.fillStyle='#888'; rctx.font='8px Georgia';
+    rctx.fillText(m, x-6, PAD.t+ph+13);
+  });
+
+  // msoft line
+  rctx.strokeStyle='#d04418'; rctx.lineWidth=0.8; rctx.setLineDash([3,3]);
+  rctx.beginPath(); rctx.moveTo(toX(M_SOFT),PAD.t); rctx.lineTo(toX(M_SOFT),PAD.t+ph); rctx.stroke();
+  rctx.setLineDash([]);
+  rctx.fillStyle='#d04418'; rctx.font='8px Georgia';
+  rctx.fillText('mₛ', toX(M_SOFT)+2, PAD.t+8);
+
+  // mhard line
+  rctx.strokeStyle='#1a60d0'; rctx.lineWidth=0.8; rctx.setLineDash([3,3]);
+  rctx.beginPath(); rctx.moveTo(toX(M_HARD),PAD.t); rctx.lineTo(toX(M_HARD),PAD.t+ph); rctx.stroke();
+  rctx.setLineDash([]);
+  rctx.fillStyle='#1a60d0'; rctx.font='8px Georgia';
+  rctx.fillText('mₕ', toX(M_HARD)+2, PAD.t+8);
+
+  // DP reference (grey dashed)
+  rctx.strokeStyle='#aaa'; rctx.lineWidth=1.2; rctx.setLineDash([4,4]);
+  rctx.beginPath();
+  for(let m=5;m<=28;m+=0.3){
+    const g=Math.max(0,(m-5)/22);
+    if(m===5) rctx.moveTo(toX(m),toY(g));
+    else rctx.lineTo(toX(m),toY(g));
+  }
+  rctx.stroke();
+  rctx.setLineDash([]);
+  rctx.fillStyle='#aaa'; rctx.font='8px Georgia';
+  rctx.fillText('DP', toX(24), toY(0.85)-2);
+
+  // SSM rate curve
+  rctx.strokeStyle='#d04418'; rctx.lineWidth=2.2;
+  rctx.beginPath();
+  for(let m=5;m<=28;m+=0.2){
+    let g;
+    if(m<=M_SOFT) g=0;
+    else if(m<M_HARD){
+      const eps=(m-M_SOFT)/M_SOFT;
+      g=Math.min(eps*eps,1);
+    } else g=1.0;
+    if(m===5) rctx.moveTo(toX(m),toY(g));
+    else rctx.lineTo(toX(m),toY(g));
+  }
+  rctx.stroke();
+
+  // Vertical cutoff at mhard
+  rctx.strokeStyle='#d04418'; rctx.lineWidth=2.2;
+  rctx.beginPath();
+  const eps_h=(M_HARD-M_SOFT)/M_SOFT;
+  rctx.moveTo(toX(M_HARD),toY(eps_h*eps_h));
+  rctx.lineTo(toX(M_HARD),PAD.t);
+  rctx.stroke();
+
+  // Current mass indicator
+  if(currentMass>=5 && currentMass<=28){
+    const cx=toX(currentMass);
+    let gy;
+    if(currentMass<=M_SOFT) gy=0;
+    else if(currentMass<M_HARD){const eps=(currentMass-M_SOFT)/M_SOFT; gy=eps*eps;}
+    else gy=1;
+    const cy=toY(gy);
+    rctx.fillStyle='#d04418';
+    rctx.beginPath(); rctx.arc(cx,cy,4,0,Math.PI*2); rctx.fill();
+    rctx.strokeStyle='#fff'; rctx.lineWidth=1.2;
+    rctx.beginPath(); rctx.arc(cx,cy,4,0,Math.PI*2); rctx.stroke();
+  }
+
+  // Bild experiment
+  rctx.fillStyle='#1a60d0'; rctx.font='8px Georgia';
+  rctx.fillText('Bild 16.2', toX(16.2)+3, PAD.t+25);
+  const bx=toX(16.2), eps_b=(16.2-M_SOFT)/M_SOFT;
+  rctx.strokeStyle='#1a60d0'; rctx.lineWidth=0.8; rctx.setLineDash([2,2]);
+  rctx.beginPath(); rctx.moveTo(bx,PAD.t+33); rctx.lineTo(bx,toY(eps_b*eps_b)); rctx.stroke();
+  rctx.setLineDash([]);
+}
+
+// ── Camera views ───────────────────────────────────────────────────────
+function setView(v){
+  view=v;
+  ['full','face','wave'].forEach(id=>{
+    document.getElementById('btn-'+id).classList.toggle('active',id===v);
+  });
+  if(v==='full'){cam.position.set(0,1.5,16);}
+  else if(v==='face'){
+    // Zoom to the highlighted triangular face
+    const fc = RAW[HIGHLIGHT_FACE[0]].clone().add(RAW[HIGHLIGHT_FACE[1]]).add(RAW[HIGHLIGHT_FACE[2]]).multiplyScalar(1/3);
+    cam.position.set(fc.x+5, fc.y+4, fc.z+5);
+    cam.lookAt(fc);
+  } else {
+    // Focus on wavepacket
+    const fc = RAW[HIGHLIGHT_FACE[0]].clone().add(RAW[HIGHLIGHT_FACE[1]]).add(RAW[HIGHLIGHT_FACE[2]]).multiplyScalar(1/3);
+    cam.position.set(fc.x+3, fc.y+2, fc.z+8);
+    cam.lookAt(fc);
+  }
+}
+
+function toggleRot(){
+  autoRot=!autoRot;
+  document.getElementById('btn-rot').classList.toggle('active',autoRot);
+}
+
+// ── Interaction ────────────────────────────────────────────────────────
+let drag=false,px=0,py=0;
+c3d.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{
+  if(!drag)return;
+  grp.rotation.y+=(e.clientX-px)*0.006;
+  grp.rotation.x+=(e.clientY-py)*0.006;
+  px=e.clientX;py=e.clientY;
+});
+c3d.addEventListener('wheel',e=>{
+  cam.position.z=Math.max(5,Math.min(28,cam.position.z+e.deltaY*0.018));
+  e.preventDefault();
+},{passive:false});
+
+document.getElementById('mass-slider').addEventListener('input',e=>{
+  currentMass=parseFloat(e.target.value);
+  updateWavepacket();
+  drawRate();
+});
+
+addEventListener('resize',()=>{
+  const W=innerWidth,H=innerHeight;
+  renderer.setSize(W,H);
+  cam.aspect=W/H; cam.updateProjectionMatrix();
+});
+
+// ── Animate ────────────────────────────────────────────────────────────
+let t=0;
+buildScene();
+drawRate();
+
+const W0=innerWidth,H0=innerHeight;
+renderer.setSize(W0,H0); cam.aspect=W0/H0; cam.updateProjectionMatrix();
+
+(function loop(){
+  requestAnimationFrame(loop);
+  t+=0.016;
+
+  if(autoRot&&!drag){
+    grp.rotation.y=t*0.25;
+    grp.rotation.x=Math.sin(t*0.18)*0.07;
+  }
+
+  // Pulse the circumradius ring
+  if(circumRing){
+    const p=0.5+0.5*Math.sin(t*1.8);
+    circumRing.material.opacity=0.5+0.4*p;
+    circumRing.material.color.setHex(new THREE.Color(0.1+0.0*p, 0.35+0.05*p, 0.9-0.1*p).getHex());
+  }
+  // Pulse circumlines
+  circumLines.forEach(l=>{
+    if(l.material) l.material.opacity=0.4+0.35*Math.sin(t*1.8);
+  });
+
+  // Pulse wavepacket
+  if(waveMesh && currentMass > M_SOFT && currentMass < M_HARD){
+    const eps=(currentMass-M_SOFT)/M_SOFT;
+    const pulse=0.5+0.5*Math.sin(t*2.5);
+    waveMesh.material.opacity=0.25+0.2*pulse*eps;
+  }
+
+  renderer.render(scene,cam);
+})();
+</script>
+</body>
+</html>
