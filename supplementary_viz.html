@@ -149,7 +149,9 @@ canvas { display:block; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ── Constants ──────────────────────────────────────────────────────────
-const M_SOFT = 11.81, M_HARD = 20.45;
+const M_SOFT = 11.81;
+const M_HARD = M_SOFT * Math.sqrt(3);  // exact: 11.81*√3 ≈ 20.46 µg
+// Paper rounds to 11.8 and 20.5; here we keep exact ratio √3 for geometric consistency
 const L = 2.2;  // scene units
 const R_MIN = L / Math.sqrt(3); // circumradius of triangular face
 
@@ -379,7 +381,8 @@ function updateWavepacket(){
     regLabel.style.background='#fff8e1'; regLabel.style.color='#e65100';
     regLabel.textContent='Grey Zone: Lattice Corrections Active';
     const eps = ((currentMass-M_SOFT)/M_SOFT);
-    regDesc.innerHTML=`λ<sub>c</sub>/L = ${lcStr} (< 1, > 1/√3)<br>ε = ${eps.toFixed(3)}<br>Γ ∝ ε² = ${(eps*eps).toFixed(3)} Γ₀<br>Coherence survives (below m<sub>hard</sub>).`;
+    const gamma_norm = ((currentMass-M_SOFT)/(M_HARD-M_SOFT))**2;
+    regDesc.innerHTML=`λ<sub>c</sub>/L = ${lcStr} (< 1, > 1/√3)<br>ε = ${eps.toFixed(3)}<br>Γ/Γ<sub>max</sub> = ${gamma_norm.toFixed(3)}<br>Coherence survives (below m<sub>hard</sub>).`;
   } else {
     regLabel.style.background='#ffebee'; regLabel.style.color='#b71c1c';
     regLabel.textContent='Regime III: Topological Cutoff';
@@ -474,8 +477,7 @@ function drawRate(){
     let g;
     if(m<=M_SOFT) g=0;
     else if(m<M_HARD){
-      const eps=(m-M_SOFT)/M_SOFT;
-      g=Math.min(eps*eps,1);
+      g=Math.min(((m-M_SOFT)/(M_HARD-M_SOFT))**2, 1.0);
     } else g=1.0;
     if(m===5) rctx.moveTo(toX(m),toY(g));
     else rctx.lineTo(toX(m),toY(g));
@@ -485,8 +487,8 @@ function drawRate(){
   // Vertical cutoff at mhard
   rctx.strokeStyle='#d04418'; rctx.lineWidth=2.2;
   rctx.beginPath();
-  const eps_h=(M_HARD-M_SOFT)/M_SOFT;
-  rctx.moveTo(toX(M_HARD),toY(eps_h*eps_h));
+  // At m_hard, normalized Gamma = 1.0 exactly (by definition of normalization)
+  rctx.moveTo(toX(M_HARD),toY(1.0));
   rctx.lineTo(toX(M_HARD),PAD.t);
   rctx.stroke();
 
@@ -495,7 +497,7 @@ function drawRate(){
     const cx=toX(currentMass);
     let gy;
     if(currentMass<=M_SOFT) gy=0;
-    else if(currentMass<M_HARD){const eps=(currentMass-M_SOFT)/M_SOFT; gy=eps*eps;}
+    else if(currentMass<M_HARD){gy=((currentMass-M_SOFT)/(M_HARD-M_SOFT))**2;}
     else gy=1;
     const cy=toY(gy);
     rctx.fillStyle='#d04418';
@@ -507,7 +509,7 @@ function drawRate(){
   // Bild experiment
   rctx.fillStyle='#1a60d0'; rctx.font='8px Georgia';
   rctx.fillText('Bild 16.2', toX(16.2)+3, PAD.t+25);
-  const bx=toX(16.2), eps_b=(16.2-M_SOFT)/M_SOFT;
+  const bx=toX(16.2), eps_b=(16.2-M_SOFT)/(M_HARD-M_SOFT);
   rctx.strokeStyle='#1a60d0'; rctx.lineWidth=0.8; rctx.setLineDash([2,2]);
   rctx.beginPath(); rctx.moveTo(bx,PAD.t+33); rctx.lineTo(bx,toY(eps_b*eps_b)); rctx.stroke();
   rctx.setLineDash([]);
