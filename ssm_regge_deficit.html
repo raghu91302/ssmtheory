@@ -259,9 +259,9 @@ if(involvesCenter){
   var otherIdx=(bi===centerIdx)?bj:bi;
   var dyy=allN[otherIdx][1]-allN[centerIdx][1];
   var bondCol,bondR,bondOp;
-  if(Math.abs(dyy)<0.1){bondCol=C.tl;bondR=0.04;bondOp=1.0;}  // in-plane = teal
-  else if(dyy>0){bondCol=C.or;bondR=0.04;bondOp=1.0;}         // above = orange
-  else{bondCol=C.b;bondR=0.04;bondOp=1.0;}                     // below = blue
+  if(Math.abs(dyy)<0.1){bondCol=C.gn;bondR=0.04;bondOp=1.0;}  // in-plane = green (Layer B)
+  else if(dyy>0){bondCol=C.b;bondR=0.04;bondOp=1.0;}         // above = blue (Layer C)
+  else{bondCol=C.or;bondR=0.04;bondOp=1.0;}                   // below = orange (Layer A)
   g.add(mC(p1,p2,bondR,bondCol,bondOp));
 } else {
   var dyb=Math.abs(allN[bi][1]-allN[bj][1]);
@@ -283,16 +283,16 @@ if(Math.abs(dyy)<0.1)inP++;else if(dyy>0)abv++;else blw++;}}
 // Labels
 var cP=new THREE.Vector3(allN[centerIdx][0]-cx,allN[centerIdx][1]-cy,allN[centerIdx][2]-cz);
 g.add(mL("Central node: K=12",new THREE.Vector3(cP.x,cP.y+0.5,cP.z),"#CC9900"));
-g.add(mL(inP+" in-plane (teal)",new THREE.Vector3(3.0,0.8,0),"#009988"));
-g.add(mL(abv+" above (orange)",new THREE.Vector3(3.0,0.4,0),"#EE7733"));
-g.add(mL(blw+" below (blue)",new THREE.Vector3(3.0,0.0,0),"#0077BB"));
+g.add(mL(inP+" in-plane (green)",new THREE.Vector3(3.0,0.8,0),"#22AA44"));
+g.add(mL(abv+" above (blue)",new THREE.Vector3(3.0,0.4,0),"#0077BB"));
+g.add(mL(blw+" below (orange)",new THREE.Vector3(3.0,0.0,0),"#EE7733"));
 g.add(mL(inP+"+"+abv+"+"+blw+" = 12",new THREE.Vector3(3.0,-0.4,0),"#333"));
 // Layer labels
-g.add(mL("Layer C (above)",new THREE.Vector3(-3.0,lH+0.15,0),"#EE7733"));
-g.add(mL("Layer A (center)",new THREE.Vector3(-3.0,0.15,0),"#009988"));
-g.add(mL("Layer B (below)",new THREE.Vector3(-3.0,-lH+0.15,0),"#0077BB"));
+g.add(mL("Layer C (above)",new THREE.Vector3(-3.0,lH+0.15,0),"#0077BB"));
+g.add(mL("Layer B (center)",new THREE.Vector3(-3.0,0.15,0),"#22AA44"));
+g.add(mL("Layer A (below)",new THREE.Vector3(-3.0,-lH+0.15,0),"#EE7733"));
 g.add(mL("\u03B4 = 0  |  Saturated",new THREE.Vector3(0,lH+0.8,0),"#22AA44"));
-},ph:"k12",badge:"K = 12  CUBOCTAHEDRON",bc:"#22AA44",label:"Phase III: The K=12 FCC Lattice \u2014 Cuboctahedral Coordination",desc:"The frustrated K=4 foam has crystallized into three ordered ABC-stacked layers. The highlighted node (yellow) achieves K=12: 6 in-plane bonds (teal) + 3 to the layer above (orange) + 3 to the layer below (blue). This is the cuboctahedral coordination of the FCC lattice. Deficit angles vanish (\u03B4=0): the lattice is now flat. K=12 saturates the kissing-number bound of 3D Euclidean space, so the cascade has no fifth phase. Each layer is a flat hexagonal sheet, stacked with ABC offset.",legend:'<div class="lt">Phase III: K = 12</div>3 ABC-stacked hexagonal layers.<br><br>Highlighted node (yellow):<br><span style="color:#009988">\u25CF 6 in-plane</span> (teal)<br><span style="color:#EE7733">\u25CF 3 above</span> (orange)<br><span style="color:#0077BB">\u25CF 3 below</span> (blue)<br><b>6 + 3 + 3 = 12</b><br><br><span class="mt">\u03B4 = 0</span><br>K=12 saturated.',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Frustrated Foam<br>\u25B6 <b style="color:#22AA44">K=12 Vacuum</b>'});
+},ph:"k12",badge:"K = 12  CUBOCTAHEDRON",bc:"#22AA44",label:"Phase III: The K=12 FCC Lattice \u2014 Cuboctahedral Coordination",desc:"The frustrated K=4 foam has crystallized into three ordered ABC-stacked layers. The highlighted node (yellow) achieves K=12: 6 in-plane bonds (green, Layer B) + 3 to the layer above (blue, Layer C) + 3 to the layer below (orange, Layer A). This is the cuboctahedral coordination of the FCC lattice. Deficit angles vanish (\u03B4=0): the lattice is now flat. K=12 saturates the kissing-number bound of 3D Euclidean space, so the cascade has no fifth phase. Each layer is a flat hexagonal sheet, stacked with ABC offset.",legend:'<div class="lt">Phase III: K = 12</div>3 ABC-stacked hexagonal layers.<br><br>Highlighted node (yellow):<br><span style="color:#22AA44">\u25CF 6 in-plane</span> (Layer B)<br><span style="color:#0077BB">\u25CF 3 above</span> (Layer C)<br><span style="color:#EE7733">\u25CF 3 below</span> (Layer A)<br><b>6 + 3 + 3 = 12</b><br><br><span class="mt">\u03B4 = 0</span><br>K=12 saturated.',tl:'<b>You are here:</b><br>\u00A0\u00A0 K=6 Ground State<br>\u00A0\u00A0 K=4 Frustrated Foam<br>\u25B6 <b style="color:#22AA44">K=12 Vacuum</b>'});
 // RENDER
 var si3=0,pl2=false,pt2=null;var sli2=document.querySelector("#sld input");sli2.max=steps.length-1;
 function rn2(idx){si3=Math.max(0,Math.min(idx,steps.length-1));sli2.value=si3;while(G.children.length){var c=G.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}G.remove(c);}var s=steps[si3];s.b(G);document.getElementById("hd").className=s.ph==="k6"?"pk6":s.ph==="k4"?"pk4":"pk12";document.getElementById("pb").textContent=s.badge;document.getElementById("pb").style.background=s.bc;document.getElementById("sl2").textContent=s.label;document.getElementById("lg").innerHTML=s.legend;document.getElementById("dc").textContent=s.desc;document.getElementById("tl").innerHTML=s.tl;document.getElementById("fc").textContent=(si3+1)+"/"+steps.length;sli2.style.accentColor=s.bc;}
