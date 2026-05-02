@@ -34,11 +34,12 @@ P_LIFT = np.exp(-3.0)  # ~ 0.0498
 
 # Bulk diagnostic: count neighbors within this range — used to mark bulk-interior nodes
 R_BULK_INTERIOR = 2.0 * L
-# Threshold: a node is "bulk-interior" iff at least this many other nodes are within R_BULK_INTERIOR.
-# Ideal FCC has ~18 nodes within 2L (K=12 nearest + 6 second-nearest at distance sqrt(2)*L=1.414L... 
-# but 2L includes much more — first 3 shells in FCC are at L, sqrt(2)L≈1.414, sqrt(3)L≈1.732.
-# Counts: 12 + 6 + 24 = 42 within 2L for ideal FCC. Use generous threshold 35.
-N_BULK_THRESHOLD = 35
+# Threshold: a node is "bulk-interior" iff all three FCC coordination shells around it
+# are populated. An ideal FCC interior node has 12 + 6 + 24 = 42 neighbors at distances
+# L, sqrt(2)*L = 1.414L, sqrt(3)*L = 1.732L — all within 2L. Setting the threshold to
+# the full count of 42 is a strict geometric criterion: bulk-interior means "all three
+# coordination shells fully populated", not a tunable parameter.
+N_BULK_THRESHOLD = 42
 
 
 def grow_lattice(N_target, seed, p_lift=P_LIFT, verbose=False):
@@ -282,7 +283,7 @@ def aggregate(results):
 if __name__ == '__main__':
     import json
     sizes = [250, 500, 750, 1000]
-    n_seeds = 5  # smaller than the paper's 30 for speed; adequate for the diagnostic
+    n_seeds = 30  # match the 30-seed protocol used for the all-node columns of Table 2
     summary = {}
     for N in sizes:
         results = run_size(N, n_seeds=n_seeds, verbose=True)
