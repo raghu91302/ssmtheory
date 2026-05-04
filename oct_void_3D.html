@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Octahedral Void in the FCC Cuboctahedral Cluster — Interactive 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #5a5a5a;
+    --line: #e8e6e2;
+    --rule: #1a1a1a;
+    --accent: #8a3324;
+
+    --c-cubocta:        #1f5fa8;   /* deep blue */
+    --c-cubocta-edge:   #6b94c2;
+    --c-origin:         #b51a17;   /* deep red */
+    --c-oct:            #2d8a4e;   /* deep green */
+    --c-antipode:       #c46a1b;   /* burnt orange */
+    --c-center:         #d9a82a;   /* aged gold */
+    --c-k222:           #2d8a4e;
+    --c-k222-anti:      #b51a17;
+    --c-trapped-bond:   #c46a1b;
+    --c-sphere:         #d9a82a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 16px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ============================================================
+     Layout
+     ============================================================ */
+  .frame {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Three.js canvas container */
+  #scene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ============================================================
+     Header - editorial style
+     ============================================================ */
+  .masthead {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 24px 36px 18px;
+    z-index: 10;
+    pointer-events: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .masthead .title-block {
+    max-width: 60ch;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-family: 'Crimson Pro', serif;
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.18;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+  .meta .ref { color: var(--ink); font-weight: 500; }
+
+  /* ============================================================
+     Hairline rules (editorial flourish)
+     ============================================================ */
+  .rule-top {
+    position: absolute;
+    top: 96px; left: 36px; right: 36px;
+    height: 1px;
+    background: var(--rule);
+    z-index: 9;
+    pointer-events: none;
+  }
+  .rule-bottom {
+    position: absolute;
+    bottom: 124px; left: 36px; right: 36px;
+    height: 1px;
+    background: var(--rule);
+    opacity: 0.15;
+    z-index: 9;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     Side legend — left
+     ============================================================ */
+  .legend {
+    position: absolute;
+    bottom: 140px;
+    left: 36px;
+    z-index: 8;
+    pointer-events: auto;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--line);
+    padding: 16px 18px 14px;
+    max-width: 280px;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .legend h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .legend-item:last-child { margin-bottom: 0; }
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.2);
+  }
+  .swatch-line {
+    width: 16px;
+    height: 2px;
+    flex-shrink: 0;
+  }
+  .swatch-line.dashed {
+    background-image: linear-gradient(to right, currentColor 50%, transparent 50%);
+    background-size: 6px 100%;
+    height: 2px;
+  }
+  .swatch-star {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    background-color: var(--c-center);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+  .item-label { flex: 1; font-size: 13px; }
+  .item-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* ============================================================
+     Right control panel
+     ============================================================ */
+  .controls {
+    position: absolute;
+    bottom: 140px;
+    right: 36px;
+    z-index: 8;
+    pointer-events: auto;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--line);
+    padding: 16px 18px;
+    width: 240px;
+  }
+  .controls h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink);
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .toggle:hover { color: var(--accent); }
+  .toggle input { display: none; }
+  .toggle-pill {
+    width: 26px;
+    height: 14px;
+    border-radius: 8px;
+    background: #d8d4cc;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle-pill::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 1px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .toggle-pill {
+    background: var(--accent);
+  }
+  .toggle input:checked + .toggle-pill::after {
+    transform: translateX(12px);
+  }
+  .controls-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 12px 0 10px;
+  }
+  .button {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--ink);
+    background: white;
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .button:hover {
+    background: var(--ink);
+    color: white;
+  }
+  .button.is-active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .button + .button { margin-top: 6px; }
+
+  /* ============================================================
+     Bottom status bar
+     ============================================================ */
+  .statusbar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 18px 36px 24px;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    z-index: 7;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .statusbar .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .statusbar .stat .label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .statusbar .stat .value {
+    font-size: 12.5px;
+    color: var(--ink);
+    font-weight: 500;
+    font-family: 'Crimson Pro', serif;
+    font-style: italic;
+  }
+  .statusbar .hint {
+    flex: 1;
+    text-align: center;
+    font-style: italic;
+    font-family: 'Crimson Pro', serif;
+    font-size: 13px;
+  }
+
+  /* ============================================================
+     Loading overlay
+     ============================================================ */
+  .loader {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s;
+  }
+  .loader.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loader-content {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .loader-content::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 24px;
+    margin: 0 auto 16px;
+    border: 1.5px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ============================================================
+     Mobile/responsive
+     ============================================================ */
+  @media (max-width: 880px) {
+    .masthead { padding: 16px 18px 12px; flex-direction: column; gap: 6px; }
+    h1 { font-size: 19px; }
+    .meta { text-align: left; }
+    .rule-top { top: 138px; left: 18px; right: 18px; }
+    .legend, .controls {
+      max-width: none;
+      width: calc(50% - 27px);
+      padding: 10px 12px;
+      bottom: 88px;
+      font-size: 11px;
+    }
+    .legend { left: 18px; }
+    .controls { right: 18px; }
+    .legend h3, .controls h3 { font-size: 8.5px; margin-bottom: 6px; }
+    .legend-item { font-size: 11px; gap: 6px; }
+    .item-note { display: none; }
+    .statusbar { padding: 10px 18px 14px; font-size: 9.5px; gap: 12px; flex-wrap: wrap; }
+    .statusbar .hint { display: none; }
+    .statusbar .stat .value { font-size: 11px; }
+    .button { font-size: 10px; padding: 6px 8px; }
+  }
+
+  @media (max-width: 560px) {
+    .legend, .controls {
+      position: static;
+      width: 100%;
+      max-width: none;
+    }
+    .legend { display: none; } /* hide on smallest screens to maximize 3D area */
+    .controls {
+      position: absolute;
+      bottom: 76px;
+      right: 12px;
+      width: auto;
+      padding: 8px 10px;
+    }
+    .controls .toggle { font-size: 10px; }
+    .controls h3 { display: none; }
+    .controls-divider { display: none; }
+    .controls .button { display: none; }
+  }
+
+</style>
+</head>
+
+<body>
+<div class="frame">
+
+  <!-- 3D scene -->
+  <div id="scene"></div>
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="title-block">
+      <div class="eyebrow">Selection-Stitch Model · Supplementary visualization</div>
+      <h1>The octahedral void within the<br>FCC <em>cuboctahedral</em> coordination cluster</h1>
+    </div>
+    <div class="meta">
+      <div><span class="ref">FIG. S1</span></div>
+      <div>K=12 · K<sub>2,2,2</sub></div>
+      <div>L = √2</div>
+    </div>
+  </header>
+
+  <div class="rule-top"></div>
+
+  <!-- Legend (left) -->
+  <aside class="legend">
+    <h3>Legend</h3>
+    <div class="legend-item">
+      <span class="swatch" style="background:var(--c-origin)"></span>
+      <span class="item-label">Cluster center</span>
+      <span class="item-note">FCC node</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch" style="background:var(--c-cubocta)"></span>
+      <span class="item-label">Cuboctahedron NN</span>
+      <span class="item-note">12 verts</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch" style="background:var(--c-oct)"></span>
+      <span class="item-label">Oct vertex (in cluster)</span>
+      <span class="item-note">5 verts</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch" style="background:var(--c-antipode)"></span>
+      <span class="item-label">Antipode (out of cluster)</span>
+      <span class="item-note">at √2·L</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch-star"></span>
+      <span class="item-label">Octahedral void center</span>
+      <span class="item-note">(1,0,0)</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch-line" style="background:var(--c-k222)"></span>
+      <span class="item-label">K<sub>2,2,2</sub> bond</span>
+      <span class="item-note">12 edges</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch-line dashed" style="color:var(--c-k222-anti)"></span>
+      <span class="item-label">Antipodal non-bond</span>
+      <span class="item-note">3 pairs</span>
+    </div>
+  </aside>
+
+  <!-- Controls (right) -->
+  <aside class="controls">
+    <h3>Layers</h3>
+    <label class="toggle">
+      <span>Cuboctahedron faces</span>
+      <input type="checkbox" id="t-cubocta-faces" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>Cuboctahedron edges</span>
+      <input type="checkbox" id="t-cubocta-edges" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>Origin radial bonds</span>
+      <input type="checkbox" id="t-origin-edges" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>Octahedron faces</span>
+      <input type="checkbox" id="t-oct-faces" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>K<sub>2,2,2</sub> bonds</span>
+      <input type="checkbox" id="t-k222" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>Antipodal non-bonds</span>
+      <input type="checkbox" id="t-antipodal" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>Trapped-center bonds</span>
+      <input type="checkbox" id="t-trapped" checked>
+      <span class="toggle-pill"></span>
+    </label>
+    <label class="toggle">
+      <span>Inscribed sphere</span>
+      <input type="checkbox" id="t-sphere">
+      <span class="toggle-pill"></span>
+    </label>
+
+    <div class="controls-divider"></div>
+
+    <button class="button is-active" id="b-rotate">Auto-rotate · ON</button>
+    <button class="button" id="b-reset">Reset view</button>
+  </aside>
+
+  <!-- Status bar -->
+  <footer class="statusbar">
+    <div class="stat">
+      <span class="label">Cluster</span>
+      <span class="value">13 nodes</span>
+    </div>
+    <div class="stat">
+      <span class="label">Octahedron</span>
+      <span class="value">6 verts · 12 edges</span>
+    </div>
+    <div class="hint">drag to rotate · scroll to zoom · click toggles to explore the structure</div>
+    <div class="stat" style="text-align:right">
+      <span class="label">Inscribed r<sub>O</sub></span>
+      <span class="value">0.414·R ≈ 0.207·L</span>
+    </div>
+    <div class="stat" style="text-align:right">
+      <span class="label">Volume ratio</span>
+      <span class="value">V<sub>O</sub>/V<sub>T</sub> = 3.13</span>
+    </div>
+  </footer>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="loader-content">Loading geometry</div>
+  </div>
+
+</div>
+
+<!-- Three.js (single bundle from cdnjs) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+'use strict';
+
+// =============================================================
+// Geometry — parity-even FCC convention
+// =============================================================
+
+const L_SQ = 2.0;            // squared NN distance in raw coords (L = √2)
+const L = Math.sqrt(L_SQ);
+
+// 12 nearest-neighbor displacements
+const NN = [
+  [1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],
+  [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+  [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]
+];
+
+const ORIGIN = [0, 0, 0];                   // cluster center
+const CUBOCTA = NN.map(d => [...d]);         // 12 cuboctahedron vertices
+
+const OCT_CENTER = [1, 0, 0];                // octahedral void center
+const OCT_VERTS = [
+  [2, 0, 0],   // 0: antipode of origin (OUTSIDE cluster, distance 2 = √2·L)
+  [0, 0, 0],   // 1: origin itself (IN cluster, IS cluster center)
+  [1, 1, 0],   // 2
+  [1,-1, 0],   // 3
+  [1, 0, 1],   // 4
+  [1, 0,-1]    // 5
+];
+const ANTIPODAL = [[0,1],[2,3],[4,5]];
+
+// Compute K_222 edges (non-antipodal NN pairs)
+const K222 = [];
+for (let i = 0; i < 6; i++) {
+  for (let j = i+1; j < 6; j++) {
+    const a = OCT_VERTS[i], b = OCT_VERTS[j];
+    const d2 = (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+    if (Math.abs(d2 - L_SQ) < 1e-9) K222.push([i,j]);
+  }
+}
+
+// Cuboctahedron edges (24 — adjacent NN of origin)
+const CUBOCTA_EDGES = [];
+for (let i = 0; i < 12; i++) {
+  for (let j = i+1; j < 12; j++) {
+    const a = CUBOCTA[i], b = CUBOCTA[j];
+    const d2 = (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+    if (Math.abs(d2 - L_SQ) < 1e-9) CUBOCTA_EDGES.push([i,j]);
+  }
+}
+
+// Cuboctahedron faces — 8 triangles + 6 squares
+function findCuboctaFaces() {
+  const triangles = [];
+  for (let i = 0; i < 12; i++) {
+    for (let j = i+1; j < 12; j++) {
+      for (let k = j+1; k < 12; k++) {
+        const a = CUBOCTA[i], b = CUBOCTA[j], c = CUBOCTA[k];
+        const d12 = (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+        const d13 = (a[0]-c[0])**2 + (a[1]-c[1])**2 + (a[2]-c[2])**2;
+        const d23 = (b[0]-c[0])**2 + (b[1]-c[1])**2 + (b[2]-c[2])**2;
+        if (Math.abs(d12 - L_SQ) < 1e-9 &&
+            Math.abs(d13 - L_SQ) < 1e-9 &&
+            Math.abs(d23 - L_SQ) < 1e-9) {
+          triangles.push([i,j,k]);
+        }
+      }
+    }
+  }
+
+  const squares = [];
+  // Squares: 4 vertices, all NN to two others, with two diagonals at √2·L (squared 2·L_SQ)
+  for (let i = 0; i < 12; i++) {
+    for (let j = i+1; j < 12; j++) {
+      for (let k = j+1; k < 12; k++) {
+        for (let l = k+1; l < 12; l++) {
+          const verts = [CUBOCTA[i], CUBOCTA[j], CUBOCTA[k], CUBOCTA[l]];
+          const dists = [];
+          for (let m = 0; m < 4; m++) {
+            for (let n = m+1; n < 4; n++) {
+              dists.push((verts[m][0]-verts[n][0])**2 +
+                         (verts[m][1]-verts[n][1])**2 +
+                         (verts[m][2]-verts[n][2])**2);
+            }
+          }
+          dists.sort((x,y) => x-y);
+          if (Math.abs(dists[0]-L_SQ) < 1e-9 &&
+              Math.abs(dists[1]-L_SQ) < 1e-9 &&
+              Math.abs(dists[2]-L_SQ) < 1e-9 &&
+              Math.abs(dists[3]-L_SQ) < 1e-9 &&
+              Math.abs(dists[4]-2*L_SQ) < 1e-9 &&
+              Math.abs(dists[5]-2*L_SQ) < 1e-9) {
+
+            // Order vertices around the centroid
+            const cent = [
+              (verts[0][0]+verts[1][0]+verts[2][0]+verts[3][0])/4,
+              (verts[0][1]+verts[1][1]+verts[2][1]+verts[3][1])/4,
+              (verts[0][2]+verts[1][2]+verts[2][2]+verts[3][2])/4
+            ];
+            // Project to 2D plane (normal = centroid direction from origin since origin is inside)
+            const n = [cent[0], cent[1], cent[2]];
+            const nlen = Math.hypot(n[0], n[1], n[2]);
+            n[0]/=nlen; n[1]/=nlen; n[2]/=nlen;
+            // build basis
+            let arb = [1,0,0];
+            if (Math.abs(arb[0]*n[0]+arb[1]*n[1]+arb[2]*n[2]) > 0.9) arb = [0,1,0];
+            const dot = arb[0]*n[0] + arb[1]*n[1] + arb[2]*n[2];
+            const u = [arb[0]-dot*n[0], arb[1]-dot*n[1], arb[2]-dot*n[2]];
+            const ulen = Math.hypot(u[0], u[1], u[2]);
+            u[0]/=ulen; u[1]/=ulen; u[2]/=ulen;
+            const v = [n[1]*u[2]-n[2]*u[1], n[2]*u[0]-n[0]*u[2], n[0]*u[1]-n[1]*u[0]];
+
+            const idxList = [i, j, k, l];
+            const ang = idxList.map((idx, m) => {
+              const rel = [verts[m][0]-cent[0], verts[m][1]-cent[1], verts[m][2]-cent[2]];
+              const aa = Math.atan2(rel[0]*v[0]+rel[1]*v[1]+rel[2]*v[2],
+                                    rel[0]*u[0]+rel[1]*u[1]+rel[2]*u[2]);
+              return [aa, idx];
+            });
+            ang.sort((x,y) => x[0]-y[0]);
+            squares.push(ang.map(p => p[1]));
+          }
+        }
+      }
+    }
+  }
+  return { triangles, squares };
+}
+const { triangles: CUBOCTA_TRI, squares: CUBOCTA_SQ } = findCuboctaFaces();
+
+// Octahedron triangular faces (8)
+const OCT_TRI = [];
+for (let i = 0; i < 6; i++) {
+  for (let j = i+1; j < 6; j++) {
+    for (let k = j+1; k < 6; k++) {
+      const a = OCT_VERTS[i], b = OCT_VERTS[j], c = OCT_VERTS[k];
+      const d12 = (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+      const d13 = (a[0]-c[0])**2 + (a[1]-c[1])**2 + (a[2]-c[2])**2;
+      const d23 = (b[0]-c[0])**2 + (b[1]-c[1])**2 + (b[2]-c[2])**2;
+      if (Math.abs(d12 - L_SQ) < 1e-9 &&
+          Math.abs(d13 - L_SQ) < 1e-9 &&
+          Math.abs(d23 - L_SQ) < 1e-9) {
+        OCT_TRI.push([i,j,k]);
+      }
+    }
+  }
+}
+
+// Inscribed sphere radius for the octahedral void:
+// r_O = L/√2 - L/2 = L*(1/√2 - 1/2) ≈ 0.207·L. With L=√2: r_O = 1 - √2/2 ≈ 0.293
+const R_INSCRIBED = L * (1/Math.SQRT2 - 0.5);
+
+// =============================================================
+// Color palette (matching CSS)
+// =============================================================
+const COLORS = {
+  cubocta:      0x1f5fa8,
+  cubocta_edge: 0x6b94c2,
+  cubocta_face: 0xc8d4e6,
+  origin:       0xb51a17,
+  oct:          0x2d8a4e,
+  antipode:     0xc46a1b,
+  center:       0xd9a82a,
+  k222:         0x2d8a4e,
+  k222_anti:    0xb51a17,
+  trapped_bond: 0xc46a1b,
+  oct_face:     0xb8dfc4,
+  origin_edge:  0x9b8aae,
+  sphere:       0xd9a82a
+};
+
+// =============================================================
+// Three.js scene setup
+// =============================================================
+
+const sceneEl = document.getElementById('scene');
+const W = () => sceneEl.clientWidth;
+const H = () => sceneEl.clientHeight;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W(), H());
+renderer.setClearColor(0xffffff, 1);
+sceneEl.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+// Slight fog to add depth without darkening
+// (using FogExp2 lightly so distant elements desaturate just a touch)
+// Actually skip fog — it muddies the colors. Use proper lighting instead.
+
+const camera = new THREE.PerspectiveCamera(38, W()/H(), 0.1, 100);
+const CAMERA_DEFAULT = { distance: 7.0, theta: 0.45, phi: 0.40 }; // theta=elev, phi=azim (rad)
+let camState = { ...CAMERA_DEFAULT };
+
+function updateCamera() {
+  // Spherical coords centered on a target point slightly to the right of origin
+  // (so the cluster + oct void are both nicely in frame)
+  const target = new THREE.Vector3(0.7, 0, 0);
+  const r = camState.distance;
+  const x = target.x + r * Math.cos(camState.theta) * Math.cos(camState.phi);
+  const y = target.y + r * Math.sin(camState.theta);
+  const z = target.z + r * Math.cos(camState.theta) * Math.sin(camState.phi);
+  camera.position.set(x, y, z);
+  camera.lookAt(target);
+}
+updateCamera();
+
+// Lighting — soft, balanced
+const amb = new THREE.AmbientLight(0xffffff, 0.55);
+scene.add(amb);
+const key = new THREE.DirectionalLight(0xffffff, 0.55);
+key.position.set(5, 8, 6);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.30);
+fill.position.set(-4, -2, -4);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 0.20);
+rim.position.set(0, -6, 3);
+scene.add(rim);
+
+// =============================================================
+// Build the scene
+// =============================================================
+
+// Layer groups
+const G = {
+  cubocta_faces: new THREE.Group(),
+  cubocta_edges: new THREE.Group(),
+  origin_edges:  new THREE.Group(),
+  oct_faces:     new THREE.Group(),
+  k222:          new THREE.Group(),
+  antipodal:     new THREE.Group(),
+  trapped:       new THREE.Group(),
+  sphere:        new THREE.Group(),
+  vertices:      new THREE.Group()
+};
+for (const k in G) scene.add(G[k]);
+
+// Helper: tube edge between two points
+function makeTube(a, b, color, radius=0.022, opacity=1.0) {
+  const v1 = new THREE.Vector3(...a);
+  const v2 = new THREE.Vector3(...b);
+  const path = new THREE.LineCurve3(v1, v2);
+  const geom = new THREE.TubeGeometry(path, 1, radius, 8, false);
+  const mat = new THREE.MeshStandardMaterial({
+    color, roughness: 0.55, metalness: 0.0,
+    transparent: opacity < 1, opacity
+  });
+  return new THREE.Mesh(geom, mat);
+}
+
+// Helper: dashed-style edge (multiple short tubes along the path)
+function makeDashedTube(a, b, color, radius=0.018, dashCount=10, opacity=0.9) {
+  const v1 = new THREE.Vector3(...a);
+  const v2 = new THREE.Vector3(...b);
+  const total = v1.distanceTo(v2);
+  const grp = new THREE.Group();
+  const segLen = total / (dashCount * 2 - 1); // dashes + gaps
+  for (let i = 0; i < dashCount; i++) {
+    const t1 = (i * 2) / (dashCount * 2 - 1);
+    const t2 = t1 + 1 / (dashCount * 2 - 1);
+    const p1 = v1.clone().lerp(v2, t1);
+    const p2 = v1.clone().lerp(v2, t2);
+    const path = new THREE.LineCurve3(p1, p2);
+    const geom = new THREE.TubeGeometry(path, 1, radius, 8, false);
+    const mat = new THREE.MeshStandardMaterial({
+      color, roughness: 0.55, metalness: 0,
+      transparent: opacity < 1, opacity
+    });
+    grp.add(new THREE.Mesh(geom, mat));
+  }
+  return grp;
+}
+
+// Helper: triangle face mesh
+function makeFace(verts, color, opacity=0.18, doubleSide=true) {
+  const geom = new THREE.BufferGeometry();
+  const flat = [];
+  for (const v of verts) flat.push(v[0], v[1], v[2]);
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(flat, 3));
+
+  // Triangulate (fan from vertex 0)
+  const indices = [];
+  for (let i = 1; i < verts.length - 1; i++) {
+    indices.push(0, i, i+1);
+  }
+  geom.setIndex(indices);
+  geom.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({
+    color, roughness: 0.7, metalness: 0,
+    transparent: true, opacity,
+    side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+    depthWrite: false
+  });
+  return new THREE.Mesh(geom, mat);
+}
+
+// ---- Cuboctahedron faces ----
+for (const tri of CUBOCTA_TRI) {
+  const verts = tri.map(i => CUBOCTA[i]);
+  G.cubocta_faces.add(makeFace(verts, COLORS.cubocta_face, 0.10));
+}
+for (const sq of CUBOCTA_SQ) {
+  const verts = sq.map(i => CUBOCTA[i]);
+  G.cubocta_faces.add(makeFace(verts, COLORS.cubocta_face, 0.13));
+}
+
+// ---- Cuboctahedron edges ----
+for (const [i,j] of CUBOCTA_EDGES) {
+  G.cubocta_edges.add(makeTube(CUBOCTA[i], CUBOCTA[j], COLORS.cubocta_edge, 0.014, 0.55));
+}
+
+// ---- Origin radial bonds (12 dotted) ----
+for (const v of CUBOCTA) {
+  G.origin_edges.add(makeDashedTube(ORIGIN, v, COLORS.origin_edge, 0.010, 14, 0.45));
+}
+
+// ---- Octahedron faces ----
+for (const tri of OCT_TRI) {
+  const verts = tri.map(i => OCT_VERTS[i]);
+  G.oct_faces.add(makeFace(verts, COLORS.oct_face, 0.22));
+}
+
+// ---- K_2,2,2 edges (12 solid) ----
+for (const [i,j] of K222) {
+  G.k222.add(makeTube(OCT_VERTS[i], OCT_VERTS[j], COLORS.k222, 0.030, 0.95));
+}
+
+// ---- Antipodal non-bonds (3 dashed red) ----
+for (const [i,j] of ANTIPODAL) {
+  G.antipodal.add(makeDashedTube(OCT_VERTS[i], OCT_VERTS[j], COLORS.k222_anti, 0.020, 9, 0.85));
+}
+
+// ---- Trapped-center bonds (6 dashed gold/orange) ----
+for (let i = 0; i < 6; i++) {
+  G.trapped.add(makeDashedTube(OCT_CENTER, OCT_VERTS[i], COLORS.trapped_bond, 0.014, 8, 0.65));
+}
+
+// ---- Inscribed sphere (initially hidden) ----
+{
+  const sphGeom = new THREE.SphereGeometry(R_INSCRIBED, 48, 32);
+  const sphMat = new THREE.MeshStandardMaterial({
+    color: COLORS.sphere, roughness: 0.4, metalness: 0,
+    transparent: true, opacity: 0.32,
+    depthWrite: false
+  });
+  const sph = new THREE.Mesh(sphGeom, sphMat);
+  sph.position.set(...OCT_CENTER);
+  G.sphere.add(sph);
+  G.sphere.visible = false;
+}
+
+// ---- Vertices ----
+function makeVertex(pos, color, radius=0.075, edgeColor=0x000000) {
+  const grp = new THREE.Group();
+  // Inner sphere
+  const inner = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 24, 18),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.05 })
+  );
+  inner.position.set(...pos);
+  grp.add(inner);
+  // Subtle outline (slightly larger, dark, back-side)
+  const outer = new THREE.Mesh(
+    new THREE.SphereGeometry(radius * 1.06, 18, 14),
+    new THREE.MeshBasicMaterial({ color: edgeColor, side: THREE.BackSide, transparent: true, opacity: 0.5 })
+  );
+  outer.position.set(...pos);
+  grp.add(outer);
+  return grp;
+}
+
+// 12 cubocta vertices, but skip those that are also oct vertices (to avoid double-render)
+function isOctVert(p) {
+  return OCT_VERTS.some(v => Math.abs(v[0]-p[0])<1e-9 && Math.abs(v[1]-p[1])<1e-9 && Math.abs(v[2]-p[2])<1e-9);
+}
+function isOrigin(p) { return p[0]===0 && p[1]===0 && p[2]===0; }
+
+for (const v of CUBOCTA) {
+  if (!isOctVert(v) && !isOrigin(v)) {
+    G.vertices.add(makeVertex(v, COLORS.cubocta, 0.060));
+  }
+}
+
+// Origin (cluster center) — also is one of the oct vertices
+G.vertices.add(makeVertex(ORIGIN, COLORS.origin, 0.090));
+
+// Oct vertices (excluding the origin which is already drawn)
+// Index 0 = (2,0,0) is the antipode → orange
+G.vertices.add(makeVertex(OCT_VERTS[0], COLORS.antipode, 0.085));
+// Indices 2-5 are the green "in cluster" oct verts (index 1 = origin already drawn)
+for (let i = 2; i < 6; i++) {
+  G.vertices.add(makeVertex(OCT_VERTS[i], COLORS.oct, 0.075));
+}
+
+// Octahedral void center — gold star (use an octahedron mesh as a stand-in for star)
+{
+  const grp = new THREE.Group();
+  const geom = new THREE.OctahedronGeometry(0.10);
+  const mat = new THREE.MeshStandardMaterial({
+    color: COLORS.center, roughness: 0.3, metalness: 0.4
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.position.set(...OCT_CENTER);
+  grp.add(mesh);
+
+  // Outline
+  const outline = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.107),
+    new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide, transparent: true, opacity: 0.5 })
+  );
+  outline.position.set(...OCT_CENTER);
+  grp.add(outline);
+
+  G.vertices.add(grp);
+  // Animate gentle pulse on the void center
+  grp.userData.pulse = mesh;
+}
+
+// =============================================================
+// Interaction — orbit controls (built from scratch, lightweight)
+// =============================================================
+
+let isPointerDown = false;
+let lastPointer = { x: 0, y: 0 };
+let autoRotate = true;
+let lastInteractionTime = 0;
+const RESUME_AFTER = 4500; // ms before auto-rotate resumes after manual interaction
+
+function onPointerDown(e) {
+  isPointerDown = true;
+  const p = e.touches ? e.touches[0] : e;
+  lastPointer = { x: p.clientX, y: p.clientY };
+  lastInteractionTime = performance.now();
+}
+function onPointerMove(e) {
+  if (!isPointerDown) return;
+  const p = e.touches ? e.touches[0] : e;
+  const dx = p.clientX - lastPointer.x;
+  const dy = p.clientY - lastPointer.y;
+  lastPointer = { x: p.clientX, y: p.clientY };
+
+  camState.phi   -= dx * 0.0075;
+  camState.theta += dy * 0.0075;
+  camState.theta = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, camState.theta));
+  updateCamera();
+  lastInteractionTime = performance.now();
+}
+function onPointerUp() {
+  isPointerDown = false;
+  lastInteractionTime = performance.now();
+}
+function onWheel(e) {
+  e.preventDefault();
+  const factor = Math.exp(e.deltaY * 0.0008);
+  camState.distance = Math.max(3.5, Math.min(14, camState.distance * factor));
+  updateCamera();
+  lastInteractionTime = performance.now();
+}
+
+renderer.domElement.addEventListener('mousedown', onPointerDown);
+window.addEventListener('mousemove', onPointerMove);
+window.addEventListener('mouseup', onPointerUp);
+renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+renderer.domElement.addEventListener('touchstart', onPointerDown, { passive: true });
+renderer.domElement.addEventListener('touchmove', (e) => { e.preventDefault(); onPointerMove(e); }, { passive: false });
+renderer.domElement.addEventListener('touchend', onPointerUp);
+
+// =============================================================
+// Toggle wiring
+// =============================================================
+
+const TOGGLES = [
+  ['t-cubocta-faces', 'cubocta_faces'],
+  ['t-cubocta-edges', 'cubocta_edges'],
+  ['t-origin-edges',  'origin_edges'],
+  ['t-oct-faces',     'oct_faces'],
+  ['t-k222',          'k222'],
+  ['t-antipodal',     'antipodal'],
+  ['t-trapped',       'trapped'],
+  ['t-sphere',        'sphere']
+];
+for (const [id, group] of TOGGLES) {
+  const cb = document.getElementById(id);
+  cb.addEventListener('change', () => { G[group].visible = cb.checked; });
+}
+
+// Auto-rotate button
+const rotBtn = document.getElementById('b-rotate');
+rotBtn.addEventListener('click', () => {
+  autoRotate = !autoRotate;
+  rotBtn.textContent = autoRotate ? 'Auto-rotate · ON' : 'Auto-rotate · OFF';
+  rotBtn.classList.toggle('is-active', autoRotate);
+});
+
+// Reset view
+document.getElementById('b-reset').addEventListener('click', () => {
+  camState = { ...CAMERA_DEFAULT };
+  updateCamera();
+});
+
+// =============================================================
+// Animation loop
+// =============================================================
+
+function resize() {
+  camera.aspect = W() / H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+}
+window.addEventListener('resize', resize);
+
+let rafTime = 0;
+function animate(t) {
+  requestAnimationFrame(animate);
+  const dt = (t - rafTime) / 1000;
+  rafTime = t;
+
+  // Auto-rotate (paused while user is interacting, resumes after idle)
+  const shouldAutoRotate = autoRotate && !isPointerDown &&
+                          (t - lastInteractionTime > RESUME_AFTER);
+  if (shouldAutoRotate) {
+    camState.phi += dt * 0.20;
+    updateCamera();
+  }
+
+  // Pulse the void center
+  const pulseGrp = G.vertices.children.find(c => c.userData.pulse);
+  if (pulseGrp && pulseGrp.userData.pulse) {
+    const s = 1 + 0.06 * Math.sin(t * 0.003);
+    pulseGrp.userData.pulse.scale.set(s, s, s);
+    pulseGrp.userData.pulse.rotation.y = t * 0.0006;
+    pulseGrp.userData.pulse.rotation.x = t * 0.0004;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// Hide loader once first frame is rendered
+requestAnimationFrame((t) => {
+  rafTime = t;
+  animate(t);
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('hidden');
+  }, 250);
+});
+
+</script>
+</body>
+</html>
