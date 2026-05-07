@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geometric Origins of Spin-1/2 and Relativistic Kinematics: Defect Migration in the FCC Vacuum Lattice</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;}
+#wrap{display:flex;flex-direction:column;width:100%;height:100%;}
+#hd{padding:5px 12px;border-bottom:1px solid #ddd;background:#f8f8f8;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+#badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.4px;}
+#title{font-size:13px;font-weight:700;color:#222;}
+#cv{flex:1;display:block;min-height:0;}
+#desc{position:absolute;bottom:46px;left:10px;max-width:440px;background:rgba(255,255,255,0.96);color:#333;padding:9px 13px;border-radius:7px;font-size:11.5px;line-height:1.65;border:1px solid #ddd;pointer-events:none;}
+#desc b{color:#111;}
+.cb{color:#1e6091;}.cr{color:#c0392b;}.cg{color:#4d8c2e;}.co{color:#EE7733;}.cy{color:#996600;}.cp{color:#AA3377;}
+#overlay{position:absolute;top:8px;left:50%;transform:translateX(-50%);pointer-events:none;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:center;max-width:96%;}
+.ovItem{background:rgba(255,255,255,0.92);border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:14px;font-weight:600;line-height:1.3;text-align:center;}
+.ovItem .ovTop{font-size:11px;color:#666;font-weight:500;}
+.ovItem .ovMain{font-size:18px;}
+#eq{position:absolute;bottom:46px;right:10px;background:rgba(255,255,255,0.96);color:#222;padding:7px 13px;border-radius:7px;font-size:12px;font-family:'Courier New',monospace;border:1px solid #ddd;pointer-events:none;text-align:right;line-height:1.7;}
+#ct{flex-shrink:0;padding:5px 10px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;align-items:center;justify-content:center;}
+.btn{padding:4px 10px;border:1px solid #ccc;border-radius:3px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.btn.on{border-color:#1e6091;background:#e6f2ff;color:#0e3c5d;font-weight:600;}
+#sl{flex:1;max-width:350px;margin:0 8px;}
+#sl input{width:100%;}
+#fc{font-size:10px;color:#888;min-width:40px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="hd">
+<span id="badge" style="background:#1e6091;">K=12</span>
+<div id="title">Loading...</div>
+</div>
+<div style="flex:1;position:relative;min-height:0;">
+<canvas id="cv"></canvas>
+<div id="desc"></div>
+<div id="eq"></div>
+<div id="overlay"></div>
+</div>
+<div id="ct">
+<button class="btn" onclick="goS()">&#9198;</button>
+<button class="btn" onclick="goP()">&#9664;</button>
+<button class="btn on" id="bp" onclick="togPlay()">&#9654; Play</button>
+<button class="btn" onclick="goN()">&#9654;</button>
+<button class="btn" onclick="goE()">&#9197;</button>
+<div id="sl"><input type="range" min="0" max="0" value="0" oninput="goTo(+this.value)"></div>
+<span id="fc">1/7</span>
+<button class="btn on" id="br" onclick="togR()">Rot</button>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var canvas=document.getElementById("cv");
+var W,H2,scene,camera,renderer,group;
+var rot={x:0.25,y:0},md=false,mx=0,my=0,ar=true;
+function init(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;
+scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
+camera=new THREE.PerspectiveCamera(42,W/H2,0.1,200);
+renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});renderer.setSize(W,H2);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(5,8,6);scene.add(dl);
+scene.add(new THREE.DirectionalLight(0x8888cc,0.18)).position.set(-4,-3,-5);
+group=new THREE.Group();scene.add(group);}
+init();
+canvas.addEventListener("mousedown",function(e){md=true;mx=e.clientX;my=e.clientY;});
+canvas.addEventListener("touchstart",function(e){md=true;mx=e.touches[0].clientX;my=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md=false;});window.addEventListener("touchend",function(){md=false;});
+window.addEventListener("mousemove",function(e){if(!md)return;rot.y+=(e.clientX-mx)*0.005;rot.x+=(e.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=e.clientX;my=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md)return;var t=e.touches[0];rot.y+=(t.clientX-mx)*0.005;rot.x+=(t.clientY-my)*0.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x));mx=t.clientX;my=t.clientY;},{passive:true});
+canvas.addEventListener("wheel",function(e){camera.position.z=Math.max(3,Math.min(25,camera.position.z+e.deltaY*0.03));e.preventDefault();},{passive:false});
+window.addEventListener("resize",function(){var p=canvas.parentElement;W=p.clientWidth;H2=p.clientHeight;canvas.width=W;canvas.height=H2;camera.aspect=W/H2;camera.updateProjectionMatrix();renderer.setSize(W,H2);if(typeof renderStep==="function")renderStep(idx);});
+
+// Color palette - matches paper figures
+var C={b:0x1e6091,or:0xEE7733,tl:0x009988,rd:0xc0392b,gn:0x4d8c2e,wn:0xAA3377,gy:0x444444,lgy:0xcccccc,yl:0xf1c40f};
+
+function mS(g,p,r,c,op){var geo=new THREE.SphereGeometry(r,16,16);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.set(p[0],p[1],p[2]);g.add(s);return s;}
+function mC(g,a,b,r,c,op){var d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]);var l=d.length();if(l<0.01)return;var mid=new THREE.Vector3((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);var geo=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(geo,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());g.add(s);}
+function mL(g,t,p,c,sz){var fs=sz||28;var cv2=document.createElement("canvas");cv2.width=384;cv2.height=128;var ctx=cv2.getContext("2d");ctx.font="bold "+fs+"px -apple-system,sans-serif";ctx.fillStyle=c;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,192,64);var tx=new THREE.CanvasTexture(cv2);tx.minFilter=THREE.LinearFilter;tx.magFilter=THREE.LinearFilter;var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.set(p[0],p[1],p[2]);s.scale.set(fs*0.045,fs*0.011,1);g.add(s);return s;}
+function mTri(g,v1,v2,v3,c,op){var geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1[0],v1[1],v1[2],v2[0],v2[1],v2[2],v3[0],v3[1],v3[2]]),3));geo.computeVertexNormals();g.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide})));}
+function mStar(g,p,sz,c,op){var geo=new THREE.OctahedronGeometry(sz,0);var mat=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var m=new THREE.Mesh(geo,mat);m.position.set(p[0],p[1],p[2]);g.add(m);return m;}
+
+// === FCC GEOMETRY (matches paper Appendix A exactly) ===
+var aLat = 4.0; // visualization lattice constant
+var basis = [
+  [0,0,0],
+  [0.5,0.5,0],
+  [0.5,0,0.5],
+  [0,0.5,0.5]
+].map(function(b){return b.map(function(x){return x*aLat;});});
+
+// 4 P-orientation tet voids: (a/4)(1,1,1) and permutations
+var tet_pos = [
+  [0.25,0.25,0.25],
+  [0.75,0.75,0.25],
+  [0.75,0.25,0.75],
+  [0.25,0.75,0.75]
+].map(function(t){return t.map(function(x){return x*aLat;});});
+
+// 4 N-orientation tet voids: (a/4)(3,3,3) etc
+var tet_neg = [
+  [0.75,0.75,0.75],
+  [0.25,0.25,0.75],
+  [0.25,0.75,0.25],
+  [0.75,0.25,0.25]
+].map(function(t){return t.map(function(x){return x*aLat;});});
+
+var all_tets = tet_pos.concat(tet_neg);
+var tet_types = ['P','P','P','P','N','N','N','N'];
+
+// FCC atoms in unit cell (corners + face centers, with periodic copies for visualization)
+function fcc_atoms_cell(){
+  var atoms=new Set();
+  for(var dx=0;dx<=1;dx++)for(var dy=0;dy<=1;dy++)for(var dz=0;dz<=1;dz++){
+    for(var bi=0;bi<basis.length;bi++){
+      var p=[(dx+basis[bi][0]/aLat)*aLat,(dy+basis[bi][1]/aLat)*aLat,(dz+basis[bi][2]/aLat)*aLat];
+      if(p[0]<=aLat+1e-6 && p[1]<=aLat+1e-6 && p[2]<=aLat+1e-6)
+        atoms.add(p.map(function(x){return Math.round(x*1e3)/1e3;}).join(','));
+    }
+  }
+  return Array.from(atoms).map(function(s){return s.split(',').map(parseFloat);});
+}
+var fccAtoms = fcc_atoms_cell();
+
+function dist(a,b){return Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]));}
+
+function get_bounding_atoms(center){
+  var verts={};
+  var target=aLat*Math.sqrt(3)/4;
+  for(var dx=-1;dx<=1;dx++)for(var dy=-1;dy<=1;dy++)for(var dz=-1;dz<=1;dz++){
+    for(var bi=0;bi<basis.length;bi++){
+      var pos=[dx*aLat+basis[bi][0],dy*aLat+basis[bi][1],dz*aLat+basis[bi][2]];
+      if(Math.abs(dist(pos,center)-target)<0.05*aLat){
+        verts[pos.map(function(x){return Math.round(x*1e3)/1e3;}).join(',')]=pos;
+      }
+    }
+  }
+  return Object.keys(verts).map(function(k){return verts[k];});
+}
+
+// Compute void-void adjacency (shared >= 2 atoms = edge-adjacent)
+var voidAdj=[];
+var voidBoundingAtoms=[];
+for(var i=0;i<8;i++){
+  voidBoundingAtoms.push(get_bounding_atoms(all_tets[i]));
+}
+for(var i=0;i<8;i++){
+  var nb=[];
+  for(var j=0;j<8;j++){
+    if(i===j)continue;
+    var shared=0;
+    for(var ki=0;ki<voidBoundingAtoms[i].length;ki++)
+      for(var kj=0;kj<voidBoundingAtoms[j].length;kj++){
+        var d=dist(voidBoundingAtoms[i][ki],voidBoundingAtoms[j][kj]);
+        if(d<0.01)shared++;
+      }
+    if(shared>=2)nb.push(j);
+  }
+  voidAdj.push(nb);
+}
+
+// Center-of-mass shift for nice viewing
+var ctrShift=[-aLat/2,-aLat/2,-aLat/2];
+function shift(p){return [p[0]+ctrShift[0],p[1]+ctrShift[1],p[2]+ctrShift[2]];}
+
+// === STEPS ALIGNED TO PAPER ===
+var steps=[];
+
+// S0: K=12 vacuum (one site with 12 NN)
+steps.push({cam:[0,1,9.5],bg:0xffffff,badge:"K = 12 VACUUM",bc:"#1e6091",
+title:"Section 1: The K=12 FCC Vacuum Lattice",
+build:function(g){
+  // Show one central atom with its 12 NN forming the cuboctahedral coordination shell
+  // FCC NN of (0,0,0): 12 atoms at (a/2)(\u00B11,\u00B11,0), (\u00B11,0,\u00B11), (0,\u00B11,\u00B11)
+  var L=2.5;
+  var nn=[];
+  var pm=[[0,1],[0,2],[1,2]];
+  for(var p=0;p<3;p++){var a=pm[p][0],b=pm[p][1];
+    for(var sa=-1;sa<=1;sa+=2)for(var sb=-1;sb<=1;sb+=2){
+      var v=[0,0,0];v[a]=sa*L/Math.sqrt(2);v[b]=sb*L/Math.sqrt(2);nn.push(v);
+    }
+  }
+  // Central atom (gold)
+  mS(g,[0,0,0],0.32,C.yl,1);
+  // 12 NN + bonds to center
+  for(var i=0;i<12;i++){
+    mS(g,nn[i],0.22,C.b,1);
+    mC(g,[0,0,0],nn[i],0.045,C.b,0.45);
+  }
+  // NN-NN bonds (cuboctahedral edges)
+  var BL=L*L*1.05;
+  for(var i=0;i<12;i++)for(var j=i+1;j<12;j++){
+    var dx=nn[i][0]-nn[j][0],dy=nn[i][1]-nn[j][1],dz=nn[i][2]-nn[j][2];
+    if(dx*dx+dy*dy+dz*dz<BL)mC(g,nn[i],nn[j],0.03,C.gy,0.25);
+  }
+},
+desc:'<b>The vacuum lattice.</b> The Selection-Stitch Model identifies the physical vacuum with the FCC lattice, the densest sphere packing in three dimensions. Every site has K=12 nearest neighbors arranged in a cuboctahedral coordination shell. Defects are localized interruptions of this saturated K=12 structure: a defect in the K=12 bulk is an interstitial node trapped in a tetrahedral void with only K=4 contact with surrounding atoms.',
+eq:'K = 12 (FCC, NN)\n\nFCC: densest packing\nin three dimensions\n\nDefect: K=4 trapped\nin K=12 bulk'});
+
+// S1: Full FCC unit cell with 8 tet voids, 4 P (red) + 4 N (blue)
+steps.push({cam:[0,1.0,10],bg:0xffffff,badge:"8 TETRAHEDRAL VOIDS",bc:"#009988",
+title:"Section 2.1: FCC Unit Cell -- 8 Tetrahedral Voids (4 P + 4 N)",
+build:function(g){
+  // Cube edges
+  var ce=[[[0,0,0],[1,0,0]],[[0,0,0],[0,1,0]],[[0,0,0],[0,0,1]],
+          [[1,0,0],[1,1,0]],[[1,0,0],[1,0,1]],[[0,1,0],[1,1,0]],
+          [[0,1,0],[0,1,1]],[[0,0,1],[1,0,1]],[[0,0,1],[0,1,1]],
+          [[1,1,0],[1,1,1]],[[1,0,1],[1,1,1]],[[0,1,1],[1,1,1]]];
+  for(var i=0;i<ce.length;i++){
+    var a=ce[i][0].map(function(x){return x*aLat;});
+    var b=ce[i][1].map(function(x){return x*aLat;});
+    mC(g,shift(a),shift(b),0.022,C.gy,0.3);
+  }
+  // FCC atoms
+  for(var i=0;i<fccAtoms.length;i++){
+    mS(g,shift(fccAtoms[i]),0.15,0x1a1a3e,0.85);
+  }
+  // 8 tet voids: P red, N blue
+  for(var t=0;t<8;t++){
+    var col=tet_types[t]==='P'?C.rd:C.b;
+    var ba=voidBoundingAtoms[t];
+    if(ba.length>=4){
+      var v0=shift(ba[0]),v1=shift(ba[1]),v2=shift(ba[2]),v3=shift(ba[3]);
+      mTri(g,v0,v1,v2,col,0.18);mTri(g,v0,v1,v3,col,0.18);
+      mTri(g,v0,v2,v3,col,0.18);mTri(g,v1,v2,v3,col,0.18);
+    }
+    mS(g,shift(all_tets[t]),0.16,col,1);
+    mL(g,tet_types[t]+(t<4?(t+1):(t-3)),
+       [shift(all_tets[t])[0],shift(all_tets[t])[1]+0.45,shift(all_tets[t])[2]],
+       col===C.rd?"#7d2419":"#0e3c5d",22);
+  }
+},
+desc:'<b>Eight tetrahedral voids per unit cell.</b> The FCC conventional cubic cell of side a contains 4 lattice atoms and 8 tetrahedral interstitial voids. The voids partition by orientation: <b>4 P-orientation</b> (<span class="cr">red</span>) at (a/4)(1,1,1) and permutations, with bounding atoms pointing along the [111] family; <b>4 N-orientation</b> (<span class="cb">blue</span>) at (a/4)(3,3,3) and permutations, pointing along the [\u0304\u0304\u0304111] family. A regular tetrahedron and its inversion through the body center differ by a 180\u00B0 orientation flip; this distinction is the geometric content of the P/N labels.',
+eq:'8 tet voids per cell\n= 4 P + 4 N\n\nP at (a/4)(1,1,1) etc.\nN at (a/4)(3,3,3) etc.\n\nP and N differ by\nbody-center inversion'});
+
+// S2: Edge-adjacent hopping mechanism (matches Fig 1 of paper)
+steps.push({cam:[0,0.5,9],bg:0xffffff,badge:"EDGE-ADJACENT HOP",bc:"#c0392b",
+title:"Section 2.2: Edge-Adjacent Hopping (2-Atom Swap)",
+build:function(g){
+  // Pick void 0 (P) and find one of its N-neighbors
+  var i_P=0;
+  var j_N=voidAdj[i_P][0]; // first N neighbor
+  var Vi=voidBoundingAtoms[i_P], Vj=voidBoundingAtoms[j_N];
+  
+  // Identify shared / only-P / only-N atoms
+  var shared=[],onlyP=[],onlyN=[];
+  for(var i=0;i<Vi.length;i++){
+    var found=false;
+    for(var j=0;j<Vj.length;j++){
+      if(dist(Vi[i],Vj[j])<0.01){found=true;break;}
+    }
+    if(found)shared.push(Vi[i]);else onlyP.push(Vi[i]);
+  }
+  for(var j=0;j<Vj.length;j++){
+    var found=false;
+    for(var i=0;i<Vi.length;i++){
+      if(dist(Vi[i],Vj[j])<0.01){found=true;break;}
+    }
+    if(!found)onlyN.push(Vj[j]);
+  }
+  
+  // Center the scene around the midpoint of the two void centers
+  var midC=[(all_tets[i_P][0]+all_tets[j_N][0])/2,
+            (all_tets[i_P][1]+all_tets[j_N][1])/2,
+            (all_tets[i_P][2]+all_tets[j_N][2])/2];
+  function shM(p){return [p[0]-midC[0],p[1]-midC[1],p[2]-midC[2]];}
+  
+  // P tet
+  if(shared.length>=2 && onlyP.length>=2){
+    var Pverts=[shM(shared[0]),shM(shared[1]),shM(onlyP[0]),shM(onlyP[1])];
+    for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,Pverts[i],Pverts[j],0.03,C.rd,0.6);
+    for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)for(var k=j+1;k<4;k++)mTri(g,Pverts[i],Pverts[j],Pverts[k],C.rd,0.13);
+  }
+  // N tet
+  if(shared.length>=2 && onlyN.length>=2){
+    var Nverts=[shM(shared[0]),shM(shared[1]),shM(onlyN[0]),shM(onlyN[1])];
+    for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,Nverts[i],Nverts[j],0.03,C.b,0.6);
+    for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)for(var k=j+1;k<4;k++)mTri(g,Nverts[i],Nverts[j],Nverts[k],C.b,0.13);
+  }
+  // Shared edge (gold)
+  if(shared.length>=2){
+    mC(g,shM(shared[0]),shM(shared[1]),0.075,C.yl,0.95);
+  }
+  // Atom dots
+  for(var i=0;i<shared.length;i++){
+    mS(g,shM(shared[i]),0.17,C.gy,1);
+    mL(g,i===0?"B":"C",[shM(shared[i])[0],shM(shared[i])[1]+0.4,shM(shared[i])[2]],"#222",24);
+  }
+  for(var i=0;i<onlyP.length;i++){
+    mS(g,shM(onlyP[i]),0.17,C.rd,1);
+    mL(g,i===0?"A":"D",[shM(onlyP[i])[0]-0.35,shM(onlyP[i])[1]-0.35,shM(onlyP[i])[2]],"#7d2419",24);
+  }
+  for(var i=0;i<onlyN.length;i++){
+    mS(g,shM(onlyN[i]),0.17,C.b,1);
+    mL(g,i===0?"A'":"D'",[shM(onlyN[i])[0]+0.35,shM(onlyN[i])[1]+0.35,shM(onlyN[i])[2]],"#0e3c5d",24);
+  }
+  // Trapped K=4 nodes (gold stars at centroids)
+  mStar(g,shM(all_tets[i_P]),0.22,C.yl,1);
+  mStar(g,shM(all_tets[j_N]),0.22,C.yl,1);
+  
+},
+desc:'<b>Edge-adjacent hopping.</b> A defect occupying tet void T<sub>P</sub> migrates to an adjacent void T<sub>N</sub> by sharing one tetrahedral edge (two bounding atoms). The shared edge BC (<span class="cy">gold</span>) is preserved; atoms A, D are released and replaced by A\', D\'. The hop distance |T<sub>P</sub> \u2212 T<sub>N</sub>| = a/2, identical for all 12 such adjacencies in the unit cell. Bond rearrangement: 5 broken, 5 created, 1 (the BC bond) preserved. Crucially, the resulting defect orientation flips: P\u2192N.',
+eq:'{A,B,C,D} \u2192 {A\',D\',B,C}\n\nshared: {B,C}\nswapped: {A,D} \u2192 {A\',D\'}\n\nd_hop = a/2\norientation: P \u2192 N'});
+
+// S3: Bipartite K_{4,4} adjacency graph (Section 2.3 / Fig 2 of paper)
+steps.push({cam:[0,0,9.5],bg:0xfafafa,badge:"BIPARTITE ADJACENCY",bc:"#4d8c2e",
+title:"Section 2.3: Bipartite K_{4,4} Adjacency on the Void Sublattice",
+build:function(g){
+  var px=-2.2,nx=2.2;
+  var spacing=1.1;
+  var Ppos=[],Npos=[];
+  for(var i=0;i<4;i++){
+    Ppos.push([px,1.65-i*spacing,0]);
+    Npos.push([nx,1.65-i*spacing,0]);
+  }
+  // Draw edges using actual computed adjacency
+  var Pidx=[0,1,2,3], Nidx=[4,5,6,7];
+  for(var i=0;i<4;i++){
+    var pT=Pidx[i];
+    for(var k=0;k<voidAdj[pT].length;k++){
+      var ni=Nidx.indexOf(voidAdj[pT][k]);
+      if(ni>=0)mC(g,Ppos[i],Npos[ni],0.022,C.gn,0.65);
+    }
+  }
+  // Triangle markers for P (point up) and N (point down)
+  for(var i=0;i<4;i++){
+    mS(g,Ppos[i],0.26,C.rd,1);
+    mL(g,"P"+(i+1),[Ppos[i][0]-0.55,Ppos[i][1],Ppos[i][2]],"#7d2419",20);
+    mS(g,Npos[i],0.26,C.b,1);
+    mL(g,"N"+(i+1),[Npos[i][0]+0.55,Npos[i][1],Npos[i][2]],"#0e3c5d",20);
+  }
+  },
+desc:'<b>The adjacency graph is bipartite.</b> On the eight tetrahedral voids per unit cell, the edge-adjacent hopping graph is exactly K<sub>4,4</sub>-regular: every P-void connects to exactly 3 N-voids (and vice versa) at uniform distance a/2, and there are <b>zero same-orientation edges anywhere</b> in the unit cell. This is verified computationally by direct enumeration (Appendix A of the paper). The bipartite structure is the central geometric input for everything that follows: every coherent hop necessarily flips orientation P \u2194 N.',
+eq:'12 edges total\nEach void: 3 neighbors\n0 same-orientation hops\n\nHop \u21D2 P \u2194 N flip\n(mandatory, geometric)'});
+
+// S4: Spin-1/2 from 720-degree inversion (matches Fig 3 of paper)
+steps.push({cam:[0,0,8.5],bg:0xffffff,badge:"SPIN-1/2",bc:"#AA3377",
+title:"Section 4: Spin-1/2 from Mandatory P\u2194N Alternation",
+build:function(g){
+  // Three tetrahedra at 0, 360, 720 degrees
+  var P_verts=[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]];
+  for(var i=0;i<4;i++)for(var k=0;k<3;k++)P_verts[i][k]/=Math.sqrt(3);
+  var s2=0.85;
+  var positions=[[-3.2,0,0],[0,0,0],[3.2,0,0]];
+  var stages=[
+    {pos:positions[0],verts:P_verts,col:C.rd,label:"0\u00B0",phase:"+\u03C8"},
+    {pos:positions[1],verts:P_verts.map(function(v){return [-v[0],-v[1],-v[2]];}),col:C.b,label:"360\u00B0",phase:"\u2212\u03C8"},
+    {pos:positions[2],verts:P_verts,col:C.rd,label:"720\u00B0",phase:"+\u03C8"}
+  ];
+  for(var st=0;st<3;st++){
+    var sg=stages[st];
+    var v=sg.verts.map(function(vv){return [vv[0]*s2+sg.pos[0],vv[1]*s2+sg.pos[1],vv[2]*s2+sg.pos[2]];});
+    for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,v[i],v[j],0.04,sg.col,0.85);
+    for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)for(var k=j+1;k<4;k++)mTri(g,v[i],v[j],v[k],sg.col,0.18);
+    for(var i=0;i<4;i++)mS(g,v[i],0.10,sg.col,1);
+    // Tracer marker on vertex 0
+    mS(g,v[0],0.18,0xffffff,1);
+    mS(g,v[0],0.11,C.yl,1);
+    // Centroid star
+    mStar(g,sg.pos,0.13,C.yl,1);
+
+  }
+  },
+desc:'<b>Spin-1/2 from geometric inversion.</b> A regular tetrahedron and its inversion through the body center differ by a 180\u00B0 orientation flip. Rotating a tetrahedron by 360\u00B0 about a body axis is equivalent to inverting it (P\u2192N), not bringing it back to its starting orientation. A second 360\u00B0 rotation (total 720\u00B0) restores the original. Identifying the wave function\'s transformation with this geometric inversion gives R(360\u00B0)\u03C8 = \u2212\u03C8 and R(720\u00B0)\u03C8 = +\u03C8, the defining property of spin-\u00BD particles. The white-rim tracer marker on vertex 0 makes the inversion visually explicit.',
+eq:'R(360\u00B0)\u03C8 = \u2212\u03C8\nR(720\u00B0)\u03C8 = +\u03C8\n\nMandatory P\u2194N flip\nper edge-adjacent hop\n\u2192 Z\u2082 phase per hop'});
+
+// S5: Zitterbewegung as P-N alternation (Section 5)
+steps.push({cam:[0,0.5,8],bg:0xffffff,badge:"ZITTERBEWEGUNG",bc:"#EE7733",
+title:"Section 5: Zitterbewegung as P\u2194N Alternation Rate",
+build:function(g){
+  var nV=7;
+  var dx=1.2;
+  var totalW=(nV-1)*dx;
+  var cs=[];
+  for(var i=0;i<nV;i++){
+    var x=-totalW/2+i*dx;
+    var y=(i%2===0)?0.45:-0.45;
+    var col=(i%2===0)?C.rd:C.b;
+    cs.push({cx:x,cy:y,cz:0,isP:i%2===0});
+    mS(g,[x,y,0],0.16,col,0.85);
+    mL(g,(i%2===0)?"P":"N",[x,y+0.35,0],col===C.rd?"#7d2419":"#0e3c5d",18);
+    if(i>0){
+      var px=cs[i-1].cx,py=cs[i-1].cy;
+      mC(g,[px,py,0],[x,y,0],0.018,C.lgy,0.5);
+    }
+  }
+  var hg=mS(g,[cs[0].cx,cs[0].cy,cs[0].cz],0.18,C.rd,1);
+  var glowG=new THREE.SphereGeometry(0.22,14,14);
+  var glowM=new THREE.MeshBasicMaterial({color:C.rd,transparent:true,opacity:0.18});
+  var glow=new THREE.Mesh(glowG,glowM);glow.position.set(cs[0].cx,cs[0].cy,cs[0].cz);g.add(glow);
+  g.userData.glows=[glow];
+  g.userData.hoppers=[{mesh:hg,glow:glow,voids:cs,speed:0.9}];
+  
+},
+desc:'<b>Zitterbewegung as alternation.</b> A free Dirac electron exhibits zitterbewegung: an oscillation between positive and negative energy states at frequency \u03C9<sub>Z</sub> = 2mc\u00B2/\u0127. The bipartite adjacency suggests a structural mapping: the two energy eigenstates correspond to the P and N orientation classes of the tet-void sublattice, and the zitterbewegung frequency corresponds to the rate at which a propagating defect alternates orientation. The qualitative correspondence is structural; the quantitative correspondence requires deriving the rest-frame hopping rate from the FCC bond Hamiltonian.',
+eq:'\u03C9_Z = 2mc\u00B2/\u0127\n\nP\u2194N alternation rate\n= zitterbewegung rate\n\n(structural mapping)'});
+
+// S6: Annihilation as shared-edge cancellation (Section 6)
+steps.push({cam:[0,0.5,7.5],bg:0xffffff,badge:"ANNIHILATION",bc:"#c0392b",
+title:"Section 6: Annihilation as Shared-Edge Cancellation",
+build:function(g){
+  var ed=0.55;
+  var BC=[[0,0,-ed],[0,0,ed]];
+  var Aex=[-1.2,0.7,0];
+  var Dex=[-1.2,-0.7,0];
+  var Apex=[1.2,-0.7,0];
+  var Dpex=[1.2,0.7,0];
+  var Pv=[BC[0],BC[1],Aex,Dex];
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,Pv[i],Pv[j],0.025,C.rd,0.6);
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)for(var k=j+1;k<4;k++)mTri(g,Pv[i],Pv[j],Pv[k],C.rd,0.13);
+  var Nv=[BC[0],BC[1],Apex,Dpex];
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)mC(g,Nv[i],Nv[j],0.025,C.b,0.6);
+  for(var i=0;i<4;i++)for(var j=i+1;j<4;j++)for(var k=j+1;k<4;k++)mTri(g,Nv[i],Nv[j],Nv[k],C.b,0.13);
+  mC(g,BC[0],BC[1],0.05,C.yl,0.95);
+  
+  var Pctr=[(Pv[0][0]+Pv[1][0]+Pv[2][0]+Pv[3][0])/4,(Pv[0][1]+Pv[1][1]+Pv[2][1]+Pv[3][1])/4,(Pv[0][2]+Pv[1][2]+Pv[2][2]+Pv[3][2])/4];
+  var Nctr=[(Nv[0][0]+Nv[1][0]+Nv[2][0]+Nv[3][0])/4,(Nv[0][1]+Nv[1][1]+Nv[2][1]+Nv[3][1])/4,(Nv[0][2]+Nv[1][2]+Nv[2][2]+Nv[3][2])/4];
+  var pNode=mS(g,Pctr,0.18,C.rd,0.99);
+  var nNode=mS(g,Nctr,0.18,C.b,0.99);
+  var glowGP=new THREE.SphereGeometry(0.26,14,14);
+  var glowMP=new THREE.MeshBasicMaterial({color:C.rd,transparent:true,opacity:0.16});
+  var gP=new THREE.Mesh(glowGP,glowMP);gP.position.set(Pctr[0],Pctr[1],Pctr[2]);g.add(gP);
+  var glowGN=new THREE.SphereGeometry(0.26,14,14);
+  var glowMN=new THREE.MeshBasicMaterial({color:C.b,transparent:true,opacity:0.16});
+  var gN=new THREE.Mesh(glowGN,glowMN);gN.position.set(Nctr[0],Nctr[1],Nctr[2]);g.add(gN);
+  g.userData.annihilate={part:pNode,anti:nNode,
+    px:Pctr[0],py:Pctr[1],pz:Pctr[2],
+    nx:Nctr[0],ny:Nctr[1],nz:Nctr[2],
+    gl1:gP,gl2:gN,phase:0};
+  g.userData.glows=[gP,gN];
+  
+},
+desc:'<b>Annihilation by shared-edge cancellation.</b> When a P-defect and an N-defect occupy adjacent voids that share an edge, the local K=4 deficit can be resolved by cancellation: the trapped nodes drift toward the shared boundary, all bounding bonds return to K=12 saturation, and the defects disappear from the lattice. The total stored energy (sum of the two defects\u2019 disrupted-bond contributions) is released into outgoing lattice excitations. The bipartite adjacency ensures that any two defects close enough to share an edge are automatically of opposite orientation, so spatial proximity is sufficient for annihilation.',
+eq:'P + N \u2192 K=12 + waves\n\nlocal K=4 deficits\ncancel pairwise\n\nE_total = 2N_disrupted \u00B7 E_bond'});
+
+// === RENDER ENGINE ===
+// Per-step HTML overlays for conceptual labels. Indexed by step index.
+// Each item: array of {top: "small label above", main: "main label HTML", color: "css color"}
+var overlays={
+  4:[ // Spin-1/2 step
+    {top:"0°",main:"+ψ",color:"#7d2419"},
+    {top:"360° (one inversion)",main:"−ψ",color:"#0e3c5d"},
+    {top:"720° (two inversions)",main:"+ψ",color:"#7d2419"}
+  ]
+};
+function updateOverlay(stepIdx){
+  var ov=document.getElementById("overlay");
+  var data=overlays[stepIdx];
+  if(!data){ov.innerHTML="";ov.style.display="none";return;}
+  ov.style.display="flex";
+  var html="";
+  for(var i=0;i<data.length;i++){
+    var d=data[i];
+    html+='<div class="ovItem" style="color:'+d.color+'"><div class="ovTop">'+d.top+'</div><div class="ovMain">'+d.main+'</div></div>';
+  }
+  ov.innerHTML=html;
+}
+var idx=0,playing=false,pt=null;
+var sli=document.querySelector("#sl input");sli.max=steps.length-1;
+function clearG(){while(group.children.length){var c=group.children[0];if(c.geometry)c.geometry.dispose();if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}group.remove(c);}group.userData.glows=[];group.userData.hoppers=null;group.userData.annihilate=null;}
+function renderStep(i){idx=Math.max(0,Math.min(i,steps.length-1));sli.value=idx;clearG();
+var s=steps[idx];s.build(group);
+// Auto-fit camera: rotation-invariant fit using bounding sphere radius.
+// Computing per-axis dimensions can clip when user rotates; use max dimension.
+var bb=new THREE.Box3().setFromObject(group);
+var ctrV=new THREE.Vector3();bb.getCenter(ctrV);
+var sz=new THREE.Vector3();bb.getSize(sz);
+// Radius = half the diagonal of the bounding box. Worst case rotation extent.
+var radius=0.5*Math.sqrt(sz.x*sz.x+sz.y*sz.y+sz.z*sz.z);
+var fovRad=camera.fov*Math.PI/180;
+var aspect=W/H2;
+// Vertical FOV: radius = dist * tan(fov/2). Horizontal: radius = dist * tan(fov/2) * aspect.
+// Choose the binding constraint.
+var halfFovV=Math.tan(fovRad/2);
+var halfFovH=halfFovV*aspect;
+var halfFovMin=Math.min(halfFovV,halfFovH);
+// Margin: 1.18 gives ~18% breathing room around geometry for labels and headroom
+var dist=radius/halfFovMin*1.18;
+camera.position.set(ctrV.x,ctrV.y,ctrV.z+dist);
+camera.lookAt(ctrV.x,ctrV.y,ctrV.z);
+scene.background=new THREE.Color(s.bg);rot.y=0;
+document.getElementById("badge").textContent=s.badge;document.getElementById("badge").style.background=s.bc;
+document.getElementById("title").textContent=s.title;
+document.getElementById("desc").innerHTML=s.desc;
+document.getElementById("eq").innerHTML=s.eq.replace(/\n/g,'<br>');
+document.getElementById("eq").style.display=s.eq?'block':'none';
+document.getElementById("fc").textContent=(idx+1)+"/"+steps.length;
+updateOverlay(idx);}
+var t=0;
+(function anim(){requestAnimationFrame(anim);t+=0.016;
+if(ar&&!md)rot.y+=0.003;
+group.rotation.x=rot.x;group.rotation.y=rot.y;
+if(group.userData.glows)group.userData.glows.forEach(function(gl){gl.material.opacity=0.10+0.08*Math.sin(t*3);gl.scale.setScalar(1+0.06*Math.sin(t*3));});
+if(group.userData.hoppers)group.userData.hoppers.forEach(function(h){
+  var nv=h.voids.length;
+  var progress=(t*h.speed)%nv;
+  var fromIdx=Math.floor(progress)%nv;
+  var toIdx=(fromIdx+1)%nv;
+  var frac=progress-Math.floor(progress);
+  var ease=frac<0.5?2*frac*frac:1-2*(1-frac)*(1-frac);
+  var f=h.voids[fromIdx],tv=h.voids[toIdx];
+  var px=f.cx+(tv.cx-f.cx)*ease;
+  var py=f.cy+(tv.cy-f.cy)*ease+Math.sin(ease*Math.PI)*0.25;
+  var pz=f.cz+(tv.cz-f.cz)*ease;
+  h.mesh.position.set(px,py,pz);
+  if(h.glow)h.glow.position.set(px,py,pz);
+  var inP=h.voids[fromIdx].isP;
+  if(ease>0.5)inP=h.voids[toIdx].isP;
+  h.mesh.material.color.setHex(inP?C.rd:C.b);
+  if(h.glow)h.glow.material.color.setHex(inP?C.rd:C.b);
+});
+if(group.userData.annihilate){
+  var an=group.userData.annihilate;
+  an.phase=(an.phase+0.008)%1;
+  var drift=an.phase*0.7;
+  var midx=(an.px+an.nx)/2,midy=(an.py+an.ny)/2,midz=(an.pz+an.nz)/2;
+  an.part.position.set(an.px+(midx-an.px)*drift,an.py+(midy-an.py)*drift,an.pz+(midz-an.pz)*drift);
+  an.anti.position.set(an.nx+(midx-an.nx)*drift,an.ny+(midy-an.ny)*drift,an.nz+(midz-an.nz)*drift);
+  if(an.gl1){an.gl1.position.copy(an.part.position);an.gl2.position.copy(an.anti.position);}
+  if(an.phase>0.85){
+    var flash=1-(an.phase-0.85)/0.15;
+    an.part.material.opacity=flash;an.anti.material.opacity=flash;
+    an.part.scale.setScalar(1+(1-flash)*2);an.anti.scale.setScalar(1+(1-flash)*2);
+  } else {an.part.material.opacity=0.99;an.anti.material.opacity=0.99;an.part.scale.setScalar(1);an.anti.scale.setScalar(1);}
+}
+renderer.render(scene,camera);})();
+function stp(){playing=false;if(pt)clearTimeout(pt);pt=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togPlay=function(){if(playing){stp();return;}playing=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nx(){if(idx>=steps.length-1){stp();return;}renderStep(idx+1);pt=setTimeout(nx,5500);}pt=setTimeout(nx,5000);};
+window.goS=function(){stp();renderStep(0);};window.goP=function(){stp();renderStep(idx-1);};
+window.goN=function(){stp();renderStep(idx+1);};window.goE=function(){stp();renderStep(steps.length-1);};
+window.goTo=function(v){stp();renderStep(v);};
+window.togR=function(){ar=!ar;var b=document.getElementById("br");b.textContent="Rot: "+(ar?"ON":"OFF");b.classList.toggle("on",ar);};
+window.addEventListener("keydown",function(e){if(e.key==="ArrowRight")goN();else if(e.key==="ArrowLeft")goP();else if(e.key===" "){e.preventDefault();togPlay();}});
+renderStep(0);
+})();
+</script>
+</body>
+</html>
