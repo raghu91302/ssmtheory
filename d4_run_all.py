@@ -13,14 +13,15 @@ SCRIPTS = [
     ("01_structure_tensor.py", "Structure tensor S^mn = 12 I, T = 0, FCC sub-lattice"),
     ("02_24cell_triality.py",  "24-cell f-vector, triality 8+8+8, F_box = 36"),
     ("03_d4_css_code.py",      "CSS code [[1536, 1282, >=3]] at L=4"),
-    ("04_mass_spectrum.py",    "All six rest-mass predictions and deviations"),
+    ("04_mass_spectrum.py",    "All seven rest-mass and Higgs predictions"),
+    ("05_triality_code_automorphism.py", "Triality as code automorphism; three inequivalent logical Z worldlines"),
 ]
 
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     print("=" * 78)
-    print("Mass-Energy-Information Equivalence II  --  verification suite")
+    print("Mass-Energy-Information Equivalence Extended  --  verification suite")
     print("=" * 78)
     total = 0.0
     for fname, label in SCRIPTS:
