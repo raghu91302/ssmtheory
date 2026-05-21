@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D4 lattice and the 24-cell — Mass–Energy–Information Equivalence Extended</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive 3D visualization of the 24-cell nearest-neighbor structure of the D4 lattice, the FCC spatial sub-lattice, and the triality decomposition into three inscribed 16-cells.">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #ffffff; color: #2d3748; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; overflow: hidden; }
+  #canvas-wrap { position: absolute; inset: 0; background: #ffffff; }
+  canvas { display: block; }
+  .panel {
+    position: absolute; z-index: 10; backdrop-filter: blur(6px);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(180, 195, 215, 0.55);
+    border-radius: 10px; padding: 14px 18px; max-width: 340px;
+    box-shadow: 0 4px 18px rgba(60, 80, 110, 0.10);
+  }
+  #header { top: 18px; left: 18px; }
+  #controls { top: 18px; right: 18px; width: 260px; }
+  #legend { bottom: 18px; left: 18px; font-size: 13px; line-height: 1.55; }
+  h1 { font-size: 16px; margin: 0 0 6px; font-weight: 600; letter-spacing: 0.01em; color: #1a2238; }
+  .sub { font-size: 12.5px; opacity: 0.70; line-height: 1.45; color: #455065; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 5px 0; }
+  .row label { font-size: 13px; }
+  select, button {
+    background: #f4f6fa; color: #2d3748; border: 1px solid #c8d2e0;
+    border-radius: 6px; padding: 5px 9px; font-size: 13px; cursor: pointer;
+    font-family: inherit;
+  }
+  select { width: 145px; }
+  button:hover, select:hover { background: #e6ebf2; border-color: #a5b2c5; }
+  .check { display: flex; align-items: center; gap: 8px; }
+  .check input { accent-color: #2c5f9e; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 7px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.20); }
+  .sq { border-radius: 2px; }
+  a { color: #2c5f9e; }
+  hr { border: 0; border-top: 1px solid rgba(180, 195, 215, 0.40); margin: 10px 0; }
+  .hint { font-size: 11.5px; opacity: 0.65; margin-top: 8px; font-style: italic; color: #5a6478; }
+  strong { color: #1a2238; }
+</style>
+</head>
+<body>
+<div id="canvas-wrap"></div>
+
+<div class="panel" id="header">
+  <h1>The D4 lattice and the 24-cell</h1>
+  <div class="sub">Interactive companion to <em>The Mass&ndash;Energy&ndash;Information Equivalence Extended</em>. The 24 nearest neighbors of a D4 vertex form a 24-cell in 4D; this view projects them to 3D by dropping the time coordinate.</div>
+</div>
+
+<div class="panel" id="controls">
+  <div class="row">
+    <label for="mode">Coloring</label>
+    <select id="mode">
+      <option value="signature">Spatial / time-mixed</option>
+      <option value="triality">Triality (three 16-cells)</option>
+      <option value="plain">Neutral</option>
+    </select>
+  </div>
+  <hr>
+  <div class="row check"><input type="checkbox" id="show-spatial" checked><label for="show-spatial">Spatial bonds (FCC, 12)</label></div>
+  <div class="row check"><input type="checkbox" id="show-time" checked><label for="show-time">Time-mixed bonds (12&nbsp;&rarr;&nbsp;6 axis)</label></div>
+  <div class="row check"><input type="checkbox" id="show-cubocta" checked><label for="show-cubocta">FCC cuboctahedron edges</label></div>
+  <div class="row check"><input type="checkbox" id="show-tri-edges"><label for="show-tri-edges">16-cell edges (triality)</label></div>
+  <div class="row check"><input type="checkbox" id="show-axes" checked><label for="show-axes">Coordinate axes</label></div>
+  <hr>
+  <div class="row"><button id="reset">Reset view</button><button id="spin">Toggle spin</button></div>
+  <div class="hint">Drag to orbit &middot; scroll to zoom &middot; right-drag to pan</div>
+</div>
+
+<div class="panel" id="legend">
+  <div id="legend-content"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ---------------- D4 nearest neighbors ----------------
+function genVertices4D() {
+  const V = [];
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      for (const si of [-1, 1]) {
+        for (const sj of [-1, 1]) {
+          const v = [0, 0, 0, 0];
+          v[i] = si; v[j] = sj;
+          V.push(v);
+        }
+      }
+    }
+  }
+  return V;
+}
+
+function trialitySet(v) {
+  const nz = [];
+  for (let i = 0; i < 4; i++) if (v[i] !== 0) nz.push(i);
+  const key = nz[0] * 10 + nz[1];
+  if (key === 1 || key === 23) return 0;
+  if (key === 2 || key === 13) return 1;
+  if (key === 3 || key === 12) return 2;
+  return -1;
+}
+
+const V4 = genVertices4D();
+const TRI = V4.map(trialitySet);
+const V3 = V4.map(v => [v[1], v[2], v[3]]);
+const IS_SPATIAL = V4.map(v => v[0] === 0);
+
+// ---------------- Scene setup (white background) ----------------
+const wrap = document.getElementById('canvas-wrap');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+scene.fog = new THREE.Fog(0xffffff, 7, 14);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(3.2, 2.4, 3.6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0xffffff, 1);
+wrap.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance = 2;
+controls.maxDistance = 12;
+
+// Lights tuned for a bright background
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.6);
+keyLight.position.set(3, 5, 4);
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0xc8d4e8, 0.25);
+fillLight.position.set(-4, -2, -3);
+scene.add(fillLight);
+
+// ---------------- Color palette tuned for white background ----------------
+const COLORS = {
+  spatial:   0x2c5f9e,
+  timeMixed: 0xc14844,
+  tri:       [0x2c8a4f, 0xc46e1f, 0x6e4694],
+  plain:     0x5a6478,
+  cubocta:   0x4a7fb8,
+  triEdges:  [0x3aa168, 0xd17a26, 0x7f56a8],
+  axes:      0xa8b3c4,
+};
+
+// ---------------- Vertex spheres ----------------
+const sphereGroup = new THREE.Group();
+scene.add(sphereGroup);
+
+const spatialMat = new THREE.MeshLambertMaterial({ color: COLORS.spatial });
+const timeMat    = new THREE.MeshLambertMaterial({ color: COLORS.timeMixed });
+const triMats    = COLORS.tri.map(c => new THREE.MeshLambertMaterial({ color: c }));
+const plainMat   = new THREE.MeshLambertMaterial({ color: COLORS.plain });
+
+const sphereGeom      = new THREE.SphereGeometry(0.075, 24, 18);
+const sphereGeomLarge = new THREE.SphereGeometry(0.105, 24, 18);
+
+const spheres = [];
+const proj3Pts = [];
+V3.forEach((p, i) => {
+  const geom = IS_SPATIAL[i] ? sphereGeom : sphereGeomLarge;
+  const mesh = new THREE.Mesh(geom, plainMat);
+  mesh.position.set(p[0], p[1], p[2]);
+  if (!IS_SPATIAL[i]) {
+    const jitter = (V4[i][0] === 1 ? 0.013 : -0.013);
+    mesh.position.x += jitter * (p[0] === 0 ? 1 : 0);
+    mesh.position.y += jitter * (p[1] === 0 ? 1 : 0);
+    mesh.position.z += jitter * (p[2] === 0 ? 1 : 0);
+  }
+  sphereGroup.add(mesh);
+  spheres.push(mesh);
+  proj3Pts.push(new THREE.Vector3(p[0], p[1], p[2]));
+});
+
+// ---------------- Edges ----------------
+function makeLines(pairs, color, opacity = 0.65, width = 1.2) {
+  const positions = [];
+  pairs.forEach(([a, b]) => {
+    positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
+  });
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity, linewidth: width });
+  return new THREE.LineSegments(geom, mat);
+}
+
+const cuboctaPairs = [];
+const spatialIdx = [];
+for (let i = 0; i < V3.length; i++) if (IS_SPATIAL[i]) spatialIdx.push(i);
+for (let a = 0; a < spatialIdx.length; a++) {
+  for (let b = a + 1; b < spatialIdx.length; b++) {
+    const i = spatialIdx[a], j = spatialIdx[b];
+    const d = proj3Pts[i].distanceTo(proj3Pts[j]);
+    if (Math.abs(d - Math.sqrt(2)) < 0.001) {
+      cuboctaPairs.push([proj3Pts[i], proj3Pts[j]]);
+    }
+  }
+}
+const cuboctaLines = makeLines(cuboctaPairs, COLORS.cubocta, 0.65);
+scene.add(cuboctaLines);
+
+const triLineGroups = [];
+for (let tset = 0; tset < 3; tset++) {
+  const idxs = [];
+  for (let i = 0; i < V4.length; i++) if (TRI[i] === tset) idxs.push(i);
+  const pairs = [];
+  for (let a = 0; a < idxs.length; a++) {
+    for (let b = a + 1; b < idxs.length; b++) {
+      const i = idxs[a], j = idxs[b];
+      let d2 = 0;
+      for (let k = 0; k < 4; k++) {
+        const diff = V4[i][k] - V4[j][k];
+        d2 += diff * diff;
+      }
+      if (Math.abs(d2 - 4) < 0.01) {
+        pairs.push([proj3Pts[i], proj3Pts[j]]);
+      }
+    }
+  }
+  const ln = makeLines(pairs, COLORS.triEdges[tset], 0.55);
+  ln.visible = false;
+  scene.add(ln);
+  triLineGroups.push(ln);
+}
+
+function makeAxis(dir, color) {
+  const positions = [];
+  for (let t = -1.4; t < 1.4; t += 0.05) {
+    positions.push(t * dir[0], t * dir[1], t * dir[2]);
+    positions.push((t + 0.02) * dir[0], (t + 0.02) * dir[1], (t + 0.02) * dir[2]);
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 });
+  return new THREE.LineSegments(geom, mat);
+}
+const axesGroup = new THREE.Group();
+axesGroup.add(makeAxis([1, 0, 0], COLORS.axes));
+axesGroup.add(makeAxis([0, 1, 0], COLORS.axes));
+axesGroup.add(makeAxis([0, 0, 1], COLORS.axes));
+scene.add(axesGroup);
+
+// ---------------- Mode handling ----------------
+function applyColoring(mode) {
+  spheres.forEach((sp, i) => {
+    if (mode === 'signature') {
+      sp.material = IS_SPATIAL[i] ? spatialMat : timeMat;
+    } else if (mode === 'triality') {
+      sp.material = triMats[TRI[i]];
+    } else {
+      sp.material = plainMat;
+    }
+  });
+  updateLegend(mode);
+}
+
+function applyVisibility() {
+  const showSpatial = document.getElementById('show-spatial').checked;
+  const showTime    = document.getElementById('show-time').checked;
+  spheres.forEach((sp, i) => {
+    sp.visible = IS_SPATIAL[i] ? showSpatial : showTime;
+  });
+  cuboctaLines.visible = document.getElementById('show-cubocta').checked && showSpatial;
+  const showTri = document.getElementById('show-tri-edges').checked;
+  triLineGroups.forEach(ln => ln.visible = showTri);
+  axesGroup.visible = document.getElementById('show-axes').checked;
+}
+
+function updateLegend(mode) {
+  const el = document.getElementById('legend-content');
+  let html = '';
+  if (mode === 'signature') {
+    html = `
+      <strong>Signature decomposition</strong><br>
+      <span class="swatch" style="background:#2c5f9e"></span>12 spatial NN form the FCC cuboctahedron<br>
+      <span class="swatch sq" style="background:#c14844"></span>12 time-mixed NN project to 6 axis points<br>
+      <span class="sub">The spatial slice of D4 is exactly the FCC lattice of Part&nbsp;I.</span>
+    `;
+  } else if (mode === 'triality') {
+    html = `
+      <strong>Triality (three inscribed 16-cells)</strong><br>
+      <span class="swatch" style="background:#2c8a4f"></span>16-cell A &nbsp; coordinate pairs (1,2) &amp; (3,4)<br>
+      <span class="swatch" style="background:#c46e1f"></span>16-cell B &nbsp; (1,3) &amp; (2,4)<br>
+      <span class="swatch" style="background:#6e4694"></span>16-cell C &nbsp; (1,4) &amp; (2,3)<br>
+      <span class="sub">Order-3 symmetry forces exactly three lepton generations.</span>
+    `;
+  } else {
+    html = `<strong>Neutral coloring</strong><br><span class="sub">24 nearest neighbors of a D4 vertex, projected to 3D.</span>`;
+  }
+  el.innerHTML = html;
+}
+
+const modeSel = document.getElementById('mode');
+modeSel.addEventListener('change', () => applyColoring(modeSel.value));
+document.querySelectorAll('input[type=checkbox]').forEach(cb =>
+  cb.addEventListener('change', applyVisibility));
+
+document.getElementById('reset').addEventListener('click', () => {
+  camera.position.set(3.2, 2.4, 3.6);
+  controls.target.set(0, 0, 0);
+  controls.update();
+});
+
+let spinning = false;
+document.getElementById('spin').addEventListener('click', () => spinning = !spinning);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+applyColoring('signature');
+applyVisibility();
+
+const clock = new THREE.Clock();
+function tick() {
+  const dt = clock.getDelta();
+  if (spinning) {
+    sphereGroup.rotation.y   += dt * 0.4;
+    cuboctaLines.rotation.y   = sphereGroup.rotation.y;
+    triLineGroups.forEach(g => g.rotation.y = sphereGroup.rotation.y);
+    axesGroup.rotation.y      = sphereGroup.rotation.y;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
