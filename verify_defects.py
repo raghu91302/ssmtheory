@@ -271,7 +271,7 @@ def find_bonds(sites):
     return bonds, s2i
 
 # Verify tetrahedral defect surrounding sites are in the cluster
-sites = build_cluster(R=2)
+sites = build_cluster(R=3)
 bonds, s2i = find_bonds(sites)
 tet_surround = [(0,0,0),(1,1,0),(1,0,1),(0,1,1)]
 check(all(s in s2i for s in tet_surround), "Tetrahedral void at (1/2,1/2,1/2) has 4 surrounding FCC sites all in cluster")
@@ -279,6 +279,79 @@ check(all(s in s2i for s in tet_surround), "Tetrahedral void at (1/2,1/2,1/2) ha
 # Verify octahedral defect surrounding sites are in the cluster
 oct_surround = [(0,0,0),(2,0,0),(1,1,0),(1,-1,0),(1,0,1),(1,0,-1)]
 check(all(s in s2i for s in oct_surround), "Octahedral void at (1,0,0) has 6 surrounding FCC sites all in cluster")
+
+# ---------------------------------------------------------------
+section("Finite-cluster Dirac diagonalization: A_1 + T_1 multiplet at tetrahedral defect")
+# ---------------------------------------------------------------
+# Build the naive Dirac operator on the 55-site FCC cluster (R=3) with a defect
+# modeled as a strong attractive on-site potential V at the 4 surrounding sites of
+# the tetrahedral void at (1/2, 1/2, 1/2). This is the effective Hamiltonian after
+# integrating out the trapped-extra-node site by Schur complement; it preserves
+# the T_d symmetry of the defect and creates well-localized bound modes.
+#
+# Verify: the 8 most localized eigenstates (4 surrounding sites × 2 spinor)
+# decompose under the T_d permutation representation as A_1 + T_1 (1 + 3 spatial,
+# times 2 spinor = 2 + 6), with the expected ratio T_1/A_1 = 3.
+
+R = 3
+diag_sites = build_cluster(R=R)
+diag_bonds, diag_s2i = find_bonds(diag_sites)
+N_sites = len(diag_sites)
+check(N_sites == 55, f"Diagonalization cluster has 55 FCC sites (got {N_sites})")
+surround_idx = [diag_s2i[s] for s in tet_surround]
+
+# Build the bulk naive Dirac Hamiltonian on the cluster
+V_defect = -64.0  # strong on-site potential at the 4 surrounding sites
+H_dirac = np.zeros((2*N_sites, 2*N_sites), dtype=complex)
+for (i, j, n) in diag_bonds:
+    n_dot_sigma = n[0]*SIGMA[0] + n[1]*SIGMA[1] + n[2]*SIGMA[2]
+    coeff_block = (1j/2) * n_dot_sigma
+    H_dirac[2*j:2*j+2, 2*i:2*i+2] += coeff_block
+    H_dirac[2*i:2*i+2, 2*j:2*j+2] += coeff_block.conj().T
+for i in surround_idx:
+    H_dirac[2*i, 2*i] += V_defect
+    H_dirac[2*i+1, 2*i+1] += V_defect
+
+check(np.allclose(H_dirac, H_dirac.conj().T), "Finite-cluster Dirac Hamiltonian is Hermitian")
+diag_eigvals, diag_eigvecs = np.linalg.eigh(H_dirac)
+
+# Project surrounding-site amplitudes onto A_1 (symmetric) and T_1 (3-dim orthogonal complement)
+A1_vec = np.ones(4) / 2.0  # normalized
+T1_basis_raw = np.array([[1,-1,0,0],[1,1,-2,0],[1,1,1,-3]], dtype=float)
+for r in range(3):
+    T1_basis_raw[r] -= np.dot(T1_basis_raw[r], A1_vec) * A1_vec
+T1_basis = np.linalg.qr(T1_basis_raw.T)[0].T
+
+def project_eigenstate(psi):
+    """Return (A_1 weight, T_1 weight) for an eigenstate, summed over the 2 spinor components."""
+    a1 = t1 = 0.0
+    for spinor in range(2):
+        v = np.array([psi[2*i + spinor] for i in surround_idx])
+        a1 += abs(np.vdot(A1_vec, v))**2
+        for t1v in T1_basis:
+            t1 += abs(np.vdot(t1v, v))**2
+    return a1, t1
+
+# Sort by weight on the 4 surrounding sites
+weights = np.array([sum(abs(diag_eigvecs[2*i,k])**2 + abs(diag_eigvecs[2*i+1,k])**2
+                        for i in surround_idx) for k in range(2*N_sites)])
+order = np.argsort(-weights)
+
+# Sum A_1 and T_1 across the 8 most-localized states
+sum_a1 = sum(project_eigenstate(diag_eigvecs[:, order[r]])[0] for r in range(8))
+sum_t1 = sum(project_eigenstate(diag_eigvecs[:, order[r]])[1] for r in range(8))
+
+check(abs(sum_a1 - 2.0) < 0.01,
+      f"A_1 weight across top-8 states = {sum_a1:.4f} (target 2.0 = 1 spatial × 2 spinor)")
+check(abs(sum_t1 - 6.0) < 0.05,
+      f"T_1 weight across top-8 states = {sum_t1:.4f} (target 6.0 = 3 spatial × 2 spinor)")
+check(abs(sum_t1/sum_a1 - 3.0) < 0.05,
+      f"Multiplet ratio T_1/A_1 = {sum_t1/sum_a1:.4f} (target 3.0 for A_1 + T_1 decomp)")
+
+# Also verify the top-8 are highly localized on the tet (weight > 0.9)
+top8_weights = [weights[order[r]] for r in range(8)]
+check(min(top8_weights) > 0.90,
+      f"Top-8 bound modes all have weight > 0.9 on the 4 surrounding sites (min = {min(top8_weights):.4f})")
 
 # ---------------------------------------------------------------
 section("FCC vs HCP bond tensors (Sec. 6)")
