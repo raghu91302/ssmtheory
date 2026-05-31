@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSM — Dark matter annihilation: chi chi -> gamma + chi'</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:rgba(255,255,255,.9); --ink:#1f242c; --muted:#5d6470;
+    --line:rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;overflow:hidden}
+  #app{position:relative;width:100%;height:100%}
+  canvas{display:block}
+  .panel{position:absolute;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:13px 15px;backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  #title{top:16px;left:16px;max-width:330px}
+  #title h1{font-size:15px;font-weight:500;margin:0 0 4px}
+  #title p{font-size:12px;line-height:1.55;color:var(--muted);margin:0}
+  #legend{top:16px;right:16px;font-size:12px;line-height:1.85}
+  #legend .row{display:flex;align-items:center;gap:8px}
+  .dot{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+  .dot.ring{border-radius:50%}
+  #controls{bottom:16px;left:50%;transform:translateX(-50%);display:flex;
+    align-items:center;gap:13px;font-size:13px;flex-wrap:wrap;justify-content:center;max-width:92vw}
+  button{font:inherit;color:var(--ink);background:rgba(0,0,0,.05);
+    border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer}
+  button:hover{background:rgba(0,0,0,.1)}
+  button.primary{background:#2f7fd0;border-color:#2f7fd0;color:#fff}
+  #stage{min-width:240px;text-align:center;color:var(--muted)}
+  #stage b{color:var(--ink);font-weight:500}
+  label.tog{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  #eq{position:absolute;bottom:16px;left:16px;font-size:12.5px;color:var(--muted)}
+  #eq b{color:var(--ink);font-weight:500}
+  @media (max-width:720px){#title,#legend{position:static;margin:10px;max-width:none}#app{overflow:auto}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="panel" id="title">
+    <h1>Dark matter annihilation in the FCC vacuum</h1>
+    <p>Two K=6 octahedral voids of the FCC lattice (each a dark matter particle &chi;)
+    share one octahedron edge. On merger they form a single tetrahedral residual &mdash;
+    the dark proton &chi;&prime; &mdash; in a tet void hinged on that edge, plus a photon.</p>
+  </div>
+  <div class="panel" id="legend">
+    <div class="row"><span class="dot ring" style="background:#9bb6d6"></span>FCC lattice atom (K=12)</div>
+    <div class="row"><span class="dot" style="background:#2f7fd0"></span>oct void A &mdash; &chi;</div>
+    <div class="row"><span class="dot" style="background:#cf4d78"></span>oct void B &mdash; &chi;</div>
+    <div class="row"><span class="dot" style="background:#179a6f"></span>shared edge (interface)</div>
+    <div class="row"><span class="dot" style="background:#e08a14"></span>tet void &mdash; &chi;&prime; residual</div>
+    <div class="row"><span class="dot" style="background:#e8a200"></span>photon (1.59 GeV)</div>
+  </div>
+  <div class="panel" id="controls">
+    <button class="primary" id="play">&#9654; Play annihilation</button>
+    <button id="reset">&#8634; Reset</button>
+    <span id="stage"><b>Stage:</b> two &chi; defects at rest</span>
+    <label class="tog"><input type="checkbox" id="showbulk" checked> show lattice</label>
+    <label class="tog">spin <input type="range" id="spin" min="0" max="100" value="25"></label>
+  </div>
+  <div class="panel" id="eq">&chi; + &chi; &rarr; &gamma; + &chi;&prime; &nbsp;|&nbsp;
+    <b>E<sub>&gamma;</sub> = 1.591 GeV</b> &nbsp; m<sub>&chi;&prime;</sub> = 0.938 GeV
+    &nbsp; (0.27&sigma; from Kang)</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const C={octA:0x2f7fd0,octB:0xcf4d78,share:0x179a6f,tet:0xe08a14,
+         photon:0xe8a200,atom:0x9bb6d6,bond:0xcfd6e0};
+const a=2.0, L=a/Math.SQRT2;
+function v(x,y,z){return new THREE.Vector3(x,y,z);}
+const cA=v(0.5,-0.5,0.0), cB=v(-0.5,0.5,0.0);
+const octAv=[[1.5,-0.5,0],[-0.5,-0.5,0],[0.5,0.5,0],[0.5,-1.5,0],[0.5,-0.5,1],[0.5,-0.5,-1]].map(p=>v(p[0],p[1],p[2]));
+const octBv=[[0.5,0.5,0],[-1.5,0.5,0],[-0.5,1.5,0],[-0.5,-0.5,0],[-0.5,0.5,1],[-0.5,0.5,-1]].map(p=>v(p[0],p[1],p[2]));
+const shared=[v(-0.5,-0.5,0), v(0.5,0.5,0)];
+const tet2=v(0,0,0.5);
+
+let scene,camera,renderer,root,raf;
+let bulkGroup,gA,gB,nodeA,nodeB,edge,tetMesh,resid,photon;
+let t=0,playing=false,spin=0.25,stage=0;
+const stageEl=document.getElementById('stage');
+
+init(); build(); animate();
+
+function init(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0xffffff);
+  const w=innerWidth,h=innerHeight;
+  camera=new THREE.PerspectiveCamera(45,w/h,0.1,100);
+  camera.position.set(4.2,2.6,5.6);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(w,h);
+  document.getElementById('app').appendChild(renderer.domElement);
+  scene.add(new THREE.AmbientLight(0xffffff,0.85));
+  const d=new THREE.DirectionalLight(0xffffff,0.55); d.position.set(5,8,6); scene.add(d);
+  const d2=new THREE.DirectionalLight(0xdde6f5,0.3); d2.position.set(-6,-2,-4); scene.add(d2);
+  addEventListener('resize',onResize);
+  let down=false,px=0,py=0,az=0.0,el=0.42;
+  const dom=renderer.domElement;
+  dom.addEventListener('pointerdown',e=>{down=true;px=e.clientX;py=e.clientY});
+  addEventListener('pointerup',()=>down=false);
+  addEventListener('pointermove',e=>{if(!down)return;
+    az-=(e.clientX-px)*0.006; el+=(e.clientY-py)*0.006;
+    el=Math.max(-1.2,Math.min(1.3,el)); px=e.clientX; py=e.clientY; orbit();});
+  dom.addEventListener('wheel',e=>{e.preventDefault();
+    const r=camera.position.length()*(1+Math.sign(e.deltaY)*0.08);
+    camera.position.setLength(Math.max(3,Math.min(13,r))); camera.lookAt(0,0,0);},{passive:false});
+  orbit();
+  function orbit(){const r=camera.position.length();
+    camera.position.set(r*Math.cos(el)*Math.sin(az),r*Math.sin(el),r*Math.cos(el)*Math.cos(az));
+    camera.lookAt(0,0,0);}
+  document.getElementById('play').onclick=()=>{if(stage===0)playing=true;};
+  document.getElementById('reset').onclick=reset;
+  document.getElementById('spin').oninput=e=>spin=e.target.value/100;
+  document.getElementById('showbulk').onchange=e=>bulkGroup.visible=e.target.checked;
+}
+
+function sphere(p,r,color,emissive){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),
+    new THREE.MeshStandardMaterial({color,roughness:.45,metalness:0,
+      emissive:emissive||0x000000, emissiveIntensity:emissive?0.4:0}));
+  m.position.copy(p); return m;
+}
+
+function octVoid(center,verts,color){
+  const g=new THREE.Group();
+  const dirs=verts.map(p=>p.clone().sub(center));
+  const find=(ax,s)=>dirs.findIndex(d=>Math.sign(d.getComponent(ax))===s && Math.abs(d.getComponent(ax))>0.9
+       && Math.abs(d.getComponent((ax+1)%3))<0.1 && Math.abs(d.getComponent((ax+2)%3))<0.1);
+  const o=[find(0,1),find(0,-1),find(1,1),find(1,-1),find(2,1),find(2,-1)];
+  const tris=[[o[0],o[2],o[4]],[o[2],o[1],o[4]],[o[1],o[3],o[4]],[o[3],o[0],o[4]],
+              [o[2],o[0],o[5]],[o[1],o[2],o[5]],[o[3],o[1],o[5]],[o[0],o[3],o[5]]];
+  const pos=[]; tris.forEach(tr=>tr.forEach(i=>{const p=verts[i]; pos.push(p.x,p.y,p.z);}));
+  const hullGeo=new THREE.BufferGeometry();
+  hullGeo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  hullGeo.computeVertexNormals();
+  const hull=new THREE.Mesh(hullGeo,new THREE.MeshStandardMaterial({color,
+    transparent:true,opacity:0.14,side:THREE.DoubleSide,roughness:.6}));
+  g.add(hull);
+  const epairs=[[o[0],o[2]],[o[0],o[3]],[o[0],o[4]],[o[0],o[5]],[o[1],o[2]],[o[1],o[3]],
+                [o[1],o[4]],[o[1],o[5]],[o[2],o[4]],[o[2],o[5]],[o[3],o[4]],[o[3],o[5]]];
+  epairs.forEach(pr=>{const lg=new THREE.BufferGeometry().setFromPoints([verts[pr[0]],verts[pr[1]]]);
+    g.add(new THREE.Line(lg,new THREE.LineBasicMaterial({color,transparent:true,opacity:0.7})));});
+  verts.forEach(p=>g.add(sphere(p,0.085,C.atom)));
+  const node=sphere(center,0.15,color,color); g.userData.node=node; g.add(node);
+  verts.forEach(p=>{const bg=new THREE.BufferGeometry().setFromPoints([center,p]);
+    g.add(new THREE.Line(bg,new THREE.LineBasicMaterial({color,transparent:true,opacity:0.35})));});
+  return g;
+}
+
+function build(){
+  root=new THREE.Group(); scene.add(root);
+  bulkGroup=new THREE.Group();
+  const atomSet=new Set(), atoms=[];
+  for(let ix=-2;ix<=2;ix++)for(let iy=-2;iy<=2;iy++)for(let iz=-2;iz<=2;iz++){
+    const cell=[[ix*a,iy*a,iz*a],[ix*a+a/2,iy*a+a/2,iz*a],
+                [ix*a+a/2,iy*a,iz*a+a/2],[ix*a,iy*a+a/2,iz*a+a/2]];
+    cell.forEach(p=>{const k=p.map(x=>x.toFixed(2)).join(',');
+      if(!atomSet.has(k)){atomSet.add(k);atoms.push(p);}});
+  }
+  const mid=[0.5,1.5,1.0];
+  atoms.forEach(p=>{const c=v(p[0]-mid[0],p[1]-mid[1],p[2]-mid[2]);
+    if(c.length()>3.1) return;
+    const s=sphere(c,0.05,C.atom); s.material.transparent=true; s.material.opacity=0.55; bulkGroup.add(s);});
+  const bp=bulkGroup.children.map(m=>m.position);
+  for(let i=0;i<bp.length;i++)for(let j=i+1;j<bp.length;j++){
+    if(Math.abs(bp[i].distanceTo(bp[j])-L)<0.05){
+      const lg=new THREE.BufferGeometry().setFromPoints([bp[i],bp[j]]);
+      bulkGroup.add(new THREE.Line(lg,new THREE.LineBasicMaterial({color:C.bond,transparent:true,opacity:0.4})));}
+  }
+  root.add(bulkGroup);
+
+  gA=octVoid(cA,octAv,C.octA); gB=octVoid(cB,octBv,C.octB); root.add(gA,gB);
+  nodeA=gA.userData.node; nodeB=gB.userData.node;
+
+  const eg=new THREE.BufferGeometry().setFromPoints(shared);
+  edge=new THREE.Line(eg,new THREE.LineBasicMaterial({color:C.share,transparent:true,opacity:0.0}));
+  root.add(edge);
+  shared.forEach(p=>{const s=sphere(p,0.1,C.share); s.material.transparent=true; s.material.opacity=0.0;
+    s.userData.shareMark=true; root.add(s);});
+
+  const tg=new THREE.TetrahedronGeometry(L*0.62,0);
+  tetMesh=new THREE.Group();
+  const tm=new THREE.Mesh(tg,new THREE.MeshStandardMaterial({color:C.tet,transparent:true,opacity:0.28,roughness:.4}));
+  const tw=new THREE.LineSegments(new THREE.EdgesGeometry(tg),new THREE.LineBasicMaterial({color:C.tet}));
+  tetMesh.add(tm,tw); tetMesh.position.copy(tet2); tetMesh.scale.setScalar(0.001); tetMesh.visible=false; root.add(tetMesh);
+  resid=sphere(tet2,0.15,C.tet,C.tet); resid.visible=false; resid.scale.setScalar(0.001); root.add(resid);
+
+  photon=sphere(v(0,0,0),0.11,C.photon,C.photon); photon.material.emissiveIntensity=1.4; photon.visible=false; root.add(photon);
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(0.2,16,16),
+    new THREE.MeshBasicMaterial({color:C.photon,transparent:true,opacity:0.3}));
+  photon.add(halo);
+  setStage(0,'two \u03c7 defects at rest');
+}
+
+function setStage(n,txt){stage=n; stageEl.innerHTML='<b>Stage:</b> '+txt;}
+function ease(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);}
+
+function animate(){
+  raf=requestAnimationFrame(animate);
+  root.rotation.y+=0.0006+spin*0.004;
+  if(playing){
+    t+=0.011;
+    if(t<1){const e=ease(t),off=(1-e);
+      gA.position.set(off*0.9,0,0); gB.position.set(-off*0.9,0,0);
+      edge.material.opacity=e*0.95;
+      root.children.forEach(c=>{if(c.userData.shareMark)c.material.opacity=e*0.95;});
+      setStage(1,'two \u03c7 defects approach, sharing an octahedron edge');
+    } else if(t<2){const e=ease(t-1);
+      [gA,gB].forEach(g=>g.children.forEach(c=>{if(c.material&&c.material.opacity!==undefined){
+        c.material.transparent=true; c.material.opacity*=0.97;}}));
+      tetMesh.visible=true; resid.visible=true;
+      const s=0.001+e; tetMesh.scale.setScalar(s); resid.scale.setScalar(Math.min(1,s)); tetMesh.rotation.y+=0.04;
+      edge.material.opacity=0.95*(1-e);
+      setStage(2,'merger across shared face \u2192 tetrahedral \u03c7\u2032 forms');
+      if(t>=2-0.011){photon.visible=true; photon.position.copy(tet2);}
+    } else if(t<3.2){const e=ease((t-2)/1.2);
+      const dir=v(0.55,0.8,0.45).normalize();
+      photon.position.copy(tet2).addScaledVector(dir,e*5.5);
+      photon.material.emissiveIntensity=1.4*(1-e*0.5);
+      photon.children[0].material.opacity=0.3*(1-e);
+      const back=tet2.clone().addScaledVector(dir,-e*0.45);
+      tetMesh.position.copy(back); resid.position.copy(back);
+      setStage(3,'photon (1.591 GeV) emitted; \u03c7\u2032 recoils');
+    } else { playing=false; setStage(4,'\u03c7\u2032 dark proton remains \u2014 gravitational only'); }
+  }
+  renderer.render(scene,camera);
+}
+function reset(){playing=false; t=0; cancelAnimationFrame(raf); scene.remove(root); build();
+  bulkGroup.visible=document.getElementById('showbulk').checked; animate();}
+function onResize(){const w=innerWidth,h=innerHeight; camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h);}
+</script>
+</body>
+</html>
