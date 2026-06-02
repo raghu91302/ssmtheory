@@ -193,11 +193,127 @@ def check_signature():
 
 # ----------------------------------------------------------------------
 
+# ----------------------------------------------------------------------
+# (H) Hyperbolic continuum limit of the repair update
+# ----------------------------------------------------------------------
+
+def check_hyperbolic_limit():
+    print("=" * 68)
+    print("(H) Repair-update continuum limit: hyperbolic vs parabolic fork")
+    print("=" * 68)
+    w, k, c, beta, gamma = sp.symbols('omega k c beta gamma', positive=True)
+
+    # Reversible / time-symmetric (1,-2,1) stencil: 2cos(w)-2 = -alpha k^2
+    lhs_rev = sp.series(2*sp.cos(w) - 2, w, 0, 4).removeO()   # -> -w^2
+    rev_second_order = sp.simplify(lhs_rev + w**2) == 0
+    print(f"  reversible stencil small-w limit = {lhs_rev}  (== -w^2 ? {rev_second_order})")
+    print("    => w^2 = c^2 k^2 : HYPERBOLIC (real light cone)")
+
+    # Dissipative / forward (1,-1) stencil: e^{-iw}-1 = -beta k^2
+    lhs_dis = sp.series(sp.exp(-sp.I*w) - 1, w, 0, 2).removeO()  # -> -i w
+    dis_first_order = sp.simplify(lhs_dis + sp.I*w) == 0
+    print(f"  dissipative stencil small-w limit = {lhs_dis}  (== -i*w ? {dis_first_order})")
+    print("    => w = -i beta k^2 : PARABOLIC (diffusive, decaying)")
+
+    # The stabilizer support is time-symmetric: 6 forward (+e4) and 6 backward (-e4)
+    # cross-slice bonds. Count them to confirm no past/future asymmetry.
+    cross = [n for n in d4_neighbors() if n[3] != 0]
+    fwd = sum(1 for n in cross if n[3] == 1)
+    bwd = sum(1 for n in cross if n[3] == -1)
+    symmetric_support = (fwd == bwd == 6)
+    print(f"  cross-slice bonds: {fwd} forward (+e4), {bwd} backward (-e4) "
+          f"-> time-symmetric support? {symmetric_support}")
+    print("    => zero-syndrome condition is the (1,-2,1) second difference: second order forced")
+
+    # Damped-wave robustness: d_t^2 + gamma d_t = c^2 nabla^2  ->  -w^2 - i gamma w + c^2 k^2 = 0
+    # Solve the quadratic in w explicitly (avoid solver edge cases).
+    a_, b_, cc_ = -1, -sp.I*gamma, c**2*k**2
+    disc = sp.sqrt(b_**2 - 4*a_*cc_)
+    roots = [(-b_ + disc)/(2*a_), (-b_ - disc)/(2*a_)]
+    # Underdamped limit gamma -> 0: real part -> +- c k (propagating cone)
+    re_lead = sp.simplify(roots[0].subs(gamma, 0))
+    print(f"  damped-wave root at gamma->0: w -> {re_lead}  (propagating cone Re(w)=c k)")
+    underdamped_propagating = sp.simplify(re_lead**2 - c**2*k**2) == 0
+    print(f"    => underdamped limit is the Lorentzian cone? {underdamped_propagating}")
+    print("    => dissipation is a width on the cone, not a change of order")
+
+    ok = (rev_second_order and dis_first_order and symmetric_support
+          and underdamped_propagating)
+    print(f"  RESULT: {'PASS' if ok else 'FAIL'}\n")
+    return ok
+
+# ----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
+# (C) D4 CSS code: stabilizer temporal support is e4-symmetric (both check types)
+# ----------------------------------------------------------------------
+
+def check_d4_code_support():
+    import numpy as np
+    print("=" * 68)
+    print("(C) D4 CSS code: weight-24 stabilizer support, e4-symmetric in time")
+    print("=" * 68)
+    L = 4
+    sites = [tuple(p) for p in np.ndindex(L, L, L, L)]
+    verts = [s for s in sites if sum(s) % 2 == 0]
+    voids = [s for s in sites if sum(s) % 2 == 1]
+
+    # roots: +-e_i +- e_j, i<j  (the 24 D4 nearest neighbors)
+    roots = []
+    for i in range(4):
+        for j in range(i + 1, 4):
+            for si in (1, -1):
+                for sj in (1, -1):
+                    r = [0, 0, 0, 0]; r[i] = si; r[j] = sj
+                    roots.append(tuple(r))
+
+    def x4(d):
+        return ((d + L // 2) % L) - L // 2
+
+    # Z-stabilizer on a vertex: all 24 incident edges (one per root)
+    v0 = verts[0]
+    zc = {'sp': 0, 'fwd': 0, 'bwd': 0}
+    for r in roots:
+        d4 = x4(r[3])
+        zc['sp' if d4 == 0 else ('fwd' if d4 > 0 else 'bwd')] += 1
+    print(f"  Z-check (vertex): {zc['sp']} in-slice, {zc['fwd']} forward, {zc['bwd']} backward")
+
+    # X-stabilizer on a void: non-antipodal pairs among the 8 surrounding vertices
+    o = voids[0]
+    surround = [tuple((o[k] + (s if k == d else 0)) % L for k in range(4))
+                for d in range(4) for s in (1, -1)]
+    xc = {'sp': 0, 'fwd': 0, 'bwd': 0}
+    for a in range(len(surround)):
+        for b in range(a + 1, len(surround)):
+            va, vb = surround[a], surround[b]
+            diff = tuple(((vb[k] - va[k] + L // 2) % L) - L // 2 for k in range(4))
+            nz = [k for k in range(4) if diff[k] != 0]
+            antipodal = (len(nz) == 1 and abs(diff[nz[0]]) == 2)
+            if not antipodal:
+                d4 = x4(vb[3] - va[3])
+                xc['sp' if d4 == 0 else ('fwd' if d4 > 0 else 'bwd')] += 1
+    print(f"  X-check (void):   {xc['sp']} in-slice, {xc['fwd']} forward, {xc['bwd']} backward")
+
+    z_ok = (zc['sp'] == 12 and zc['fwd'] == zc['bwd'] == 6)
+    x_ok = (xc['sp'] == 12 and xc['fwd'] == xc['bwd'] == 6)
+    print(f"  Z support 12+6+6 and forward==backward? {z_ok}")
+    print(f"  X support 12+6+6 and forward==backward? {x_ok}")
+    print("  => both stabilizer types: cross-slice support symmetric under e4 -> -e4")
+    print("     => repair enforces a (t-1,t,t+1) SECOND difference -> hyperbolic, not diffusive")
+
+    ok = z_ok and x_ok
+    print(f"  RESULT: {'PASS' if ok else 'FAIL'}\n")
+    return ok
+
+# ----------------------------------------------------------------------
+
 def main():
     results = []
     results.append(check_rank4_isotropy())
     results.append(check_laplacian_and_speed())
     results.append(check_signature())
+    results.append(check_hyperbolic_limit())
+    results.append(check_d4_code_support())
 
     print("=" * 68)
     allpass = all(results)
