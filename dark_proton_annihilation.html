@@ -50,6 +50,7 @@
     <div class="row"><span class="dot" style="background:#2f7fd0"></span>oct void A &mdash; &chi;</div>
     <div class="row"><span class="dot" style="background:#cf4d78"></span>oct void B &mdash; &chi;</div>
     <div class="row"><span class="dot" style="background:#179a6f"></span>shared edge (interface)</div>
+    <div class="row"><span class="dot ring" style="background:#9bb6d6"></span>cuboctahedral coordination shell</div>
     <div class="row"><span class="dot" style="background:#e08a14"></span>tet void &mdash; &chi;&prime; residual</div>
     <div class="row"><span class="dot" style="background:#e8a200"></span>photon (1.59 GeV)</div>
   </div>
@@ -58,7 +59,8 @@
     <button id="reset">&#8634; Reset</button>
     <span id="stage"><b>Stage:</b> two &chi; defects at rest</span>
     <label class="tog"><input type="checkbox" id="showbulk" checked> show lattice</label>
-    <label class="tog">spin <input type="range" id="spin" min="0" max="100" value="25"></label>
+    <button id="spintoggle">&#10074;&#10074; Stop spin</button>
+    <label class="tog">spin speed <input type="range" id="spin" min="0" max="100" value="25"></label>
   </div>
   <div class="panel" id="eq">&chi; + &chi; &rarr; &gamma; + &chi;&prime; &nbsp;|&nbsp;
     <b>E<sub>&gamma;</sub> = 1.591 GeV</b> &nbsp; m<sub>&chi;&prime;</sub> = 0.938 GeV
@@ -75,10 +77,10 @@ const cA=v(0.5,-0.5,0.0), cB=v(-0.5,0.5,0.0);
 const octAv=[[1.5,-0.5,0],[-0.5,-0.5,0],[0.5,0.5,0],[0.5,-1.5,0],[0.5,-0.5,1],[0.5,-0.5,-1]].map(p=>v(p[0],p[1],p[2]));
 const octBv=[[0.5,0.5,0],[-1.5,0.5,0],[-0.5,1.5,0],[-0.5,-0.5,0],[-0.5,0.5,1],[-0.5,0.5,-1]].map(p=>v(p[0],p[1],p[2]));
 const shared=[v(-0.5,-0.5,0), v(0.5,0.5,0)];
-const tet2=v(0,0,0.5);
+const tet2=v(0,0,0);
 
 let scene,camera,renderer,root,raf;
-let bulkGroup,gA,gB,nodeA,nodeB,edge,tetMesh,resid,photon;
+let bulkGroup,gA,gB,nodeA,nodeB,edge,tetMesh,resid,residShell,photon;
 let t=0,playing=false,spin=0.25,stage=0;
 const stageEl=document.getElementById('stage');
 
@@ -114,8 +116,17 @@ function init(){
     camera.lookAt(0,0,0);}
   document.getElementById('play').onclick=()=>{if(stage===0)playing=true;};
   document.getElementById('reset').onclick=reset;
-  document.getElementById('spin').oninput=e=>spin=e.target.value/100;
+  document.getElementById('spin').oninput=e=>{spin=e.target.value/100; updateSpinBtn();};
   document.getElementById('showbulk').onchange=e=>bulkGroup.visible=e.target.checked;
+  let lastSpin=0.25;
+  const spinBtn=document.getElementById('spintoggle');
+  function updateSpinBtn(){spinBtn.innerHTML = spin>0 ? '\u275a\u275a Stop spin' : '\u25b6 Resume spin';}
+  spinBtn.onclick=()=>{
+    if(spin>0){lastSpin=spin; spin=0; document.getElementById('spin').value=0;}
+    else{spin=lastSpin>0?lastSpin:0.25; document.getElementById('spin').value=Math.round(spin*100);}
+    updateSpinBtn();
+  };
+  updateSpinBtn();
 }
 
 function sphere(p,r,color,emissive){
@@ -125,8 +136,40 @@ function sphere(p,r,color,emissive){
   m.position.copy(p); return m;
 }
 
+// Thick edge as a cylinder mesh (WebGL ignores LineBasicMaterial linewidth,
+// so real thickness must come from geometry). radius is in world units.
+function tube(p0,p1,color,radius,emissive){
+  const dir=p1.clone().sub(p0); const len=dir.length();
+  const geo=new THREE.CylinderGeometry(radius,radius,len,12,1,false);
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.4,metalness:0,
+    emissive:emissive||color, emissiveIntensity:0.25});
+  const m=new THREE.Mesh(geo,mat);
+  m.position.copy(p0).add(p1).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+  return m;
+}
+
+// === cuboctahedral coordination shell around a site (reusable) ===
+// Built in LOCAL coords centered at origin; caller positions the returned group.
+function cuboctShell(center,color){
+  const g=new THREE.Group();
+  const coff=[[1,1,0],[1,-1,0],[-1,1,0],[-1,-1,0],[1,0,1],[1,0,-1],
+              [-1,0,1],[-1,0,-1],[0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1]]
+             .map(p=>v(p[0],p[1],p[2]));
+  const cE=[[0,4],[0,5],[0,8],[0,9],[1,4],[1,5],[1,10],[1,11],[2,6],[2,7],[2,8],[2,9],
+            [3,6],[3,7],[3,10],[3,11],[4,8],[4,10],[5,9],[5,11],[6,8],[6,10],[7,9],[7,11]];
+  const CUBOCT_R=0.008; // clearly thinner than the octa cage, but above the hairline bulk
+  cE.forEach(pr=>{const tb=tube(coff[pr[0]],coff[pr[1]],color,CUBOCT_R);
+    tb.userData.cuboct=true; g.add(tb);});
+  coff.forEach(p=>{const cap=sphere(p,CUBOCT_R*1.5,color,color);
+    cap.material.emissiveIntensity=0.2; cap.userData.cuboct=true; g.add(cap);});
+  g.position.copy(center);
+  return g;
+}
+
 function octVoid(center,verts,color){
   const g=new THREE.Group();
+  g.add(cuboctShell(center,color));
   const dirs=verts.map(p=>p.clone().sub(center));
   const find=(ax,s)=>dirs.findIndex(d=>Math.sign(d.getComponent(ax))===s && Math.abs(d.getComponent(ax))>0.9
        && Math.abs(d.getComponent((ax+1)%3))<0.1 && Math.abs(d.getComponent((ax+2)%3))<0.1);
@@ -142,8 +185,14 @@ function octVoid(center,verts,color){
   g.add(hull);
   const epairs=[[o[0],o[2]],[o[0],o[3]],[o[0],o[4]],[o[0],o[5]],[o[1],o[2]],[o[1],o[3]],
                 [o[1],o[4]],[o[1],o[5]],[o[2],o[4]],[o[2],o[5]],[o[3],o[4]],[o[3],o[5]]];
-  epairs.forEach(pr=>{const lg=new THREE.BufferGeometry().setFromPoints([verts[pr[0]],verts[pr[1]]]);
-    g.add(new THREE.Line(lg,new THREE.LineBasicMaterial({color,transparent:true,opacity:0.7})));});
+  // Slight emphasis: octahedron cage edges as thin tubes, only a little thicker
+  // than the hairline bulk-lattice bonds so the two reacting cells read clearly.
+  const EDGE_R=0.020;
+  epairs.forEach(pr=>{const tb=tube(verts[pr[0]],verts[pr[1]],color,EDGE_R);
+    tb.userData.cage=true; g.add(tb);});
+  // small color-matched caps at the 6 octahedron vertices for clean edge joins
+  [o[0],o[1],o[2],o[3],o[4],o[5]].forEach(i=>{const cap=sphere(verts[i],EDGE_R*1.4,color,color);
+    cap.material.emissiveIntensity=0.25; cap.userData.cage=true; g.add(cap);});
   verts.forEach(p=>g.add(sphere(p,0.085,C.atom)));
   const node=sphere(center,0.15,color,color); g.userData.node=node; g.add(node);
   verts.forEach(p=>{const bg=new THREE.BufferGeometry().setFromPoints([center,p]);
@@ -188,6 +237,8 @@ function build(){
   const tw=new THREE.LineSegments(new THREE.EdgesGeometry(tg),new THREE.LineBasicMaterial({color:C.tet}));
   tetMesh.add(tm,tw); tetMesh.position.copy(tet2); tetMesh.scale.setScalar(0.001); tetMesh.visible=false; root.add(tetMesh);
   resid=sphere(tet2,0.15,C.tet,C.tet); resid.visible=false; resid.scale.setScalar(0.001); root.add(resid);
+  // residual's own cuboctahedral coordination shell (same visibility as the chi cells)
+  residShell=cuboctShell(tet2,C.tet); residShell.visible=false; root.add(residShell);
 
   photon=sphere(v(0,0,0),0.11,C.photon,C.photon); photon.material.emissiveIntensity=1.4; photon.visible=false; root.add(photon);
   const halo=new THREE.Mesh(new THREE.SphereGeometry(0.2,16,16),
@@ -201,7 +252,7 @@ function ease(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);}
 
 function animate(){
   raf=requestAnimationFrame(animate);
-  root.rotation.y+=0.0006+spin*0.004;
+  root.rotation.y+=spin*0.004;
   if(playing){
     t+=0.011;
     if(t<1){const e=ease(t),off=(1-e);
@@ -211,19 +262,23 @@ function animate(){
       setStage(1,'two \u03c7 defects approach, sharing an octahedron edge');
     } else if(t<2){const e=ease(t-1);
       [gA,gB].forEach(g=>g.children.forEach(c=>{if(c.material&&c.material.opacity!==undefined){
-        c.material.transparent=true; c.material.opacity*=0.97;}}));
-      tetMesh.visible=true; resid.visible=true;
+        c.material.transparent=true; c.material.opacity=Math.max(0,(1-e)*0.95);
+        if(c.material.emissive)c.material.emissiveIntensity=0.4*(1-e);}}));
+      tetMesh.visible=true; resid.visible=true; residShell.visible=true;
       const s=0.001+e; tetMesh.scale.setScalar(s); resid.scale.setScalar(Math.min(1,s)); tetMesh.rotation.y+=0.04;
+      residShell.scale.setScalar(Math.min(1,s));
       edge.material.opacity=0.95*(1-e);
       setStage(2,'merger across shared face \u2192 tetrahedral \u03c7\u2032 forms');
       if(t>=2-0.011){photon.visible=true; photon.position.copy(tet2);}
     } else if(t<3.2){const e=ease((t-2)/1.2);
+      gA.visible=false; gB.visible=false; edge.visible=false;
+      root.children.forEach(c=>{if(c.userData.shareMark)c.visible=false;});
       const dir=v(0.55,0.8,0.45).normalize();
       photon.position.copy(tet2).addScaledVector(dir,e*5.5);
       photon.material.emissiveIntensity=1.4*(1-e*0.5);
       photon.children[0].material.opacity=0.3*(1-e);
       const back=tet2.clone().addScaledVector(dir,-e*0.45);
-      tetMesh.position.copy(back); resid.position.copy(back);
+      tetMesh.position.copy(back); resid.position.copy(back); residShell.position.copy(back);
       setStage(3,'photon (1.591 GeV) emitted; \u03c7\u2032 recoils');
     } else { playing=false; setStage(4,'\u03c7\u2032 dark proton remains \u2014 gravitational only'); }
   }
