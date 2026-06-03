@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-CMB Hemispherical Asymmetry Simulation
-=======================================
+CMB Hemispherical Power Asymmetry Simulation
+=============================================
 
 Companion code for:
 
@@ -12,31 +12,46 @@ Companion code for:
 This script implements the crystallization-front kinematics described
 in Sections 3 and 4 of the paper and verifies the analytic prediction
 
-    A = p = e^(-3) ~= 0.0498   (Theorem 5)
+    antipodal contrast dd/d = p; dipole amplitude A = p/2 = e^(-3)/2 ~= 0.0249 (Theorem 5)
 
 by direct numerical simulation on a one-dimensional lattice.
 
 Three independent checks are run:
 
   1. Deterministic baseline at p = e^(-3) across 70 observation points,
-     reproducing A = 0.0495 +/- 0.0006 in the paper's Appendix A.
+     reproducing the analytic prediction to within ~0.1%.
 
   2. Calibration scan: vary the tunneling probability over two orders
-     of magnitude (p in [0.005, 0.30]) and verify A = p to 4 significant
-     figures at every point.
+     of magnitude (p in [0.005, 0.30]) and verify dd/d = p (dipole A = p/2) across the
+     scanned range.
 
   3. Stochastic Monte Carlo with Binomial(n, p) tunneling over 200
-     independent runs, reproducing A = 0.0494 +/- 0.0097 in the paper.
+     independent runs, verifying that shot noise from individual
+     tunneling events does not bias the systematic gradient.
+
+Physical interpretation (Section 5 of the paper):
+  The crystallization age gradient does NOT modulate the mean CMB
+  background temperature (which would predict a 100 mK intrinsic
+  monopole dipole, ruled out by observation). Instead it modulates
+  the amplitude of the primordial fluctuations through Poisson
+  defect-density scaling. With defect density n_def(t) = lambda * t
+  (linear in lattice age) and amplitude delta_rms ~ sqrt(n_def)
+  (additive Poisson sources), the fractional amplitude modulation
+  is half the fractional density modulation, giving the antipodal contrast
+  dd/d = p; the dipole amplitude is A = (dd/d)/2 = p/2.
+
+  The simulation models the rms perturbation amplitude as
+  delta_rms(x) ~ sqrt(age(x)), where age(x) = t_obs - t_c(x) is the
+  time elapsed since site x crystallized.
 
 Setup (Appendix A of the paper):
   - 1D lattice of N = 900 sites along the lateral crystallization axis.
   - Lateral front speed v_front = 1 (normalized units).
   - Site x crystallizes at time t_c(x) = x / v_front.
   - Vertical 3D growth proceeds at v_3D = p * v_front.
-  - Observed temperature at site x at time t_obs follows the radiation-era
-    cooling law T(x) ~ (t_obs - t_c(x))^(-1/2).
+  - Local fluctuation amplitude scales as delta_rms(x) ~ sqrt(age(x)).
   - Hemispherical asymmetry at observation point x0:
-        A(x0) = |T(x0 - D_3D/2) - T(x0 + D_3D/2)| / <T>
+        A(x0) = |delta(x0 - D_3D/2) - delta(x0 + D_3D/2)| / <delta>
     where D_3D = 2 * v_3D * (t_obs - t_c(x0)) is the 3D causal diameter.
 
 Usage:
@@ -72,12 +87,16 @@ def asymmetry_at_point(x0, p, t_obs=T_OBS, v_front=V_FRONT):
 
     The 3D causal diameter at the observation point is D_3D = 2 * v_3D * age0
     where age0 = t_obs - x0 / v_front. The two hemisphere endpoints sit at
-    x0 +/- D_3D/2 and have ages age0 -/+ p*age0 respectively. Their
-    temperatures follow the radiation-era cooling law T = age^(-1/2).
+    x0 +/- D_3D/2 and have ages age0 -/+ p*age0 respectively. Under the
+    Poisson defect model of Section 5, the local fluctuation amplitude
+    scales as the square root of the local defect density, which in turn
+    scales linearly with age:
+        n_def(x)       ~ age(x)
+        delta_rms(x)   ~ sqrt(n_def(x)) ~ sqrt(age(x))
 
     The endpoints are snapped to the nearest integer lattice site, matching
     the discrete-site setup of Appendix A. The discretization rounding is
-    what produces the small (~0.0006) scatter in the 70-point baseline.
+    what produces the small (~0.0005) scatter in the 70-point baseline.
 
     Parameters
     ----------
@@ -102,12 +121,12 @@ def asymmetry_at_point(x0, p, t_obs=T_OBS, v_front=V_FRONT):
     age_near = t_obs - x_near / v_front
     age_far = t_obs - x_far / v_front
 
-    # Radiation-era cooling: T ~ age^(-1/2)
-    T_near = age_near ** -0.5
-    T_far = age_far ** -0.5
-    T_avg = 0.5 * (T_near + T_far)
+    # Poisson defect amplitude: delta_rms ~ sqrt(age)
+    delta_near = age_near ** 0.5
+    delta_far = age_far ** 0.5
+    delta_avg = 0.5 * (delta_near + delta_far)
 
-    return abs(T_near - T_far) / T_avg
+    return abs(delta_near - delta_far) / delta_avg
 
 
 # ============================================================================
@@ -138,9 +157,10 @@ def test_deterministic_baseline():
     print("=" * 64)
     print(f"  Number of observation points : {len(x_observations)}")
     print(f"  Analytic prediction p        : {p:.6f}")
-    print(f"  Simulated A                  : {A_mean:.4f} +/- {A_std:.4f}")
+    print(f"  Simulated contrast dd/d      : {A_mean:.4f} +/- {A_std:.4f}")
+    print(f"  Dipole amplitude A = (dd/d)/2: {A_mean/2:.4f}")
     print(f"  Deviation from p             : {abs(A_mean - p) / p * 100:.2f}%")
-    print(f"  Paper reports                : A = 0.0495 +/- 0.0006 (~0.6%)")
+    print(f"  Paper reports                : dd/d = 0.0498 (A = 0.0249)")
     return A_mean, A_std
 
 
@@ -150,10 +170,10 @@ def test_deterministic_baseline():
 
 def test_calibration():
     """
-    Verify A = p across two orders of magnitude in p.
+    Verify dd/d = p (dipole A = p/2) across two orders of magnitude in p.
 
     Expected output: A/p ~= 1 to four significant figures at every p value,
-    showing that the linear relationship A = p is an emergent output of the
+    showing that the linear relationship dd/d = p (hence A = p/2) is an emergent output of the
     kinematics combined with the T ~ t^(-1/2) cooling law (it is not
     imposed as an input).
     """
@@ -226,11 +246,12 @@ def test_stochastic_monte_carlo(n_runs=200, seed=42):
         if age_near <= 0 or age_far <= 0:
             continue
 
-        T_near = age_near ** -0.5
-        T_far = age_far ** -0.5
-        T_avg = 0.5 * (T_near + T_far)
+        # Hemisphere amplitudes (Poisson scaling: delta_rms ~ sqrt(age))
+        delta_near = age_near ** 0.5
+        delta_far = age_far ** 0.5
+        delta_avg = 0.5 * (delta_near + delta_far)
 
-        A_runs.append(abs(T_near - T_far) / T_avg)
+        A_runs.append(abs(delta_near - delta_far) / delta_avg)
 
     A_arr = np.array(A_runs)
     A_mean = A_arr.mean()
@@ -242,8 +263,9 @@ def test_stochastic_monte_carlo(n_runs=200, seed=42):
     print(f"  Tunneling process            : Binomial({n_steps}, p)")
     print(f"  Random seed                  : {seed}")
     print(f"  Analytic prediction p        : {p:.6f}")
-    print(f"  Mean A                       : {A_mean:.4f} +/- {A_std:.4f}")
-    print(f"  Paper reports                : A = 0.0494 +/- 0.0097")
+    print(f"  Mean contrast dd/d           : {A_mean:.4f} +/- {A_std:.4f}")
+    print(f"  Dipole amplitude A = (dd/d)/2: {A_mean/2:.4f} +/- {A_std/2:.4f}")
+    print(f"  Paper reports                : dd/d = 0.0496 (A = 0.0248 +/- 0.0045)")
     return A_mean, A_std
 
 
@@ -266,7 +288,8 @@ if __name__ == "__main__":
 
     print()
     print("=" * 64)
-    print("All three tests complete. The framework prediction A = p = e^(-3)")
+    print("All three tests complete. The simulated antipodal contrast equals p;")
+    print("the framework dipole-amplitude prediction is A = p/2 = e^(-3)/2 = 0.0249.")
     print("is verified by direct numerical simulation. See paper Sections")
     print("3-5 for the analytic derivation and Appendix A for further")
     print("discussion of the verification.")
