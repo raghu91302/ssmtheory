@@ -1,211 +1,268 @@
 #!/usr/bin/env python3
-"""Punctured FCC CSS code study (independent reimplementation).
-Build the [[3L^3, 2L^3+2, 3]] code of arXiv:2603.20294, carve spherical
-vacancies, and compute the static code-theoretic quantities vs radius."""
-import numpy as np
-import itertools as it
+"""
+pbh_revised_vacancy_analysis.py -- static code-theoretic quantities of the FCC
+vacuum with a spherical vacancy (the punctured code), in BOTH CSS sectors.
 
-def gf2_rank(M):
-    M = M.copy() % 2
-    r = 0
-    rows, cols = M.shape
-    for c in range(cols):
-        piv = None
-        for i in range(r, rows):
-            if M[i, c]:
-                piv = i; break
-        if piv is None:
-            continue
-        M[[r, piv]] = M[[piv, r]]
-        for i in range(rows):
-            if i != r and M[i, c]:
-                M[i] ^= M[r]
-        r += 1
-        if r == rows:
-            break
-    return r
-
-def gf2_in_rowspace(M, v):
-    A = np.vstack([M, v]) % 2
-    return gf2_rank(A) == gf2_rank(M)
+Builds the [[3L^3, 2L^3+2, 3]] FCC code on a periodic box, carves spherical
+vacancies at the distinct FCC shells, and computes for the intact exterior:
+  (1) X-type sector (ker of truncated vertex checks): exhaustive absence of
+      weight-1/weight-2 logicals at every radius;
+  (2) Z-type sector (ker of surviving octahedral checks, modulo the vertex-check
+      row space): boundary-localized weight-1/2 modes, with their maximum depth
+      from the vacancy surface (in units of L0);
+  (3) explicit exterior weight-3 bulk logicals, maximally distant from the
+      vacancy -> minimum bulk logical weight 3, independent of R;
+  (4) per-step conversion counts (vertex checks, octahedral checks, boundary
+      degree), all R-independent;
+  (5) logical deficit vs removed edges (-> code rate 2/3), and severed bonds vs
+      vacancy area at the volume-equivalent radius (-> 3*sqrt(2)/L0^2).
+Writes pbh_revised_vacancy_L8.json, consumed by pbh_revised_make_figs.py.
+Run: python3 pbh_revised_vacancy_analysis.py            (L=8, ~20 min)
+     python3 pbh_revised_vacancy_analysis.py 6          (L=6 smoke test)
+"""
+import numpy as np, itertools, json, sys
 
 NN = []
-for i in range(3):
-    for j in range(3):
-        if i < j:
-            for si in (1, -1):
-                for sj in (1, -1):
-                    v = np.zeros(3, int); v[i] = si; v[j] = sj
-                    NN.append(v)
-E6 = [np.eye(3, dtype=int)[i] * s for i in range(3) for s in (1, -1)]
+for a, b in itertools.combinations(range(3), 2):
+    for s1 in (1, -1):
+        for s2 in (1, -1):
+            v = [0, 0, 0]; v[a] = s1; v[b] = s2; NN.append(tuple(v))
+OCT = [(1,0,0),(-1,0,0),(0,1,0),(0,-1,0),(0,0,1),(0,0,-1)]
 
-class FCCCode:
-    def __init__(self, L):
-        self.L = L
-        self.nodes = [np.array(p) for p in it.product(range(L), repeat=3)
-                      if sum(p) % 2 == 0]
-        self.nidx = {tuple(p): i for i, p in enumerate(self.nodes)}
-        self.octs = [np.array(p) for p in it.product(range(L), repeat=3)
-                     if sum(p) % 2 == 1]
-        self.edges = []
-        self.eidx = {}
-        for p in self.nodes:
-            for d in NN:
-                q = (p + d) % L
-                key = tuple(sorted((tuple(p), tuple(q))))
-                if key not in self.eidx:
-                    self.eidx[key] = len(self.edges)
-                    self.edges.append(key)
-        n = len(self.edges)
-        self.HZ = np.zeros((len(self.nodes), n), dtype=np.uint8)
-        for iv, p in enumerate(self.nodes):
-            for d in NN:
-                q = (p + d) % L
-                self.HZ[iv, self.eidx[tuple(sorted((tuple(p), tuple(q))))]] = 1
-        self.HX = np.zeros((len(self.octs), n), dtype=np.uint8)
-        for io, c in enumerate(self.octs):
-            surr = [tuple((c + e) % L) for e in E6]
-            cnt = 0
-            for a, b in it.combinations(surr, 2):
-                key = tuple(sorted((a, b)))
-                if key in self.eidx:
-                    da = np.abs(np.array(a) - np.array(b))
-                    da = np.minimum(da, self.L - da)
-                    if int(np.sum(da * da)) == 2:
-                        self.HX[io, self.eidx[key]] = 1
-                        cnt += 1
-            assert cnt == 12, (tuple(c), cnt)
 
-    def params(self):
-        n = len(self.edges)
-        rz, rx = gf2_rank(self.HZ), gf2_rank(self.HX)
-        return n, n - rz - rx, rz, rx
+def build(L):
+    """FCC code on an L^3 periodic box: nodes at even-parity sites."""
+    nidx, nodes = {}, []
+    for x in range(L):
+        for y in range(L):
+            for z in range(L):
+                if (x + y + z) % 2 == 0:
+                    nidx[(x, y, z)] = len(nodes); nodes.append((x, y, z))
+    eidx, edges = {}, []
+    for i, (x, y, z) in enumerate(nodes):
+        for dx, dy, dz in NN:
+            nb = ((x+dx) % L, (y+dy) % L, (z+dz) % L)
+            j = nidx[nb]
+            k = (min(i, j), max(i, j))
+            if k not in eidx:
+                eidx[k] = len(edges); edges.append(k)
+    octs = []
+    for x in range(L):
+        for y in range(L):
+            for z in range(L):
+                if (x + y + z) % 2 == 1:
+                    nb = [nidx[((x+d[0]) % L, (y+d[1]) % L, (z+d[2]) % L)] for d in OCT]
+                    octs.append(sorted(set(nb)))
+    return nodes, nidx, edges, eidx, octs
 
-def torus_dist2(a, b, L):
-    d = np.abs(np.array(a) - np.array(b))
-    d = np.minimum(d, L - d)
-    return int(np.sum(d * d))
 
-def puncture(code, R_int2):
-    L = code.L
-    removed_nodes = {tuple(p) for p in code.nodes
-                     if torus_dist2(p, (0, 0, 0), L) < R_int2}
-    removed_edges = set()
-    severed = 0
-    for kk, (a, b) in enumerate(code.edges):
-        ain, bin_ = a in removed_nodes, b in removed_nodes
-        if ain or bin_:
-            removed_edges.add(kk)
-            if ain != bin_:
-                severed += 1
-    keep = np.array([kk for kk in range(len(code.edges))
-                     if kk not in removed_edges])
-    zrows = [i for i, p in enumerate(code.nodes)
-             if tuple(p) not in removed_nodes]
-    HZp = code.HZ[np.ix_(zrows, keep)]
-    xrows = []
-    for io, c in enumerate(code.octs):
-        surr = [tuple((c + e) % L) for e in E6]
-        if not any(s in removed_nodes for s in surr):
-            xrows.append(io)
-    HXp = code.HX[np.ix_(xrows, keep)]
-    return HZp, HXp, keep, removed_nodes, removed_edges, severed
+def rows_Z(nodes, edges):
+    """vertex stabilizers: row per node, bits on incident edges"""
+    inc = [0] * len(nodes)
+    for e, (i, j) in enumerate(edges):
+        inc[i] |= (1 << e); inc[j] |= (1 << e)
+    return inc
 
-def low_weight_logicals(HZp, HXp):
-    out = {}
-    for name, Hk, Hr in (("X", HZp, HXp), ("Z", HXp, HZp)):
-        zero_cols = np.where(~Hk.any(axis=0))[0]
-        w1 = 0
-        for c in zero_cols:
-            v = np.zeros(Hk.shape[1], dtype=np.uint8); v[c] = 1
-            if not gf2_in_rowspace(Hr, v):
-                w1 += 1
-        colkeys = {}
-        w2 = 0
-        for c in range(Hk.shape[1]):
-            key = Hk[:, c].tobytes()
-            if key in colkeys:
-                v = np.zeros(Hk.shape[1], dtype=np.uint8)
-                v[c] = 1; v[colkeys[key]] = 1
-                if not gf2_in_rowspace(Hr, v):
-                    w2 += 1
-            else:
-                colkeys[key] = c
-        out[name] = (w1, w2)
+
+def rows_X(octs, edges, eidx):
+    """octahedral stabilizers: bits on edges with both endpoints in the oct"""
+    out = []
+    for nb in octs:
+        s = set(nb); r = 0
+        for e, (i, j) in enumerate(edges):
+            if i in s and j in s: r |= (1 << e)
+        out.append(r)
     return out
 
-def exterior_triangle_logical(code, keep, removed_nodes, HXp):
-    L = code.L
-    kmap = {kk: i for i, kk in enumerate(keep)}
-    best = None; bestd = -1
-    for p in code.nodes:
-        tp = tuple(p)
-        if tp in removed_nodes:
-            continue
-        d2 = torus_dist2(p, (0, 0, 0), L)
-        q = tuple((p + np.array([1, 1, 0])) % L)
-        r = tuple((p + np.array([1, 0, 1])) % L)
-        if q in removed_nodes or r in removed_nodes:
-            continue
-        try:
-            eks = [kmap[code.eidx[tuple(sorted((tp, q)))]],
-                   kmap[code.eidx[tuple(sorted((tp, r)))]],
-                   kmap[code.eidx[tuple(sorted((q, r)))]]]
-        except KeyError:
-            continue
-        if d2 > bestd:
-            bestd = d2; best = eks
-    v = np.zeros(len(keep), dtype=np.uint8)
-    for ek in best:
-        v[ek] = 1
-    return (not gf2_in_rowspace(HXp, v)), np.sqrt(bestd / 2.0)
 
-def conversion_step_stats(code, removed_nodes):
-    L = code.L
-    stats = []
-    for p in code.nodes:
-        tp = tuple(p)
-        if tp in removed_nodes:
-            continue
-        nbrs = [tuple((p + d) % L) for d in NN]
-        if not any(nb in removed_nodes for nb in nbrs):
-            continue
-        surv_edges = sum(1 for nb in nbrs if nb not in removed_nodes)
-        z_affected = 1 + surv_edges
-        octs = {tuple((p + e) % L) for e in E6}
-        x_affected = sum(1 for c in octs if not any(
-            tuple((np.array(c) + e) % L) in removed_nodes for e in E6))
-        stats.append((surv_edges, z_affected, x_affected))
-    a = np.array(stats)
-    return a.mean(axis=0), a.max(axis=0), len(stats)
+def gf2_rank(rows):
+    piv, rank = [], 0
+    for r in rows:
+        cur = r
+        for p in piv:
+            cur = min(cur, cur ^ p)
+        if cur:
+            piv.append(cur); piv.sort(reverse=True); rank += 1
+    return rank
 
-if __name__ == "__main__":
-    for L in (6, 8):
-        code = FCCCode(L)
-        n, k, rz, rx = code.params()
-        print(f"L={L}: n={n}, k={k} (expect {2*L**3+2}), rank HZ={rz}, rank HX={rx}")
-    code = FCCCode(8)
-    n0, k0, _, _ = code.params()
-    print(f"\nvacancy study at L=8 (n0={n0}, k0={k0}):")
-    rows = []
-    for RL0 in (1.5, 2.0, 2.5, 3.0, 3.5):
-        R_int2 = 2.0 * RL0**2
-        HZp, HXp, keep, rn, re, severed = puncture(code, R_int2)
-        npr = len(keep)
-        kp = npr - gf2_rank(HZp) - gf2_rank(HXp)
-        lw = low_weight_logicals(HZp, HXp)
-        tri, td = exterior_triangle_logical(code, keep, rn, HXp)
-        (m_e, m_z, m_x), (M_e, M_z, M_x), nb = conversion_step_stats(code, rn)
-        A = 4 * np.pi * RL0**2
-        d3 = tri and all(v == (0, 0) for v in lw.values())
-        print(f" R={RL0}: nodes_rm={len(rn)}, edges_rm={len(re)}, severed={severed},"
-              f" n'={npr}, k'={kp}, deficit={k0-kp},"
-              f" deficit/edges_rm={(k0-kp)/len(re):.3f}")
-        print(f"   w<=2 logicals {lw} | ext triangle nontrivial={tri}"
-              f" (dist {td:.2f} L0) => d'=3: {d3}")
-        print(f"   boundary nodes={nb}: surv edges mean={m_e:.1f},"
-              f" Z-checks max={M_z}, X-checks max={M_x},"
-              f" severed/A={severed/A:.3f} vs 3sqrt2={3*np.sqrt(2):.3f}")
-        rows.append((RL0, len(rn), len(re), severed, npr, kp, k0 - kp,
-                     m_e, M_z, M_x, int(d3)))
-    np.save("/tmp/vacancy_rows.npy", np.array(rows))
+
+def in_span(v, rows):
+    piv = []
+    for r in rows:
+        cur = r
+        for p in piv:
+            cur = min(cur, cur ^ p)
+        if cur: piv.append(cur); piv.sort(reverse=True)
+    cur = v
+    for p in piv:
+        cur = min(cur, cur ^ p)
+    return cur == 0
+
+
+def analyse(L, Rlist):
+    nodes, nidx, edges, eidx, octs = build(L)
+    n0 = len(edges)
+    HZ0, HX0 = rows_Z(nodes, edges), rows_X(octs, edges, eidx)
+    k0 = n0 - gf2_rank(HZ0) - gf2_rank(HX0)
+    print(f"L={L}: n={n0}, k={k0}  (2L^3+2 = {2*L**3+2})  intact check: {k0 == 2*L**3+2}")
+    cen = np.array([L/2.0]*3)
+    pos = np.array(nodes, float)
+    d = np.linalg.norm((pos - cen + L/2) % L - L/2, axis=1)
+    out = []
+    for R in Rlist:
+        inside = set(np.where(d < R)[0])
+        keep_e = [e for e, (i, j) in enumerate(edges) if i not in inside and j not in inside]
+        if not keep_e: continue
+        remap = {e: t for t, e in enumerate(keep_e)}
+        def restrict(row):
+            r = 0
+            for e in keep_e:
+                if row >> e & 1: r |= (1 << remap[e])
+            return r
+        HZ = [restrict(HZ0[i]) for i in range(len(nodes)) if i not in inside]
+        HZ = [r for r in HZ if r]
+        HX = [restrict(HX0[o]) for o, nb in enumerate(octs) if not (set(nb) & inside)]
+        HX = [r for r in HX if r]
+        n = len(keep_e)
+        k = n - gf2_rank(HZ) - gf2_rank(HX)
+        # (1) weight-1 / weight-2 logicals in ker(HZ)
+        cols = [0]*n
+        for ri, r in enumerate(HZ):
+            for t in range(n):
+                if r >> t & 1: cols[t] |= (1 << ri)
+        w1 = sum(1 for cc in cols if cc == 0)
+        seen, w2 = {}, 0
+        for t, cc in enumerate(cols):
+            if cc in seen: w2 += 1
+            else: seen[cc] = t
+        # (2) explicit weight-3 exterior logical: an FCC triangle
+        found3 = 0
+        adj = {}
+        for e in keep_e:
+            i, j = edges[e]
+            adj.setdefault(i, set()).add(j); adj.setdefault(j, set()).add(i)
+        emap = {edges[e]: remap[e] for e in keep_e}
+        for i in list(adj)[:400]:
+            for j in adj[i]:
+                if j <= i: continue
+                for m in adj[i] & adj.get(j, set()):
+                    if m <= j: continue
+                    try:
+                        tri = (1 << emap[(min(i,j),max(i,j))]) | (1 << emap[(min(j,m),max(j,m))]) | (1 << emap[(min(i,m),max(i,m))])
+                    except KeyError:
+                        continue
+                    if not in_span(tri, HX):
+                        found3 = 1; break
+                if found3: break
+            if found3: break
+        # (3) generators violated by one boundary conversion step
+        bnd = [i for i in range(len(nodes)) if i not in inside
+               and any((j in inside) for j in adj.get(i, set()) | set())]
+        # surviving bond count of nodes adjacent to the vacancy
+        degs = [len(adj.get(i, set())) for i in range(len(nodes)) if i not in inside
+                and any(np.linalg.norm(((pos[i]-pos[j]+L/2)%L)-L/2) < 1.5 for j in list(inside)[:1])] if inside else []
+        surv = [len(adj.get(i, set())) for i in range(len(nodes)) if i not in inside]
+        out.append(dict(R=R, n=n, k=k, removed=n0-n, w1=w1, w2=w2, found3=found3,
+                        maxdeg=max(surv) if surv else 0,
+                        meandeg=float(np.mean([s for s in surv if s < 12])) if any(s < 12 for s in surv) else 12.0))
+        print(f"  R={R:4.1f}: n'={n:5d} k'={k:5d} removed={n0-n:5d} | w1={w1} w2={w2} wt3-logical={'yes' if found3 else 'no'} | max deg={out[-1]['maxdeg']} mean bdy deg={out[-1]['meandeg']:.1f}")
+    return out
+
+
+
+
+def span_pivots(rows):
+    piv=[]
+    for r in rows:
+        cur=r
+        for p in piv: cur=min(cur,cur^p)
+        if cur: piv.append(cur); piv.sort(reverse=True)
+    return piv
+def reduce_v(v,piv):
+    for p in piv: v=min(v,v^p)
+    return v
+
+L=int(sys.argv[1]) if len(sys.argv)>1 else 8; SQ2=np.sqrt(2)
+nodes,nidx,edges,eidx,octs = build(L)
+n0=len(edges); HZ0,HX0=rows_Z(nodes,edges),rows_X(octs,edges,eidx)
+k0=n0-gf2_rank(HZ0)-gf2_rank(HX0)
+cen=np.array([L/2.]*3); pos=np.array(nodes,float)
+d=np.linalg.norm((pos-cen+L/2)%L-L/2,axis=1)
+res=[]
+radii=[1.2,1.5,2.2,2.5,2.9,3.2] if L>=8 else [1.2,1.5,2.2,2.5]
+for R in radii:
+    inside=set(np.where(d<R)[0]); m=len(inside)
+    keep_e=[e for e,(i,j) in enumerate(edges) if i not in inside and j not in inside]
+    remap={e:t for t,e in enumerate(keep_e)}
+    def restrict(row):
+        r=0
+        for e in keep_e:
+            if row>>e&1: r|=(1<<remap[e])
+        return r
+    HZ=[restrict(HZ0[i]) for i in range(len(nodes)) if i not in inside]; HZ=[r for r in HZ if r]
+    HX=[restrict(HX0[o]) for o,nb in enumerate(octs) if not(set(nb)&inside)]; HX=[r for r in HX if r]
+    n=len(keep_e); k=n-gf2_rank(HZ)-gf2_rank(HX)
+    colsZ=[0]*n
+    for ri,r in enumerate(HZ):
+        for t in range(n):
+            if r>>t&1: colsZ[t]|=(1<<ri)
+    w1X=sum(1 for c in colsZ if c==0)
+    seen={};w2X=0
+    for t,c in enumerate(colsZ):
+        if c in seen: w2X+=1
+        else: seen[c]=t
+    pivZ=span_pivots(HZ)
+    colsX=[0]*n
+    for ri,r in enumerate(HX):
+        for t in range(n):
+            if r>>t&1: colsX[t]|=(1<<ri)
+    w1Z=[t for t in range(n) if colsX[t]==0 and reduce_v(1<<t,pivZ)!=0]
+    seen={};w2Z=[]
+    for t,c in enumerate(colsX):
+        if c in seen:
+            v=(1<<t)|(1<<seen[c])
+            if reduce_v(v,pivZ)!=0: w2Z.append((t,seen[c]))
+        else: seen[c]=t
+    def edepth(t):
+        i,j=edges[keep_e[t]]; mid=(pos[i]+pos[j])/2
+        return np.linalg.norm((mid-cen+L/2)%L-L/2)-R
+    depths=[edepth(t) for t in w1Z]+[edepth(t) for pr in w2Z for t in pr]
+    maxdepth=(max(depths)/SQ2) if depths else 0.0  # in L0 units
+    adj={}
+    for e in keep_e:
+        i,j=edges[e]; adj.setdefault(i,set()).add(j); adj.setdefault(j,set()).add(i)
+    emap={edges[e]:remap[e] for e in keep_e}
+    tri=None
+    for i in sorted(adj,key=lambda q:-d[q])[:120]:
+        for j in adj[i]:
+            if j<=i: continue
+            for mm in (adj[i]&adj.get(j,set())):
+                if mm<=j: continue
+                try:
+                    v=(1<<emap[(min(i,j),max(i,j))])|(1<<emap[(min(j,mm),max(j,mm))])|(1<<emap[(min(i,mm),max(i,mm))])
+                except KeyError: continue
+                if not in_span(v,HX): tri=min(d[i],d[j],d[mm]); break
+            if tri is not None: break
+        if tri is not None: break
+    bnd=[i for i in adj if any(((min(i,jj),max(i,jj)) in eidx) and (jj in inside) for jj in range(len(nodes))) ]
+    # faster: boundary = kept nodes adjacent (in parent graph) to a removed node
+    bnd=set()
+    for (i,j) in edges:
+        if (i in inside) ^ (j in inside):
+            bnd.add(j if i in inside else i)
+    vc=[1+len(adj[i]) for i in bnd]; deg=[len(adj[i]) for i in bnd]
+    oc=[sum(1 for o,nb in enumerate(octs) if (not(set(nb)&inside)) and i in nb) for i in bnd]
+    sever=sum(1 for (i,j) in edges if (i in inside)^(j in inside))
+    Reff=(3*(m/0.5)/(4*np.pi))**(1/3.)   # volume-equiv radius, grid units (n_v=0.5/grid^3)
+    A=4*np.pi*Reff**2
+    dens=sever/A                          # grid^-2 ; target 3/sqrt2 = 2.1213
+    res.append(dict(Rgrid=R,RL0=round(R/SQ2,2),ReffL0=round(Reff/SQ2,2),m=m,n=n,k=k,
+        removed=n0-n,klost=k0-k,ratio=round((k0-k)/(n0-n),3),
+        w1X=w1X,w2X=w2X,w1Z=len(w1Z),w2Z=len(w2Z),maxdepthL0=round(float(maxdepth),2),
+        tri_distL0=round(float(tri)/SQ2,2),vc_max=max(vc),oc_max=max(oc),
+        deg_mean=round(float(np.mean(deg)),1),sever=sever,
+        A_L0=round(A/2,1),  # grid^2 -> L0^2 divide by 2
+        dens_ratio=round(dens/(3/SQ2),3)))
+    print(res[-1])
+json.dump(res,open("pbh_revised_vacancy_L8.json","w"),indent=1)
+print("intact k:",k0)
