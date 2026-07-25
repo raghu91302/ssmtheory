@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
 """
 pbh_revised_make_figs.py -- regenerates all six manuscript figures into figs/.
-Inputs: pbh_revised_arealaw.json (from pbh_revised_arealaw.py) and
-pbh_revised_vacancy_L8.json (from pbh_revised_vacancy_analysis.py); Figs 1, 3,
-4, 5 are drawn from the model equations and stated diagnostics directly.
+Inputs: pbh_revised_arealaw.json and pbh_revised_vacancy_L8.json, generated
+automatically by running pbh_revised_arealaw.py (a few minutes) and
+pbh_revised_vacancy_analysis.py (L=8, roughly 20-40 minutes) if not already
+present. Figs 1, 3, 4, 5 are drawn from the model equations and stated
+diagnostics directly. Bare-clone usage: python3 pbh_revised_make_figs.py
 """
-import numpy as np, json, matplotlib
+import numpy as np, json, os, subprocess, sys
+
+# Inputs are produced by companion scripts, not shipped as data files.
+# If missing, generate them here so a bare clone runs end to end.
+def ensure(fname, producer, note):
+    if not os.path.exists(fname):
+        print(f"[make_figs] {fname} not found -- running {producer} ({note})")
+        subprocess.run([sys.executable, producer], check=True)
+        if not os.path.exists(fname):
+            raise FileNotFoundError(f"{producer} did not produce {fname}")
+
+ensure("pbh_revised_arealaw.json", "pbh_revised_arealaw.py", "a few minutes")
+ensure("pbh_revised_vacancy_L8.json", "pbh_revised_vacancy_analysis.py",
+       "L=8 punctured-code study, roughly 20-40 minutes")
+
+import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size":9,"axes.titlesize":9.5,"legend.fontsize":7.5,
