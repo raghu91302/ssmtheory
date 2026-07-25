@@ -8,7 +8,7 @@ import networkx as nx
 sys.path.insert(0, str(Path(__file__).parent))
 from finite_ssm_verification_v3 import enumerate_states, build_mh
 
-OUT=Path('/mnt/data/finite_results_v3')
+OUT=Path(__file__).parent/'finite_results_v3'
 OUT.mkdir(exist_ok=True)
 summary=[]
 all_counts={}
@@ -111,7 +111,8 @@ plt.savefig(OUT/'kinetic_invariance.pdf')
 plt.savefig(OUT/'kinetic_invariance.png',dpi=200)
 plt.close()
 
-for path in ['/mnt/data/finite_ssm_verification_v3.py','/mnt/data/run_finite_verification_v3.py']:
+for path in [Path(__file__).parent/'finite_ssm_verification_v3.py',
+             Path(__file__).parent/'run_finite_verification_v3.py']:
     data=Path(path).read_bytes()
     print(Path(path).name, hashlib.sha256(data).hexdigest())
 print('Wrote',OUT)
