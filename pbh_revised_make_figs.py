@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pbh_revised_make_figs.py -- regenerates all six manuscript figures into figs/.
+pbh_revised_make_figs.py -- regenerates all six manuscript figures into the current directory (flat).
 Inputs: pbh_revised_arealaw.json and pbh_revised_vacancy_L8.json, generated
 automatically by running pbh_revised_arealaw.py (a few minutes) and
 pbh_revised_vacancy_analysis.py (L=8, roughly 20-40 minutes) if not already
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size":9,"axes.titlesize":9.5,"legend.fontsize":7.5,
                      "figure.dpi":150,"savefig.bbox":"tight"})
 import os
-OUT="figs/"; os.makedirs(OUT,exist_ok=True)
+OUT=""  # flat hierarchy: figures written beside the scripts
 C1,C2,C3="#1f77b4","#d95f02","#2ca02c"
 
 # ---------- Fig 1: isotropy + Fierz-Pauli (4 panels) ----------
@@ -121,7 +121,7 @@ a.legend(loc="lower right"); fig.savefig(OUT+"fig4_lifetime.pdf"); plt.close(fig
 # ---------- Fig 5: constraints ----------
 def zeta_lim(t):   # published-style zeta_EM(t) exclusion (GeV), order of magnitude
     lt=np.log10(t)
-    pts=np.array([[4,3e-6],[5,3e-8],[6,1e-9],[7,4e-10],[8,3e-10],[9,5e-10],[10,1e-9],[12,3e-9],[13,1e-8]])
+    pts=np.array([[4,3e-6],[5,1e-8],[6,4e-10],[7,6e-11],[8,2e-11],[9,1.5e-11],[10,1.5e-11],[12,2e-11],[13,5e-10]])
     return 10**np.interp(lt,pts[:,0],np.log10(pts[:,1]))
 def bounds(M,fEM=0.5,mob=1.0):
     t=tau_eff(M)*mob; z=zevap(M)/np.sqrt(mob)

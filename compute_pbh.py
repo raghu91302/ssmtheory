@@ -3,8 +3,8 @@
 compute_pbh.py  --  Computations and figures for the geometric-evaporation PBH paper.
 
 Revised build:
-  * Lifetime coefficient written through the curvature-flow mobility M = alpha*c*L0
-    (alpha = 1/2 reproduces tau = (2/sqrt(ln2)) t_P (M/m_P)^2). No surface-tension
+  * Lifetime coefficient from the interface mobility mu_int = beta*L0^4/hbar
+    (beta = 1 gives tau = (4 lP/L0) t_P (M/m_P)^2 = 2.17 t_P (M/m_P)^2). No surface-tension
     energy budget is invoked.
   * Survival cutoff reported as the scaling law M_cut ~ 1e16.5 (L_corr / 1 fm) g,
     with the underlying R_H(M_cut) ~ const * L_corr made explicit.
@@ -57,9 +57,9 @@ plt.rcParams.update({
 c = 2.998e8; hbar = 1.055e-34; G = 6.674e-11; kB = 1.381e-23
 lP = np.sqrt(hbar*G/c**3); mP = np.sqrt(hbar*c/G); tP = lP/c
 ln2 = np.log(2)
-L0 = np.sqrt(4*ln2)*lP                 # bond length 1.665 lP
+L0 = np.sqrt(4*ln2/np.sqrt(2.0/3.0))*lP  # bond length 1.843 lP, Eq. (4)
 Lcorr = 1e-15                          # QCD correlation length, 1 fm (fiducial)
-alpha = 0.5                            # curvature-flow O(1) coefficient
+beta = 1.0                             # interface mobility O(1) coefficient, mu_int = beta L0^4/hbar
 age = 13.8e9*365.25*86400             # s
 
 # cosmology
@@ -75,7 +75,7 @@ fEM = 0.5
 
 # ---------------- geometric channel ----------------
 def RH(M): return 2*G*M/c**2
-def tau_geo(M): return (1.0/(alpha*np.sqrt(ln2)))*tP*(M/mP)**2
+def tau_geo(M): return (4.0*lP/(beta*L0))*tP*(M/mP)**2
 def tau_eff(M, Lc=Lcorr):
     x = RH(M)/Lc
     return np.inf if x > 700 else tau_geo(M)*np.exp(x)
@@ -102,9 +102,9 @@ M_muy    = mass_evap_at(t_at_z(z_muy))
 M_recomb = mass_evap_at(t_at_z(1100))
 
 print("="*70)
-print("GEOMETRIC CHANNEL  (alpha = %.2f)" % alpha)
-print(f"  L_0 = {L0/lP:.3f} lP ; tau coeff 1/(alpha sqrt ln2) = {1/(alpha*np.sqrt(ln2)):.3f}")
-print(f"  survival cutoff M_cut = 10^{Mcut_logg:.2f} g (R_H={RH(Mcut_g)*1e15:.0f} fm = {RH(Mcut_g)/Lcorr:.0f} L_corr)")
+print("GEOMETRIC CHANNEL  (beta = %.2f)" % beta)
+print(f"  L_0 = {L0/lP:.3f} lP ; tau coeff 4 lP/(beta L0) = {4*lP/(beta*L0):.3f}")
+print(f"  survival cutoff M_cut = 10^{Mcut_logg:.2f} g (R_H={RH(Mcut_g/1000)*1e15:.0f} fm = {RH(Mcut_g/1000)/Lcorr:.0f} L_corr)")
 print("EPOCH BOUNDARIES (mass that evaporates at each epoch edge):")
 print(f"  BBN onset  (t=1s)      : {M_preBBN:.2e} g")
 print(f"  BBN end    (t=300s)    : {M_BBNend:.2e} g")
@@ -123,11 +123,9 @@ for Lc in [0.1e-15, 0.3e-15, 1e-15, 3e-15, 10e-15]:
 
 def N_area(M): return 4*np.pi*RH(M)**2/L0**2
 def kTH(M): return kB*(hbar*c**3/(8*np.pi*G*M*kB))
-print("\nENERGY CLOSURE (thermal): N_severed * kT_H / (M c^2):")
 for Mg in [1e15, 1e16]:
     M = Mg/1000
-    print(f"  M={Mg:.0e} g : {N_area(M)*kTH(M)/(M*c**2):.4f}   (= 1/(2 ln2) = {1/(2*ln2):.4f})")
-
+    
 def dE_over_Egamma(M, fPBH):
     z = z_inj(tau_eff(M))
     return fEM*fPBH*dm_over_g/(1+z), z
@@ -241,3 +239,15 @@ ax.legend(loc="lower right", frameon=True, framealpha=0.95, edgecolor="0.8")
 plt.tight_layout(); plt.savefig("fig3_constraints.pdf"); plt.close()
 
 print("\nwrote fig1_lifetime.pdf, fig2_epochs.pdf, fig3_constraints.pdf")
+
+
+# ---------------- sensitivity table (Table 3 of the manuscript) ----------------
+print("\nSENSITIVITY  log10(M_cut/g)  over  xi x beta   (mu_int = beta L0^4/hbar):")
+print("        "+"".join(f"  xi={x:.1f} fm" for x in (0.5,1.0,2.0)))
+for b in (0.3,1.0,3.0):
+    row=f"beta={b:<4}"
+    for x in (0.5,1.0,2.0):
+        f=lambda lg: (np.log((4.0*lP/(b*L0))*tP*(10**lg/1000/mP)**2)
+                      + RH(10**lg/1000)/(x*1e-15) - np.log(age))
+        row+=f"    {brentq(f,15,18):6.2f}"
+    print(row)
