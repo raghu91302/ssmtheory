@@ -10,14 +10,13 @@ Reproduces:
   - Sec 2.3(iii): exact lattice diffeomorphisms lie in the kernel (deficit ~ 0)
   - Table 4  : static T_00 source -> h_00(k) ~ 1/k^2 (Newtonian 1/r), solved by the
                Moore-Penrose pseudoinverse (numpy.linalg.pinv, rcond = 1e-6)
-  - Sec 4    : the decoding flow. NOTE: the Regge operator Q is INDEFINITE (the
-               transverse-traceless gravitons carry negative kinetic coefficient, the
-               -1 in the -1:+3:0 Fierz-Pauli structure). The decoder therefore does NOT
-               descend on the indefinite action <h,Q h>; it descends on the SYNDROME
-               WEIGHT ||syndrome||^2, a positive form whose operator is |Q| on the
-               physical (non-gauge) sector. That flow converges, with fixed point
-               |Q| h = J, equivalent to Q h = J up to the TT sign convention that the
-               pseudoinverse solve of Table 4 already handles.
+  - Sec 4    : the decoding flow. The Regge operator Q is INDEFINITE (transverse-
+               traceless gravitons carry negative kinetic coefficient, the -1 in the
+               -1:+3:0 Fierz-Pauli structure), so the decoder descends neither on the
+               action <h,Q h> (unbounded below) nor on |Q| (which gives the wrong sign
+               on the TT sector). It descends on the SYNDROME MISMATCH (1/2)||Q h - J||^2,
+               gradient flow h' = -Q(Q h - J), operator Q^2 >= 0 (unconditionally stable),
+               fixed point Q h = J EXACTLY with the correct sign on every sector.
 
 The exact-arithmetic Fierz-Pauli identity (rational Hessian; C + q_FP = 0 as a symbolic
 identity) is verified separately in linearized_gravity_verify.py.
@@ -145,19 +144,29 @@ for s in [0.06, 0.10, 0.16, 0.24]:
     print(f"  |k|={s}: h_00*k^2 = {h[0] * s * s:.6f}")
 
 # ---------------------------------------------------------------- Sec 4: decoding flow
-# Q is INDEFINITE (negative TT eigenvalue). The decoder minimizes the SYNDROME WEIGHT,
-# a positive form with operator |Q| on the physical (non-gauge) sector. That flow
-# converges; the naive flow on <h,Q h> would diverge along the TT direction.
-print("\n== Sec 4: decoding flow on the syndrome weight |Q| converges to |Q| h = J ==")
+# Q is INDEFINITE (negative TT eigenvalue). The decoder does NOT descend on the action
+# <h,Q h> (unbounded below) and NOT on |Q| (wrong sign on the TT sector). It descends on
+# the SYNDROME MISMATCH  W = (1/2)||Q h - J||^2, whose gradient flow is
+#     h' = -Q (Q h - J),
+# with operator Q^2 >= 0 (unconditionally stable) and fixed point Q h = J EXACTLY,
+# correct sign on every sector including the transverse-traceless gravitons.
+print("\n== Sec 4: decoding flow on the mismatch, h' = -Q(Q h - J), fixed point Q h = J ==")
 M = Q(np.array([0., 0.12, 0., 0.]))
 w, V = np.linalg.eigh(M)
-phys = np.abs(w) > 1e-6 * np.max(np.abs(w))                 # drop the 4 gauge zero-modes
-Mabs = V @ np.diag(np.where(phys, np.abs(w), 0.0)) @ V.T     # positive syndrome-weight op
 J = np.zeros(10); J[0] = 1.0
-J = V[:, phys] @ (V[:, phys].T @ J)                          # source in the physical range
-h = np.zeros(10); dt = 0.01
-for _ in range(200000):
-    h = h - dt * (Mabs @ h - J)
-res = np.linalg.norm(Mabs @ h - J) / np.linalg.norm(J)
-print(f"  Q is indefinite: eigenvalue signs = {np.sign(np.round(w,6)).astype(int)}")
-print(f"  decoding-flow residual ||Mabs h - J||/||J|| = {res:.2e}  (converges)")
+J = V[:, np.abs(w) > 1e-6 * np.max(np.abs(w))] @ (
+    V[:, np.abs(w) > 1e-6 * np.max(np.abs(w))].T @ J)      # source in range(Q)
+# reference solution of Q h = J on the physical sector
+href = np.zeros(10)
+for i in range(10):
+    if abs(w[i]) > 1e-6 * np.max(np.abs(w)):
+        href += (V[:, i] @ J) / w[i] * V[:, i]
+h = np.zeros(10); dt = 0.5 / np.max(w**2)
+for _ in range(8000000):
+    h = h - dt * (M @ (M @ h - J))
+res = np.linalg.norm(M @ h - J) / np.linalg.norm(J)
+match = np.linalg.norm(h - href) / max(np.linalg.norm(href), 1e-12)
+print(f"  Q indefinite: eigenvalue signs = {np.sign(np.round(w,6)).astype(int)}")
+print(f"  residual ||Q h - J||/||J||      = {res:.2e}")
+print(f"  matches Q h = J solution?        ||h-href||/||href|| = {match:.2e}")
+print(f"  (correct sign on TT: the mismatch flow solves Q h = J, not |Q| h = J)")
