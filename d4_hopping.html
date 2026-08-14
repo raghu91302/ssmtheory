@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Defect Migration in the D4 Vacuum Lattice</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --muted:#666; --rule:#d8d8d8;
+    --P:#c0392b; --N:#2471a3; --share:#1e8449;
+    --rel:#e59866; --eng:#7d3c98; --node:#d4ac0d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#fff;color:var(--ink);
+    font-family:"Palatino Linotype",Palatino,Georgia,serif}
+  #stage{position:fixed;inset:0}
+  canvas{display:block}
+  .panel{
+    position:fixed;background:rgba(255,255,255,.94);border:1px solid var(--rule);
+    border-radius:4px;padding:12px 14px;font-size:13px;line-height:1.45;
+    box-shadow:0 1px 4px rgba(0,0,0,.06)
+  }
+  #controls{top:16px;left:16px;width:246px}
+  #readout{top:16px;right:16px;width:214px}
+  #legend{bottom:16px;left:16px;width:246px}
+  #caption{bottom:16px;right:16px;width:340px;font-size:12px;color:var(--muted)}
+  h1{font-size:14px;margin:0 0 8px;font-weight:700;letter-spacing:.01em}
+  h2{font-size:11px;margin:12px 0 5px;font-weight:700;text-transform:uppercase;
+     letter-spacing:.06em;color:var(--muted)}
+  button{
+    font:inherit;font-size:12px;width:100%;text-align:left;margin:3px 0;padding:6px 9px;
+    background:#fafafa;border:1px solid var(--rule);border-radius:3px;cursor:pointer;color:var(--ink)
+  }
+  button:hover{background:#f0f0f0}
+  button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .row{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:12px}
+  input[type=range]{flex:1}
+  .key{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px}
+  .dot{width:11px;height:11px;border-radius:50%;border:1px solid #333;flex:none}
+  .sq{width:11px;height:11px;border:1px solid #333;flex:none}
+  .val{font-family:"DejaVu Sans Mono",Consolas,monospace;font-size:12px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  td{padding:2px 0}
+  td.k{color:var(--muted)}
+  td.v{text-align:right;font-family:"DejaVu Sans Mono",Consolas,monospace}
+  .hint{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div class="panel" id="controls">
+  <h1>Defect migration on D<sub>4</sub></h1>
+  <h2>Mode</h2>
+  <button id="m0" class="on">1 &nbsp;Three hops</button>
+  <button id="m1">2 &nbsp;Worldline at rest*</button>
+  <button id="m2">3 &nbsp;Free drift</button>
+  <h2>Playback</h2>
+  <button id="play">Pause</button>
+  <div class="row"><span>Speed</span><input id="speed" type="range" min="1" max="30" value="11"></div>
+  <div class="row"><label><input id="showLat" type="checkbox" checked> lattice bonds</label></div>
+  <div class="row"><label><input id="showVoid" type="checkbox" checked> void sites</label></div>
+  <div class="row"><label><input id="showTrail" type="checkbox" checked> worldline trail</label></div>
+  <div class="row"><label><input id="trueScale" type="checkbox"> true sphere radii</label></div>
+  <div class="hint">* modes 2 and 3 assume Postulate 1.<br>
+  Drag to rotate &middot; scroll to zoom &middot; right-drag to pan</div>
+</div>
+
+<div class="panel" id="readout">
+  <h2>State</h2>
+  <table>
+    <tr><td class="k">void class &sigma;</td><td class="v" id="rSig">&minus;1 (P)</td></tr>
+    <tr><td class="k">position</td><td class="v" id="rPos">(1,1,1)</td></tr>
+    <tr><td class="k">updates</td><td class="v" id="rTick">0</td></tr>
+    <tr><td class="k">last step</td><td class="v" id="rStep">&mdash;</td></tr>
+    <tr><td class="k">in D<sub>4</sub>?</td><td class="v" id="rIn">&mdash;</td></tr>
+  </table>
+  <div class="hint" id="rNote">Position in units of a/4.</div>
+</div>
+
+<div class="panel" id="legend">
+  <h2>Key</h2>
+  <div class="key"><span class="dot" style="background:#d4ac0d"></span>trapped K=4 node</div>
+  <div class="key"><span class="dot" style="background:#1e8449"></span>shared edge, kept (1)</div>
+  <div class="key"><span class="dot" style="background:#e59866"></span>released, edges broken (5)</div>
+  <div class="key"><span class="dot" style="background:#7d3c98"></span>engaged, edges formed (5)</div>
+  <div class="key"><span class="sq" style="background:#c0392b"></span>P void (&sigma;=&minus;1)</div>
+  <div class="key"><span class="sq" style="background:#2471a3"></span>N void (&sigma;=+1)</div>
+  <div class="key"><span class="dot" style="background:#555"></span>lattice atom (site marker)</div>
+  <div class="hint">Lattice atoms are drawn as small site markers so the defect stays
+  visible. Distances are exact either way. Switch on <i>true sphere radii</i> for
+  close-packing contact, where the trapped node is 0.225 of a lattice sphere.</div>
+</div>
+
+<div class="panel" id="caption">
+  A hop keeps two bounding atoms and exchanges the other two. Five tetrahedron edges break,
+  five form, and one is preserved. The defect moves by <i>a</i>/2 and the void class flips.
+  <i>Under the propagation rule of the paper</i> (Postulate 1) each hop also carries one time
+  step, so a defect at rest cannot stay in place and oscillates between two adjacent voids.
+  Distances are exact: nearest neighbors sit at <i>a</i>/&radic;2 and a hop is <i>a</i>/2.
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+// ---------------------------------------------------------------- constants
+// Paper convention: conventional cubic cell side a = 2, so the FCC
+// nearest-neighbour distance is sqrt(2) and the tetrahedral voids sit at
+// (a/4)(odd,odd,odd), i.e. at half-odd-integer points, spacing a/2 = 1.
+var A = 2.0, RANGE = 3, VOID_R = Math.sqrt(3)/2;   // = a*sqrt(3)/4
+// True proportions. Nearest-neighbour distance a/sqrt(2); close-packed spheres
+// touch, so r_atom = a/(2*sqrt(2)) = 0.7071. The tetrahedral hole ratio is
+// sqrt(3/2)-1 = 0.2247, giving r_void = 0.1589. The trapped node is drawn at
+// that true size throughout; the atoms are shrunk unless "true scale" is on.
+var R_RATIO     = Math.sqrt(1.5)-1;            // 0.22474, tetrahedral hole ratio
+var R_ATOM_TRUE = A/(2*Math.SQRT2);            // 0.70711, spheres in contact
+var R_NODE_TRUE = R_ATOM_TRUE*R_RATIO;         // 0.15892, the true hole radius
+// Default view: lattice nodes are small site markers, not spheres, so the
+// trapped defect and its four bonds stay readable. True radii on request.
+var R_ATOM_LITE = 0.075, R_NODE_LITE = 0.13;
+function atomR(){ return trueScale ? R_ATOM_TRUE : R_ATOM_LITE; }
+function nodeR(){ return trueScale ? R_NODE_TRUE : R_NODE_LITE; }
+function haloR(){ return trueScale ? R_ATOM_TRUE*1.16 : 0.115; }
+var C = { P:0xc0392b, N:0x2471a3, share:0x1e8449, rel:0xe59866,
+          eng:0x7d3c98, node:0xd4ac0d, atom:0x555555, bond:0xcccccc };
+
+// ---------------------------------------------------------------- scene
+var stage = document.getElementById('stage');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+var camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 500);
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+stage.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+var key = new THREE.DirectionalLight(0xffffff, 0.55); key.position.set(6,9,7); scene.add(key);
+var fill = new THREE.DirectionalLight(0xffffff, 0.22); fill.position.set(-6,-3,-5); scene.add(fill);
+
+// ---------------------------------------------------------------- orbit
+var target = new THREE.Vector3(1.5,1.5,1.5);
+var sph = {r:11.5, theta:0.86, phi:1.12};
+var drag=null, lastX=0, lastY=0;
+function place(){
+  camera.position.set(
+    target.x + sph.r*Math.sin(sph.phi)*Math.cos(sph.theta),
+    target.y + sph.r*Math.cos(sph.phi),
+    target.z + sph.r*Math.sin(sph.phi)*Math.sin(sph.theta));
+  camera.lookAt(target);
+}
+renderer.domElement.addEventListener('mousedown',function(e){
+  drag = e.button===2 ? 'pan':'rot'; lastX=e.clientX; lastY=e.clientY; e.preventDefault();});
+addEventListener('mouseup',function(){drag=null;});
+addEventListener('mousemove',function(e){
+  if(!drag) return;
+  var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+  if(drag==='rot'){
+    sph.theta -= dx*0.006;
+    sph.phi = Math.max(0.08, Math.min(Math.PI-0.08, sph.phi - dy*0.006));
+  } else {
+    var right = new THREE.Vector3().subVectors(camera.position,target).cross(camera.up).normalize();
+    var up = camera.up.clone().normalize();
+    target.addScaledVector(right, -dx*0.012*sph.r*0.1);
+    target.addScaledVector(up, dy*0.012*sph.r*0.1);
+  }
+  place();
+});
+renderer.domElement.addEventListener('contextmenu',function(e){e.preventDefault();});
+renderer.domElement.addEventListener('wheel',function(e){
+  sph.r = Math.max(4, Math.min(40, sph.r * (1 + (e.deltaY>0?0.09:-0.09)))); place(); e.preventDefault();},
+  {passive:false});
+place();
+
+// ---------------------------------------------------------------- lattice
+var atoms = [];
+for(var x=-1;x<=RANGE;x++)for(var y=-1;y<=RANGE;y++)for(var z=-1;z<=RANGE;z++){
+  var s=x+y+z; if(((s%2)+2)%2===0) atoms.push([x,y,z]);
+}
+var atomGroup = new THREE.Group(), bondGroup = new THREE.Group(),
+    voidGroup = new THREE.Group(), trailGroup = new THREE.Group();
+scene.add(atomGroup, bondGroup, voidGroup, trailGroup);
+
+var aGeo = new THREE.SphereGeometry(1, 18, 14);     // unit sphere, scaled per atom
+var trueScale = false;
+var atomMeshes = [];
+atoms.forEach(function(p){
+  var m = new THREE.Mesh(aGeo, new THREE.MeshLambertMaterial(
+    {color:C.atom, transparent:true, opacity:0.30}));
+  m.position.set(p[0],p[1],p[2]);
+  m.scale.setScalar(atomR());
+  m.userData.p = p;
+  atomGroup.add(m); atomMeshes.push(m);
+});
+function applyAtomScale(){
+  var r = atomR();
+  atomMeshes.forEach(function(m){ m.scale.setScalar(r); });
+  nodeMesh.scale.setScalar(nodeR());
+}
+// Atoms dim with distance from the defect, so the local structure stands out.
+function fadeAtoms(pos){
+  var near = trueScale ? 0.15 : 0.80, far = trueScale ? 0.03 : 0.13;
+  atomMeshes.forEach(function(m){
+    var p = m.userData.p;
+    var d = Math.sqrt((p[0]-pos[0])*(p[0]-pos[0]) +
+                      (p[1]-pos[1])*(p[1]-pos[1]) +
+                      (p[2]-pos[2])*(p[2]-pos[2]));
+    var k = Math.max(0, Math.min(1, (2.9 - d)/2.2));
+    m.material.opacity = far + (near-far)*k*k;
+  });
+}
+
+// nearest-neighbour bonds of the spatial slice, length sqrt(2)
+var lpts=[];
+for(var i=0;i<atoms.length;i++)for(var j=i+1;j<atoms.length;j++){
+  var a=atoms[i], b=atoms[j];
+  var d2=(a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]);
+  if(Math.abs(d2-2)<1e-9) lpts.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+}
+var lg = new THREE.BufferGeometry();
+lg.setAttribute('position', new THREE.Float32BufferAttribute(lpts,3));
+bondGroup.add(new THREE.LineSegments(lg,
+  new THREE.LineBasicMaterial({color:0xdedede, transparent:true, opacity:0.30})));
+
+// ---------------------------------------------------------------- voids
+// Voids sit at half-odd-integer points. In units of a/4 the coordinates are
+// odd; the class is the coordinate sum mod 4 (3 -> P, 1 -> N).
+// Paper Eq. (4): sigma is the product of the components of any bond direction,
+// in units of a/4. It is -1 for P voids and +1 for N voids.
+function boundingRaw(c){
+  var out=[];
+  for(var i=0;i<atoms.length;i++){
+    var p=atoms[i];
+    var d=Math.sqrt((p[0]-c[0])*(p[0]-c[0])+(p[1]-c[1])*(p[1]-c[1])+(p[2]-c[2])*(p[2]-c[2]));
+    if(Math.abs(d-VOID_R)<1e-6) out.push(p);
+  }
+  return out;
+}
+function voidSigma(c){
+  var b = boundingRaw(c);
+  if(b.length===0) return 0;
+  return Math.round((b[0][0]-c[0])/(A/4)) *
+         Math.round((b[0][1]-c[1])/(A/4)) *
+         Math.round((b[0][2]-c[2])/(A/4));
+}
+function voidClass(c){ return voidSigma(c) === -1 ? 'P' : 'N'; }
+function inUnits(c){
+  return '('+Math.round(c[0]/(A/4))+','+Math.round(c[1]/(A/4))+','+Math.round(c[2]/(A/4))+')';
+}
+var voids=[];
+for(var vx=-0.5;vx<=RANGE;vx+=1)for(var vy=-0.5;vy<=RANGE;vy+=1)for(var vz=-0.5;vz<=RANGE;vz+=1){
+  voids.push([vx,vy,vz]);
+}
+var vGeoP = new THREE.TetrahedronGeometry(0.055);
+var vGeoN = new THREE.TetrahedronGeometry(0.055);
+voids.forEach(function(c){
+  var cls = voidClass(c);
+  var m = new THREE.Mesh(cls==='P'?vGeoP:vGeoN,
+    new THREE.MeshLambertMaterial({color:cls==='P'?C.P:C.N, transparent:true, opacity:0.30}));
+  m.position.set(c[0],c[1],c[2]);
+  if(cls==='N') m.rotation.z = Math.PI;
+  voidGroup.add(m);
+});
+
+// four bounding atoms of a void, at a*sqrt(3)/4 from its center
+var bounding = boundingRaw;
+var keyOf = function(p){return p[0]+'|'+p[1]+'|'+p[2];};
+
+// ---------------------------------------------------------------- defect
+var defect = new THREE.Group(); scene.add(defect);
+var nodeMesh = new THREE.Mesh(new THREE.SphereGeometry(1,26,20),
+  new THREE.MeshLambertMaterial({color:C.node}));
+nodeMesh.scale.setScalar(nodeR());
+defect.add(nodeMesh);
+
+var bondMeshes=[], haloMeshes=[];
+var cylGeo = new THREE.CylinderGeometry(0.019,0.019,1,10);
+function clearBonds(){
+  bondMeshes.forEach(function(m){scene.remove(m); m.geometry.dispose(); m.material.dispose();});
+  haloMeshes.forEach(function(m){scene.remove(m); m.material.dispose();});
+  bondMeshes=[]; haloMeshes=[];
+}
+function drawBond(from, to, color, opacity){
+  var a=new THREE.Vector3(from[0],from[1],from[2]), b=new THREE.Vector3(to[0],to[1],to[2]);
+  var mid=a.clone().add(b).multiplyScalar(0.5), len=a.distanceTo(b);
+  var m=new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial(
+    {color:color, transparent:true, opacity:opacity}));
+  m.position.copy(mid); m.scale.set(1,len,1);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),
+    b.clone().sub(a).normalize());
+  scene.add(m); bondMeshes.push(m); return m;
+}
+var haloGeo = new THREE.SphereGeometry(1,18,14);
+function drawHalo(p,color,opacity){
+  var m=new THREE.Mesh(haloGeo, new THREE.MeshLambertMaterial(
+    {color:color, transparent:true, opacity:opacity}));
+  m.position.set(p[0],p[1],p[2]); m.scale.setScalar(haloR());
+  scene.add(m); haloMeshes.push(m); return m;
+}
+// Paper Eq. (2): a hop breaks five tetrahedron edges, forms five, and keeps one.
+function edgesOf(b){
+  var e=[];
+  for(var i=0;i<b.length;i++)for(var j=i+1;j<b.length;j++) e.push([b[i],b[j]]);
+  return e;
+}
+function edgeKey(e){
+  var a=e[0].join(','), c=e[1].join(',');
+  return a<c ? a+'/'+c : c+'/'+a;
+}
+function drawEdge(e,color,opacity,rad){
+  var a=new THREE.Vector3(e[0][0],e[0][1],e[0][2]),
+      b=new THREE.Vector3(e[1][0],e[1][1],e[1][2]);
+  var m=new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial(
+    {color:color, transparent:true, opacity:opacity}));
+  m.position.copy(a.clone().add(b).multiplyScalar(0.5));
+  m.scale.set(rad, a.distanceTo(b), rad);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
+  scene.add(m); bondMeshes.push(m);
+}
+function drawTetEdges(bF,bT,t){
+  var eF=edgesOf(bF), eT=edgesOf(bT), inT={}, inF={};
+  eT.forEach(function(e){ inT[edgeKey(e)]=1; });
+  eF.forEach(function(e){ inF[edgeKey(e)]=1; });
+  eF.forEach(function(e){
+    if(inT[edgeKey(e)]) drawEdge(e, C.share, 0.95, 0.85);
+    else if(t<1)        drawEdge(e, C.rel, Math.max(0,1-t*1.6)*0.8, 0.55);
+  });
+  eT.forEach(function(e){
+    if(inF[edgeKey(e)]) return;
+    if(t>0)             drawEdge(e, C.eng, Math.min(1,t*1.6)*0.8, 0.55);
+  });
+}
+
+// ---------------------------------------------------------------- trail
+var trailPts=[];
+function pushTrail(p){
+  trailPts.push(p.slice());
+  if(trailPts.length>140) trailPts.shift();
+  while(trailGroup.children.length){
+    var c=trailGroup.children.pop(); c.geometry.dispose(); c.material.dispose();
+  }
+  if(trailPts.length<2) return;
+  var arr=[];
+  for(var i=0;i<trailPts.length-1;i++)
+    arr.push(trailPts[i][0],trailPts[i][1],trailPts[i][2],
+             trailPts[i+1][0],trailPts[i+1][1],trailPts[i+1][2]);
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(arr,3));
+  trailGroup.add(new THREE.LineSegments(g,
+    new THREE.LineBasicMaterial({color:C.node, transparent:true, opacity:0.7})));
+}
+
+// ---------------------------------------------------------------- motion
+var HOPS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+var mode = 0, playing = true, speed = 11;
+var N_HOPS_MODE0 = 3;                      // mode 1 runs three hops, then holds
+function startFor(m){ return (m===0) ? [-0.5,1.5,1.5] : [0.5,1.5,1.5]; }
+var start=startFor(0), from=start.slice(), to=start.slice(), t=1, tick=0, step=null;
+var restPhase = 0;
+
+function inRange(c){
+  for(var i=0;i<3;i++) if(c[i]<-0.6 || c[i]>RANGE+0.1) return false;
+  return true;
+}
+function chooseStep(){
+  if(mode===1){ restPhase^=1; return restPhase? [1,0,0] : [-1,0,0]; }
+  if(mode===0){ return [1,0,0]; }              // three hops, one direction
+  var s = HOPS[Math.floor(Math.random()*6)];
+  if(!inRange([from[0]+s[0], from[1]+s[1], from[2]+s[2]]))
+    s = [-s[0],-s[1],-s[2]];                   // reflect, never jump
+  return s;
+}
+function beginStep(){
+  step = chooseStep();
+  var nxt=[from[0]+step[0], from[1]+step[1], from[2]+step[2]];
+  if(!inRange(nxt)){                            // reflect rather than teleport
+    step = [-step[0],-step[1],-step[2]];
+    nxt = [from[0]+step[0], from[1]+step[1], from[2]+step[2]];
+  }
+  to = nxt; t = 0; tick++;
+  updateReadout();
+}
+function resetMode(){
+  start = startFor(mode);
+  from = start.slice(); to = start.slice(); t = 1; tick = 0; step = null; restPhase = 0;
+  trailPts = [];
+  while(trailGroup.children.length){
+    var c=trailGroup.children.pop(); c.geometry.dispose(); c.material.dispose();
+  }
+  updateReadout();
+}
+
+// ---------------------------------------------------------------- readout
+function updateReadout(){
+  var shown = (t<0.5) ? from : to;
+  document.getElementById('rSig').innerHTML =
+    (voidClass(shown)==='P' ? '&minus;1 (P)' : '+1 (N)');
+  document.getElementById('rPos').textContent = inUnits(shown);
+  document.getElementById('rTick').textContent = tick;
+  if(step){
+    document.getElementById('rStep').textContent = '(1,'+step.join(',')+')';
+    var sum = 1+step[0]+step[1]+step[2];
+    document.getElementById('rIn').innerHTML =
+      (((sum%2)+2)%2===0) ? '<span style="color:#1e8449">yes</span>'
+                          : '<span style="color:#c0392b">no</span>';
+  }
+  document.getElementById('rNote').textContent =
+    mode===1 ? 'Net displacement is zero over two updates.'
+             : 'Position in units of a/4.';
+}
+
+// ---------------------------------------------------------------- frame
+function refreshDefect(){
+  var pos = [from[0]+(to[0]-from[0])*t, from[1]+(to[1]-from[1])*t, from[2]+(to[2]-from[2])*t];
+  defect.position.set(pos[0],pos[1],pos[2]);
+
+  clearBonds();
+  var bF = bounding(from), bT = bounding(to);
+  var setT = {}; bT.forEach(function(p){setT[keyOf(p)]=1;});
+  var setF = {}; bF.forEach(function(p){setF[keyOf(p)]=1;});
+
+  bF.forEach(function(p){
+    var shared = setT[keyOf(p)];
+    if(shared){ drawBond(pos,p,C.share,0.95); drawHalo(p,C.share,0.9); }
+    else if(t<1){ drawBond(pos,p,C.rel,Math.max(0,1-t*1.6)); drawHalo(p,C.rel,Math.max(0,1-t*1.6)); }
+  });
+  bT.forEach(function(p){
+    if(setF[keyOf(p)]) return;
+    if(t>0){ drawBond(pos,p,C.eng,Math.min(1,t*1.6)); drawHalo(p,C.eng,Math.min(1,t*1.6)); }
+  });
+  drawTetEdges(bF, bT, t);
+}
+
+var clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  var dt = Math.min(clock.getDelta(), 0.05);
+  if(playing){
+    if(t>=1){
+      pushTrail(to);
+      from = to.slice();
+      if(mode===0 && tick >= N_HOPS_MODE0){  // three hops, then hold
+        playing = false;
+        document.getElementById('play').textContent = 'Replay';
+      } else {
+        beginStep();
+      }
+    } else {
+      t = Math.min(1, t + dt*speed*0.09);
+      if(t>=1) updateReadout();
+    }
+  }
+  refreshDefect();
+  fadeAtoms([defect.position.x, defect.position.y, defect.position.z]);
+  renderer.render(scene,camera);
+}
+beginStep();
+animate();
+
+// ---------------------------------------------------------------- ui
+function setMode(m){
+  mode = m;
+  ['m0','m1','m2'].forEach(function(id,i){
+    document.getElementById(id).className = (i===m)?'on':'';
+  });
+  resetMode(); beginStep(); playing = true;
+  document.getElementById('play').textContent = 'Pause';
+}
+document.getElementById('m0').onclick=function(){setMode(0);};
+document.getElementById('m1').onclick=function(){setMode(1);};
+document.getElementById('m2').onclick=function(){setMode(2);};
+document.getElementById('play').onclick=function(){
+  if(mode===0 && !playing && tick>=N_HOPS_MODE0 && t>=1){
+    resetMode(); beginStep(); playing=true;
+  }
+  else { playing=!playing; }
+  this.textContent = playing ? 'Pause' : (mode===0 ? 'Replay' : 'Play');
+};
+document.getElementById('speed').oninput=function(){ speed = +this.value; };
+document.getElementById('showLat').onchange=function(){ bondGroup.visible=this.checked; };
+document.getElementById('showVoid').onchange=function(){ voidGroup.visible=this.checked; };
+document.getElementById('showTrail').onchange=function(){ trailGroup.visible=this.checked; };
+document.getElementById('trueScale').onchange=function(){
+  trueScale = this.checked; applyAtomScale();
+  bondGroup.visible = !trueScale && document.getElementById('showLat').checked;
+};
+
+addEventListener('resize', function(){
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+})();
+</script>
+</body>
+</html>
