@@ -54,15 +54,20 @@
   <h2>Mode</h2>
   <button id="m0" class="on">1 &nbsp;Three hops</button>
   <button id="m1">2 &nbsp;Worldline at rest*</button>
-  <button id="m2">3 &nbsp;Free drift</button>
+  <button id="m2">3 &nbsp;Free drift*</button>
+  <button id="m3">4 &nbsp;Escape channels</button>
   <h2>Playback</h2>
   <button id="play">Pause</button>
   <div class="row"><span>Speed</span><input id="speed" type="range" min="1" max="30" value="11"></div>
+  <div class="row"><label><input id="showCell" type="checkbox" checked> cubic cell</label></div>
   <div class="row"><label><input id="showLat" type="checkbox" checked> lattice bonds</label></div>
+  <div class="row"><label><input id="showShell" type="checkbox"> K=12 shell</label></div>
   <div class="row"><label><input id="showVoid" type="checkbox" checked> void sites</label></div>
   <div class="row"><label><input id="showTrail" type="checkbox" checked> worldline trail</label></div>
   <div class="row"><label><input id="trueScale" type="checkbox"> true sphere radii</label></div>
-  <div class="hint">* modes 2 and 3 assume Postulate 1.<br>
+  <div class="row"><label><input id="persp" type="checkbox"> perspective view</label></div>
+  <div class="hint">* modes 2 and 3 assume Postulate 1. Mode 4 is static geometry.<br>
+  View is orthographic, so equal lattice vectors subtend equal lengths.<br>
   Drag to rotate &middot; scroll to zoom &middot; right-drag to pan</div>
 </div>
 
@@ -86,7 +91,11 @@
   <div class="key"><span class="dot" style="background:#7d3c98"></span>engaged, edges formed (5)</div>
   <div class="key"><span class="sq" style="background:#c0392b"></span>P void (&sigma;=&minus;1)</div>
   <div class="key"><span class="sq" style="background:#2471a3"></span>N void (&sigma;=+1)</div>
-  <div class="key"><span class="dot" style="background:#555"></span>lattice atom (site marker)</div>
+  <div class="key"><span class="dot" style="background:#2c3e50"></span>cell-corner atom</div>
+  <div class="key"><span class="dot" style="background:#7f8c8d"></span>face-centre atom</div>
+  <div class="key"><span class="dot" style="background:#16a085"></span>K=12 shell (optional)</div>
+  <div class="key"><span class="dot" style="background:#1e8449"></span>open edge channel (mode 4)</div>
+  <div class="key"><span class="dot" style="background:#c0392b"></span>closed face channel (mode 4)</div>
   <div class="hint">Lattice atoms are drawn as small site markers so the defect stays
   visible. Distances are exact either way. Switch on <i>true sphere radii</i> for
   close-packing contact, where the trapped node is 0.225 of a lattice sphere.</div>
@@ -98,6 +107,11 @@
   <i>Under the propagation rule of the paper</i> (Postulate 1) each hop also carries one time
   step, so a defect at rest cannot stay in place and oscillates between two adjacent voids.
   Distances are exact: nearest neighbors sit at <i>a</i>/&radic;2 and a hop is <i>a</i>/2.
+  Mode 4 shows why the six edge channels are open and the four face channels closed: a defect
+  crossing a face would lie within the metric wall of three atoms at once. Note that P and N
+  are a host-void parity, not particle and antiparticle. The outlined cube is one conventional
+  FCC cell: eight corner atoms (dark) and six face-centre atoms (light), four atoms per cell.
+  The <i>K</i>=12 toggle draws the cuboctahedral coordination shell of one atom.
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -124,17 +138,36 @@ function atomR(){ return trueScale ? R_ATOM_TRUE : R_ATOM_LITE; }
 function nodeR(){ return trueScale ? R_NODE_TRUE : R_NODE_LITE; }
 function haloR(){ return trueScale ? R_ATOM_TRUE*1.16 : 0.115; }
 var C = { P:0xc0392b, N:0x2471a3, share:0x1e8449, rel:0xe59866,
-          eng:0x7d3c98, node:0xd4ac0d, atom:0x555555, bond:0xcccccc };
+          eng:0x7d3c98, node:0xd4ac0d, atom:0x555555, bond:0xcccccc,
+          closed:0xc0392b, open:0x1e8449,
+          corner:0x2c3e50, face:0x7f8c8d, cell:0xb8c4cc };
 
 // ---------------------------------------------------------------- scene
 var stage = document.getElementById('stage');
 var scene = new THREE.Scene();
 scene.background = new THREE.Color(0xffffff);
-var camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 500);
+// Orthographic projection is the default. A cubic lattice drawn in perspective
+// does not look cubic: near cells render larger and parallel rows converge, so
+// equal lattice vectors do not subtend equal lengths. Crystal figures are drawn
+// orthographically for that reason. Perspective is available as a toggle.
+var VW = function(){ return Math.max(1, window.innerWidth); };
+var VH = function(){ return Math.max(1, window.innerHeight); };
+var ortho = true, frustum = 7.0;
+var camP = new THREE.PerspectiveCamera(38, VW()/VH(), 0.1, 500);
+var camO = new THREE.OrthographicCamera(-1,1,1,-1, -100, 500);
+var camera = camO;
+function sizeCameras(){
+  var asp = VW()/VH();
+  camP.aspect = asp; camP.updateProjectionMatrix();
+  camO.left = -frustum*asp; camO.right = frustum*asp;
+  camO.top = frustum;       camO.bottom = -frustum;
+  camO.updateProjectionMatrix();
+}
 var renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(VW(), VH());
 stage.appendChild(renderer.domElement);
+sizeCameras();
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.72));
 var key = new THREE.DirectionalLight(0xffffff, 0.55); key.position.set(6,9,7); scene.add(key);
@@ -145,11 +178,13 @@ var target = new THREE.Vector3(1.5,1.5,1.5);
 var sph = {r:11.5, theta:0.86, phi:1.12};
 var drag=null, lastX=0, lastY=0;
 function place(){
-  camera.position.set(
+  var p = new THREE.Vector3(
     target.x + sph.r*Math.sin(sph.phi)*Math.cos(sph.theta),
     target.y + sph.r*Math.cos(sph.phi),
     target.z + sph.r*Math.sin(sph.phi)*Math.sin(sph.theta));
-  camera.lookAt(target);
+  camP.position.copy(p); camP.lookAt(target);
+  camO.position.copy(p); camO.lookAt(target);
+  camera = ortho ? camO : camP;
 }
 renderer.domElement.addEventListener('mousedown',function(e){
   drag = e.button===2 ? 'pan':'rot'; lastX=e.clientX; lastY=e.clientY; e.preventDefault();});
@@ -163,14 +198,18 @@ addEventListener('mousemove',function(e){
   } else {
     var right = new THREE.Vector3().subVectors(camera.position,target).cross(camera.up).normalize();
     var up = camera.up.clone().normalize();
-    target.addScaledVector(right, -dx*0.012*sph.r*0.1);
-    target.addScaledVector(up, dy*0.012*sph.r*0.1);
+    var s = ortho ? frustum*0.0022 : sph.r*0.0012;
+    target.addScaledVector(right, -dx*s);
+    target.addScaledVector(up, dy*s);
   }
   place();
 });
 renderer.domElement.addEventListener('contextmenu',function(e){e.preventDefault();});
 renderer.domElement.addEventListener('wheel',function(e){
-  sph.r = Math.max(4, Math.min(40, sph.r * (1 + (e.deltaY>0?0.09:-0.09)))); place(); e.preventDefault();},
+  var f = 1 + (e.deltaY>0 ? 0.09 : -0.09);
+  if(ortho){ frustum = Math.max(1.6, Math.min(24, frustum*f)); sizeCameras(); }
+  else     { sph.r   = Math.max(4,   Math.min(40, sph.r*f)); }
+  place(); e.preventDefault();},
   {passive:false});
 place();
 
@@ -186,28 +225,33 @@ scene.add(atomGroup, bondGroup, voidGroup, trailGroup);
 var aGeo = new THREE.SphereGeometry(1, 18, 14);     // unit sphere, scaled per atom
 var trueScale = false;
 var atomMeshes = [];
+// In FCC with a = 2 the lattice atoms are the even-sum integer points.
+// Cell corners have all coordinates even; face centres have exactly two odd.
+// Colouring them differently makes the cube-plus-face-centres pattern legible.
+function isCorner(p){ return p[0]%2===0 && p[1]%2===0 && p[2]%2===0; }
 atoms.forEach(function(p){
   var m = new THREE.Mesh(aGeo, new THREE.MeshLambertMaterial(
-    {color:C.atom, transparent:true, opacity:0.30}));
+    {color: isCorner(p) ? C.corner : C.face, transparent:true, opacity:0.30}));
   m.position.set(p[0],p[1],p[2]);
-  m.scale.setScalar(atomR());
-  m.userData.p = p;
+  m.scale.setScalar(atomR() * (isCorner(p) ? 1.25 : 1.0));
+  m.userData.p = p; m.userData.corner = isCorner(p);
   atomGroup.add(m); atomMeshes.push(m);
 });
 function applyAtomScale(){
   var r = atomR();
-  atomMeshes.forEach(function(m){ m.scale.setScalar(r); });
+  atomMeshes.forEach(function(m){
+    m.scale.setScalar(r * (m.userData.corner && !trueScale ? 1.25 : 1.0)); });
   nodeMesh.scale.setScalar(nodeR());
 }
 // Atoms dim with distance from the defect, so the local structure stands out.
 function fadeAtoms(pos){
-  var near = trueScale ? 0.15 : 0.80, far = trueScale ? 0.03 : 0.13;
+  var near = trueScale ? 0.15 : 0.90, far = trueScale ? 0.04 : 0.34;
   atomMeshes.forEach(function(m){
     var p = m.userData.p;
     var d = Math.sqrt((p[0]-pos[0])*(p[0]-pos[0]) +
                       (p[1]-pos[1])*(p[1]-pos[1]) +
                       (p[2]-pos[2])*(p[2]-pos[2]));
-    var k = Math.max(0, Math.min(1, (2.9 - d)/2.2));
+    var k = Math.max(0, Math.min(1, (4.2 - d)/3.2));
     m.material.opacity = far + (near-far)*k*k;
   });
 }
@@ -222,7 +266,26 @@ for(var i=0;i<atoms.length;i++)for(var j=i+1;j<atoms.length;j++){
 var lg = new THREE.BufferGeometry();
 lg.setAttribute('position', new THREE.Float32BufferAttribute(lpts,3));
 bondGroup.add(new THREE.LineSegments(lg,
-  new THREE.LineBasicMaterial({color:0xdedede, transparent:true, opacity:0.30})));
+  new THREE.LineBasicMaterial({color:0xc9d2d8, transparent:true, opacity:0.42})));
+
+// conventional cubic cells of side a, drawn faintly so the FCC cell is visible
+var cellGroup = new THREE.Group(); scene.add(cellGroup);
+(function(){
+  // one conventional cell, [0,a]^3, fully populated by the atom set:
+  // 8 corners and 6 face centres, i.e. 4 atoms per cell.
+  var v=[];
+  for(var dx=0;dx<2;dx++) for(var dy=0;dy<2;dy++) for(var dz=0;dz<2;dz++)
+    v.push([dx*A, dy*A, dz*A]);
+  var seg=[];
+  for(var m=0;m<8;m++) for(var n=m+1;n<8;n++){
+    var man=Math.abs(v[m][0]-v[n][0])+Math.abs(v[m][1]-v[n][1])+Math.abs(v[m][2]-v[n][2]);
+    if(Math.abs(man-A)<1e-9) seg.push(v[m][0],v[m][1],v[m][2], v[n][0],v[n][1],v[n][2]);
+  }
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(seg,3));
+  cellGroup.add(new THREE.LineSegments(g,
+    new THREE.LineBasicMaterial({color:C.cell, transparent:true, opacity:0.85})));
+})();
 
 // ---------------------------------------------------------------- voids
 // Voids sit at half-odd-integer points. In units of a/4 the coordinates are
@@ -331,6 +394,97 @@ function drawTetEdges(bF,bT,t){
     if(inF[edgeKey(e)]) return;
     if(t>0)             drawEdge(e, C.eng, Math.min(1,t*1.6)*0.8, 0.55);
   });
+}
+
+// the cuboctahedral K = 12 shell of one atom: the FCC coordination signature
+var shellGroup = new THREE.Group(); scene.add(shellGroup); shellGroup.visible=false;
+(function(){
+  var c=[1,1,0], seg=[], pts=[];
+  atoms.forEach(function(p){
+    var dx=p[0]-c[0], dy=p[1]-c[1], dz=p[2]-c[2];
+    if(Math.abs(Math.sqrt(dx*dx+dy*dy+dz*dz)-Math.SQRT2)<1e-6) pts.push(p);
+  });
+  pts.forEach(function(p){ seg.push(c[0],c[1],c[2], p[0],p[1],p[2]); });
+  for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
+    var dx=pts[i][0]-pts[j][0], dy=pts[i][1]-pts[j][1], dz=pts[i][2]-pts[j][2];
+    if(Math.abs(Math.sqrt(dx*dx+dy*dy+dz*dz)-Math.SQRT2)<1e-6)
+      seg.push(pts[i][0],pts[i][1],pts[i][2], pts[j][0],pts[j][1],pts[j][2]);
+  }
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(seg,3));
+  shellGroup.add(new THREE.LineSegments(g,
+    new THREE.LineBasicMaterial({color:0x16a085, transparent:true, opacity:0.9})));
+  var hub=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),
+    new THREE.MeshLambertMaterial({color:0x16a085}));
+  hub.position.set(c[0],c[1],c[2]); hub.scale.setScalar(0.11); shellGroup.add(hub);
+})();
+
+// ------------------------------------------------------- escape channels
+// Paper Prop. 3: a defect leaving a void through a FACE would sit within
+// L/sqrt(3) of all three atoms of that face at once, which the metric wall of
+// Ref. [2] excludes. Crossing an EDGE involves only two atoms and is allowed.
+var chanGroup = new THREE.Group(); scene.add(chanGroup); chanGroup.visible = false;
+var WALL = (A/Math.SQRT2)/Math.sqrt(3);
+function clearChannels(){
+  while(chanGroup.children.length){
+    var c=chanGroup.children.pop();
+    if(c.geometry) c.geometry.dispose();
+    if(c.material) c.material.dispose();
+  }
+}
+function nWithinWall(p){
+  var n=0;
+  for(var i=0;i<atoms.length;i++){
+    var q=atoms[i];
+    var dx=q[0]-p[0], dy=q[1]-p[1], dz=q[2]-p[2];
+    if(Math.sqrt(dx*dx+dy*dy+dz*dz) <= WALL+1e-6) n++;
+  }
+  return n;
+}
+function buildChannels(c){
+  clearChannels();
+  var b = bounding(c);
+  // six edges: open channels
+  for(var i=0;i<b.length;i++) for(var j=i+1;j<b.length;j++){
+    var m=[(b[i][0]+b[j][0])/2,(b[i][1]+b[j][1])/2,(b[i][2]+b[j][2])/2];
+    var g=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,12),
+      new THREE.MeshLambertMaterial({color:C.open, transparent:true, opacity:0.95}));
+    g.position.set(m[0],m[1],m[2]); g.userData.n=nWithinWall(m); chanGroup.add(g);
+    var A_=new THREE.Vector3(b[i][0],b[i][1],b[i][2]),
+        B_=new THREE.Vector3(b[j][0],b[j][1],b[j][2]);
+    var cy=new THREE.Mesh(cylGeo, new THREE.MeshLambertMaterial(
+      {color:C.open, transparent:true, opacity:0.7}));
+    cy.position.copy(A_.clone().add(B_).multiplyScalar(0.5));
+    cy.scale.set(0.9, A_.distanceTo(B_), 0.9);
+    cy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),
+      B_.clone().sub(A_).normalize());
+    chanGroup.add(cy);
+  }
+  // four faces: closed channels
+  for(var i=0;i<b.length;i++) for(var j=i+1;j<b.length;j++) for(var k=j+1;k<b.length;k++){
+    var f=[b[i],b[j],b[k]];
+    var cen=[(f[0][0]+f[1][0]+f[2][0])/3,(f[0][1]+f[1][1]+f[2][1])/3,
+             (f[0][2]+f[1][2]+f[2][2])/3];
+    var pc=new THREE.Mesh(new THREE.SphereGeometry(0.115,16,12),
+      new THREE.MeshLambertMaterial({color:C.closed, transparent:true, opacity:0.95}));
+    pc.position.set(cen[0],cen[1],cen[2]); pc.userData.n=nWithinWall(cen);
+    chanGroup.add(pc);
+    var tri=new THREE.Mesh(
+      new THREE.BufferGeometry().setAttribute('position',
+        new THREE.Float32BufferAttribute(
+          [f[0][0],f[0][1],f[0][2], f[1][0],f[1][1],f[1][2], f[2][0],f[2][1],f[2][2]],3)),
+      new THREE.MeshLambertMaterial({color:C.closed, transparent:true, opacity:0.20,
+        side:THREE.DoubleSide}));
+    chanGroup.add(tri);
+  }
+  var open=0, closed=0;
+  chanGroup.children.forEach(function(m){
+    if(m.userData.n===undefined) return;
+    if(m.userData.n>=3) closed++; else open++;
+  });
+  document.getElementById('rNote').innerHTML =
+    "Green: "+open+" edge channels, 2 atoms within the wall, open.<br>"+
+    "Red: "+closed+" face channels, 3 atoms within the wall, closed.";
 }
 
 // ---------------------------------------------------------------- trail
@@ -452,7 +606,7 @@ function animate(){
       if(t>=1) updateReadout();
     }
   }
-  refreshDefect();
+  if(mode!==3) refreshDefect();
   fadeAtoms([defect.position.x, defect.position.y, defect.position.z]);
   renderer.render(scene,camera);
 }
@@ -462,7 +616,24 @@ animate();
 // ---------------------------------------------------------------- ui
 function setMode(m){
   mode = m;
-  ['m0','m1','m2'].forEach(function(id,i){
+  chanGroup.visible = (m===3);
+  defect.visible = (m!==3);
+  if(m===3){
+    playing=false; clearBonds(); resetMode();
+    buildChannels(start);
+    defect.position.set(start[0],start[1],start[2]);
+    document.getElementById('play').textContent='Play';
+    ['m0','m1','m2','m3'].forEach(function(id,i){
+      document.getElementById(id).className=(i===m)?'on':'';});
+    document.getElementById('rSig').innerHTML =
+      (voidClass(start)==='P' ? '&minus;1 (P)' : '+1 (N)');
+    document.getElementById('rPos').textContent = inUnits(start);
+    document.getElementById('rTick').textContent = '0';
+    document.getElementById('rStep').textContent = 'static';
+    document.getElementById('rIn').textContent = '\u2014';
+    return;
+  }
+  ['m0','m1','m2','m3'].forEach(function(id,i){
     document.getElementById(id).className = (i===m)?'on':'';
   });
   resetMode(); beginStep(); playing = true;
@@ -471,6 +642,7 @@ function setMode(m){
 document.getElementById('m0').onclick=function(){setMode(0);};
 document.getElementById('m1').onclick=function(){setMode(1);};
 document.getElementById('m2').onclick=function(){setMode(2);};
+document.getElementById('m3').onclick=function(){setMode(3);};
 document.getElementById('play').onclick=function(){
   if(mode===0 && !playing && tick>=N_HOPS_MODE0 && t>=1){
     resetMode(); beginStep(); playing=true;
@@ -479,6 +651,11 @@ document.getElementById('play').onclick=function(){
   this.textContent = playing ? 'Pause' : (mode===0 ? 'Replay' : 'Play');
 };
 document.getElementById('speed').oninput=function(){ speed = +this.value; };
+document.getElementById('persp').onchange=function(){
+  ortho = !this.checked; sizeCameras(); place();
+};
+document.getElementById('showCell').onchange=function(){ cellGroup.visible=this.checked; };
+document.getElementById('showShell').onchange=function(){ shellGroup.visible=this.checked; };
 document.getElementById('showLat').onchange=function(){ bondGroup.visible=this.checked; };
 document.getElementById('showVoid').onchange=function(){ voidGroup.visible=this.checked; };
 document.getElementById('showTrail').onchange=function(){ trailGroup.visible=this.checked; };
@@ -488,8 +665,9 @@ document.getElementById('trueScale').onchange=function(){
 };
 
 addEventListener('resize', function(){
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(VW(), VH());
+  sizeCameras();
+  place();
 });
 })();
 </script>
