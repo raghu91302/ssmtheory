@@ -331,3 +331,155 @@ print(
 )
 print("     therefore does not determine the SU(2) parent representation.")
 print("     Prop 5 selects; it does not determine spin.")
+
+
+print()
+print("=" * 68)
+print("10. WHY MIGRATION GOES BY EDGES (metric wall of Ref. [2])")
+print("=" * 68)
+# Ref [2] excludes a node lying within L/sqrt(3) of ALL THREE vertices of a
+# bounding triangle at once. The condition is three-body; two atoms do not
+# trigger it.
+Lnn = a / np.sqrt(2)
+mwall = Lnn / np.sqrt(3)
+print(f"  L = {Lnn:.4f}, metric wall L/sqrt(3) = {mwall:.4f}")
+
+ATOMS = [
+    np.array(p, dtype=float)
+    for p in product(range(-3, 6), repeat=3)
+    if sum(p) % 2 == 0
+]
+n_in = lambda p: sum(
+    1 for q in ATOMS if np.linalg.norm(p - q) <= mwall + 1e-9
+)
+Tc = np.array([0.5, 0.5, 0.5])
+rT_ = a * np.sqrt(3) / 4
+bTc = [q for q in ATOMS if abs(np.linalg.norm(q - Tc) - rT_) < 1e-6]
+print(f"  bounding atoms: {len(bTc)}  {ok(len(bTc)==4)}")
+print(f"  atoms within wall at centre: {n_in(Tc)}  {ok(n_in(Tc)==0)}")
+
+face_bad = all(
+    max(np.linalg.norm(sum(f) / 3 - q) for q in f) <= mwall + 1e-9
+    for f in combinations(bTc, 3)
+)
+print(f"  4 face centroids at the wall w.r.t. 3 atoms: {ok(face_bad)}")
+print("    -> face channels are over-constrained and excluded")
+
+edge_max = max(
+    n_in((np.array(e[0]) + np.array(e[1])) / 2) for e in combinations(bTc, 2)
+)
+print(f"  max atoms within the wall at an edge midpoint: {edge_max}"
+      f"  {ok(edge_max==2)}")
+print("    -> edge channels never reach three and are permitted")
+print(f"  4 faces closed, 6 edges open -> coordination 6"
+      f"  {ok(len(list(combinations(bTc,2)))==6)}")
+
+
+print()
+print("=" * 68)
+print("11. BARYON NUMBER vs CHARGE UNDER MIGRATION")
+print("=" * 68)
+# Ref [2]: the four bonds are one anchor plus three valence quarks; the charge
+# Q = -1 + W is carried by winding numbers on the three valence bonds.
+rT2 = a * np.sqrt(3) / 4
+bd = lambda c: {
+    tuple(np.round(q, 6))
+    for q in ATOMS
+    if abs(np.linalg.norm(q - np.array(c, float)) - rT2) < 1e-6
+}
+Tv = (0.5, 0.5, 0.5)
+steps = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
+tot = kept_anchor = 0
+vdist = {}
+for hstep in steps:
+    Tn = tuple(Tv[i] + hstep[i] * (a / 2) for i in range(3))
+    b1, b2 = bd(Tv), bd(Tn)
+    kept, gone = b1 & b2, b1 - b2
+    for anch in b1:
+        tot += 1
+        kept_anchor += anch in kept
+        nv = len((b1 - {anch}) & gone)
+        vdist[nv] = vdist.get(nv, 0) + 1
+print(f"  (anchor, hop) pairs: {tot}  {ok(tot==24)}")
+print(f"  anchor in kept edge: {kept_anchor}/{tot} {ok(kept_anchor==12)}")
+print(f"  valence bonds replaced per hop: {dict(sorted(vdist.items()))}")
+print(f"  never zero valence bonds replaced: {ok(0 not in vdist)}")
+print("  -> B rides the node and epsilon (invariant); Q rides the windings")
+print("     and is partly redrawn every hop: the two transport differently.")
+
+
+print()
+print("=" * 68)
+print("12. BARYON SPECIES UNDER MIGRATION")
+print("=" * 68)
+# Ref [2]: species is fixed by the anchor choice and by the winding numbers
+# w in {0,1} on the three valence bonds, with Q = -1 + sum(w).
+rT3 = a * np.sqrt(3) / 4
+ASET = {
+    tuple(p) for p in product(range(-4, 7), repeat=3) if sum(p) % 2 == 0
+}
+
+
+def bnd3(cc):
+    cc = np.array(cc, float)
+    return sorted(
+        p for p in ASET
+        if abs(np.linalg.norm(np.array(p, float) - cc) - rT3) < 1e-6
+    )
+HOPS = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
+
+# (a) an anchor-preserving rule would trap the defect in one octant
+Tsp = (0.5, 0.5, 0.5)
+bs = bnd3(Tsp)
+edge_of = {}
+for hh in HOPS:
+    T2 = tuple(Tsp[i] + hh[i] * (a / 2) for i in range(3))
+    edge_of[hh] = set(bs) & set(bnd3(T2))
+trapped = True
+for anc in bs:
+    allowed = [hh for hh in HOPS if anc in edge_of[hh]]
+    rev = any(tuple(-x for x in hh) in allowed for hh in allowed)
+    trapped &= (len(allowed) == 3 and not rev)
+print(f"  anchor rule: 3 of 6 hops, no reversal {ok(trapped)}")
+print("    -> that rule confines the defect to one octant; the anchor cannot")
+print("       be conserved, so a transport rule is needed instead.")
+
+# (b) released atoms map onto engaged atoms by the lattice translation 2*hop
+good = True
+for st in [(0.5, 0.5, 0.5), (1.5, 0.5, 0.5),
+           (0.5, 1.5, 0.5), (1.5, 1.5, 1.5)]:
+    for hh in HOPS:
+        T2 = tuple(st[i] + hh[i] * (a / 2) for i in range(3))
+        b1, b2 = set(bnd3(st)), set(bnd3(T2))
+        rel, eng = sorted(b1 - b2), sorted(b2 - b1)
+        sh = tuple(2 * x for x in hh)
+        img = sorted(tuple(p[i] + sh[i] for i in range(3)) for p in rel)
+        good &= img == eng
+        good &= sum(sh) % 2 == 0
+print(f"  released = engaged shifted by 2*hop {ok(good)}")
+print("    -> the shift has length a and even coordinate sum: a lattice")
+print("       translation, giving a canonical bijection on BOUNDING ATOMS.")
+print("       Note it is not an isometry on defect bonds: the centre moves")
+print("       by h and the atom by 2h, so d -> d + h. Species preservation")
+print("       therefore needs the winding labels to follow the bijection,")
+print("       which is an assumption, not a consequence (Prop. 8).")
+
+
+print()
+print("  bond vectors are NOT preserved by that map:")
+cv = np.array([0.5, 0.5, 0.5])
+hv = np.array([1.0, 0.0, 0.0])
+c2v = cv + hv
+b1v, b2v = set(bnd3(tuple(cv))), set(bnd3(tuple(c2v)))
+shift_ok = True
+for v in sorted(b1v - b2v):
+    dvec = np.array(v, float) - cv
+    vp = np.array(v, float) + 2 * hv
+    dp = vp - c2v
+    shift_ok &= np.allclose(dp - dvec, hv)
+for v in sorted(b1v & b2v):
+    dvec = np.array(v, float) - cv
+    dp = np.array(v, float) - c2v
+    shift_ok &= np.allclose(dp - dvec, -hv)
+print(f"    released bonds shift by +h, shared bonds by -h {ok(shift_ok)}")
+print("    -> no defect bond is carried to itself; the local frame rotates.")
