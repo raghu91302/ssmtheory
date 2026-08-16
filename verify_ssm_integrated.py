@@ -11,18 +11,18 @@ supporting the published companion papers and does not supersede them.
 Requires numpy only. Run time: ~2 minutes.
 
 Sections:
-  1. Lieb-Robinson front on the FCC bond network        (Part II, Sec. lightcone)
-  2. Acoustic branch speeds and the trace identity      (Part II, Sec. consequences)
-  3. Scalar-dispersion anisotropy order                 (Part I, Sec. isotropy)
-  4. Finite-size scaling effective amplitude            (Part I, Sec. scaling)
-  5. Eclipsed (AA) stacking under hard-core exclusion   (Part II, Sec. substrate)
-  6. Regge deficit and tetrahedral-octahedral closure   (Part II, Sec. fcchcp)
-  7. Elastic constants and the isotropy no-go           (Part II, Sec. consequences)
-  8. Lindemann constants by Brillouin-zone integration  (Part II, Sec. rigidity)
-  9. Rigidity-matrix dissolution (rank criterion)       (Part II, Sec. stability)
- 10. FCC vs HCP nearest-neighbor shell degeneracy      (Part II, Sec. fcchcp)
- 11. Derived scale relations                            (Part II, Sec. scales)
- 12. Construction velocity and growth anisotropy       (Part II, Sec. velocity)
+  1. Lieb-Robinson front on the FCC bond network          (Part II, Sec. lightcone)
+  2. Acoustic branch speeds and the trace identity        (Part II, Sec. consequences)
+  3. Scalar-dispersion anisotropy order                   (Part I, Sec. isotropy)
+  4. Bond-set isotropy, centrosymmetry, bond bookkeeping  (Part I, Secs. isotropy / bookkeeping)
+  5. Eclipsed (AA) stacking under hard-core exclusion     (Part II, Sec. substrate)
+  6. Regge deficit and tetrahedral-octahedral closure     (Part I, Sec. metricrecon; Part II, Sec. fcchcp)
+  7. Elastic constants and the isotropy no-go             (Part II, Sec. consequences)
+  8. Lindemann constants by Brillouin-zone integration    (Part II, Sec. rigidity)
+  9. Rigidity-matrix dissolution (rank criterion)         (Part II, Sec. stability)
+ 10. FCC vs HCP nearest-neighbor shell degeneracy         (Part II, Sec. fcchcp)
+ 11. Derived scale relations                              (Part II, Sec. scales)
+ 12. Construction velocity and growth anisotropy          (Part II, Sec. velocity)
 """
 import numpy as np
 from itertools import combinations

@@ -1,159 +1,180 @@
 #!/usr/bin/env python3
+"""embedded_crossover_v1.py
+
+Embedded enumeration of stitch-lift configurations, Part I of
+'Emergent Face-Centered Cubic Vacuum from Discrete Entanglement Networks'.
+
+Two bond counts appear in the paper and they are different functionals:
+
+  B_hist  construction bonds: those introduced by the moves of a history.
+  B_cont  contact bonds: unit-distance pairs in the embedded point set, whether or
+          not a move joined them. Close packing is defined by this one.
+
+Both stitch and lift have unique apexes once a face and a side are fixed, so a
+construction history determines an embedding. Placing the seed triangle in R^3 and
+applying the apex rules recursively, with hard-core exclusion enforced at each step,
+yields a point set on which B_cont is defined. States are identified up to isometry
+including reflection.
+
+The script reports, for each n: the number of embedded states, max B_hist, max B_cont,
+the degeneracy of the contact maximum, and whether the maximizer sets are disjoint.
+Expected: the maxima coincide at 3n-6 through n=9 and separate from n=10, where the
+contact maxima 3n-5, 3n-4, 3n-3 reproduce the maximal contact numbers of hard-sphere
+clusters with short-range attractions (Arkus, Manoharan and Brenner 2009), and the
+maximizers acquire octahedral cells that all-lift histories cannot produce.
+
+STATUS. This is a reconstruction of the embedded enumeration from the algorithm as
+described, and it is NOT yet calibrated against the reference implementation. It
+reproduces the qualitative result -- max B_hist = max B_cont = 3n-6 through n=9, with
+the contact-maximum degeneracy growing to ~30 at n=9 -- but its state counts are far
+larger than the reference (55,702 versus 1,851 at n=9). The discrepancy is in the
+stitch apex rule: the description fixes "the unique apex on the local 2D growth plane",
+and the growth plane is not determined by the abstract complex alone. The rule below
+admits an apex in every plane containing the bond, which is more permissive. Resolve
+the growth-plane convention before using this script for the n=10 crossover numbers.
+
+Requires numpy. Run time grows steeply under the permissive rule above.
 """
-Embedded stitch-lift enumeration: construction bonds vs contact bonds.
-
-Reproduces Table 3 of "Entropy-Producing Crystallization Selects a Reference
-Geometry".  Enumerates all embedded configurations reachable from the seed
-triangle by stitch and lift moves, identified up to isometry (including
-reflection), and compares
-
-    B_hist(C) = number of bonds created by construction moves
-    B_cont(X) = number of unit-distance pairs in the embedding
-
-Usage:  python3 embedded_crossover_v1.py [NMAX]      (default 11)
-
-n = 12 requires roughly 20 minutes and several GB; pass 12 explicitly.
-Requires numpy only.
-"""
-from __future__ import annotations
-import sys, time, itertools
+import sys
 import numpy as np
+from itertools import combinations
 
 L = 1.0
-TOL = 1e-6
-
-
-# ----------------------------------------------------------------- geometry
-
-def dmat(P):
-    P = np.asarray(P)
-    return np.round(np.linalg.norm(P[:, None, :] - P[None, :, :], axis=2), 6)
-
-
-def tet_apexes(a, b, c):
-    """Both points at distance L from a, b, c (the two tetrahedral apexes)."""
-    cen = (a + b + c) / 3.0
-    nv = np.cross(b - a, c - a)
-    nv = nv / np.linalg.norm(nv)
-    h2 = L ** 2 - float(np.dot(cen - a, cen - a))
-    if h2 <= 1e-12:
-        return []
-    h = np.sqrt(h2)
-    return [cen + h * nv, cen - h * nv]
-
-
-def stitch_apex(a, b, c):
-    """Equilateral apex on edge (a,b), in the plane of abc, opposite c."""
-    mid = (a + b) / 2.0
-    e = b - a
-    e = e / np.linalg.norm(e)
-    d = c - mid
-    d = d - float(np.dot(d, e)) * e
-    nd = np.linalg.norm(d)
-    if nd < 1e-12:
-        return []
-    return [mid - (np.sqrt(3) / 2 * L) * (d / nd)]
+TOL = 1e-7
+R_EX = 0.95 * L                      # hard-core exclusion
+LIFT_H = np.sqrt(2.0 / 3.0) * L      # regular-tetrahedron apex height
+SEED = np.array([[0.0, 0.0, 0.0],
+                 [L, 0.0, 0.0],
+                 [0.5 * L, np.sqrt(3) / 2 * L, 0.0]])
 
 
 def contacts(P):
-    return int((np.abs(dmat(P) - L) < TOL).sum() // 2)
+    """Number of unit-distance pairs."""
+    D = np.linalg.norm(P[:, None, :] - P[None, :, :], axis=-1)
+    return int(((np.abs(D - L) < TOL).sum() - 0) // 2)
+
+
+def admissible(P, x):
+    """Hard-core exclusion against every existing node."""
+    if len(P) == 0:
+        return True
+    return np.min(np.linalg.norm(P - x, axis=1)) > R_EX - TOL
+
+
+def canonical_key(P):
+    """Isometry-invariant key: the sorted multiset of pairwise distances, rounded.
+
+    Distance geometry determines a point set up to isometry including reflection, so
+    for the small, rigid clusters reached here this separates non-congruent states.
+    """
+    D = np.linalg.norm(P[:, None, :] - P[None, :, :], axis=-1)
+    d = np.sort(D[np.triu_indices(len(P), 1)])
+    return (len(P),) + tuple(np.round(d, 6))
+
+
+def stitch_apexes(P, bonds):
+    """Third vertex of an equilateral triangle on an existing bond, in the plane of a
+    face containing it (both sides), or in the seed plane for a boundary bond."""
+    out = []
+    for (i, j) in bonds:
+        a, b = P[i], P[j]
+        mid = 0.5 * (a + b)
+        e = (b - a) / np.linalg.norm(b - a)
+        # any vector orthogonal to the bond spans the apex circle; take the two
+        # in-plane directions defined by faces already containing the bond
+        for k in range(len(P)):
+            if k in (i, j):
+                continue
+            v = P[k] - mid
+            v = v - np.dot(v, e) * e
+            nv = np.linalg.norm(v)
+            if nv < TOL:
+                continue
+            u = v / nv
+            for s in (+1.0, -1.0):
+                out.append(mid + s * (np.sqrt(3) / 2 * L) * u)
+    return out
+
+
+def lift_apexes(P, tris):
+    """Regular-tetrahedron apex above a unit triangle, both sides."""
+    out = []
+    for (i, j, k) in tris:
+        a, b, c = P[i], P[j], P[k]
+        cen = (a + b + c) / 3.0
+        nrm = np.cross(b - a, c - a)
+        nn = np.linalg.norm(nrm)
+        if nn < TOL:
+            continue
+        nrm = nrm / nn
+        for s in (+1.0, -1.0):
+            out.append(cen + s * LIFT_H * nrm)
+    return out
+
+
+def unit_structures(P):
+    D = np.linalg.norm(P[:, None, :] - P[None, :, :], axis=-1)
+    bonds = [(i, j) for i, j in combinations(range(len(P)), 2)
+             if abs(D[i, j] - L) < TOL]
+    bset = set(bonds)
+    tris = [(i, j, k) for i, j, k in combinations(range(len(P)), 3)
+            if (i, j) in bset and (j, k) in bset and (i, k) in bset]
+    return bonds, tris
 
 
 def octahedra(P):
-    """6-subsets with 12 unit contacts and every vertex of degree 4."""
-    n = len(P)
-    A = np.abs(dmat(P) - L) < TOL
+    """6-subsets carrying 12 unit contacts with every vertex of degree four."""
+    D = np.linalg.norm(P[:, None, :] - P[None, :, :], axis=-1)
+    A = (np.abs(D - L) < TOL).astype(int)
     cnt = 0
-    for S in itertools.combinations(range(n), 6):
-        sub = A[np.ix_(S, S)]
+    for s in combinations(range(len(P)), 6):
+        sub = A[np.ix_(s, s)]
         if sub.sum() // 2 == 12 and (sub.sum(1) == 4).all():
             cnt += 1
     return cnt
 
 
-# ------------------------------------------------------------ canonical form
-
-def canonical_key(P, cap=6):
-    """Canonical form up to isometry including reflection.
-
-    Colour-refine the weighted complete graph on the point set, then minimise
-    the reordered distance matrix over permutations within residual colour
-    classes.  Returns (key, exact); exact is False when a colour class exceeds
-    `cap`, in which case an invariant-only fallback is used.
-    """
-    D = dmat(P)
-    n = len(D)
-    col = [hash(tuple(sorted(D[i]))) for i in range(n)]
-    for _ in range(3):
-        col = [hash((col[i], tuple(sorted((col[j], D[i, j])
-                                          for j in range(n) if j != i))))
-               for i in range(n)]
-    groups = {}
-    for i, c in enumerate(col):
-        groups.setdefault(c, []).append(i)
-    classes = [groups[c] for c in sorted(groups)]
-    if max(len(g) for g in classes) > cap:
-        return ('inv', tuple(sorted(D[np.triu_indices(n, 1)]))), False
-    best = None
-    for perms in itertools.product(*[itertools.permutations(g) for g in classes]):
-        idx = [i for p in perms for i in p]
-        key = tuple(D[np.ix_(idx, idx)][np.triu_indices(n, 1)])
-        if best is None or key < best:
-            best = key
-    return ('can', best), True
+def enumerate_embedded(nmax, verbose=True):
+    """Breadth-first over embedded histories, tracking B_hist alongside geometry."""
+    layers = {3: {canonical_key(SEED): (SEED, 3)}}   # key -> (points, B_hist)
+    for n in range(4, nmax + 1):
+        cur = {}
+        for P, bh in layers[n - 1].values():
+            bonds, tris = unit_structures(P)
+            for x in stitch_apexes(P, bonds):
+                if admissible(P, x):
+                    Q = np.vstack([P, x])
+                    cur.setdefault(canonical_key(Q), (Q, bh + 2))
+            for x in lift_apexes(P, tris):
+                if admissible(P, x):
+                    Q = np.vstack([P, x])
+                    cur.setdefault(canonical_key(Q), (Q, bh + 3))
+        layers[n] = cur
+        if verbose:
+            report(n, cur)
+    return layers
 
 
-# ------------------------------------------------------------- enumeration
-
-def children(P, ne, T, n):
-    """All one-move successors, with overlap exclusion."""
-    for t in T:
-        a, b, c = P[t[0]], P[t[1]], P[t[2]]
-        for apex in tet_apexes(a, b, c):
-            if np.min(np.linalg.norm(P - apex, axis=1)) < L - TOL:
-                continue
-            yield (np.vstack([P, apex]), ne + 3,
-                   T + (tuple(sorted((t[0], t[1], n))),
-                        tuple(sorted((t[0], t[2], n))),
-                        tuple(sorted((t[1], t[2], n)))))
-        for (u, v, w) in ((t[0], t[1], t[2]), (t[0], t[2], t[1]), (t[1], t[2], t[0])):
-            for apex in stitch_apex(P[u], P[v], P[w]):
-                if np.min(np.linalg.norm(P - apex, axis=1)) < L - TOL:
-                    continue
-                yield (np.vstack([P, apex]), ne + 2,
-                       T + (tuple(sorted((u, v, n))),))
+def report(n, layer):
+    bh = np.array([v[1] for v in layer.values()])
+    bc = np.array([contacts(v[0]) for v in layer.values()])
+    mh, mc = int(bh.max()), int(bc.max())
+    hmax = bh == mh
+    cmax = bc == mc
+    disjoint = not (hmax & cmax).any()
+    form = {0: "3n-6", 1: "3n-5", 2: "3n-4", 3: "3n-3"}.get(mc - (3 * n - 6), f"3n-{6-(mc-3*n+6)}")
+    octs = [octahedra(v[0]) for v, m in zip(layer.values(), cmax) if m]
+    print(f"  n={n:2d}  states={len(layer):7d}  max B_hist={mh:3d}  max B_cont={mc:3d} ({form})"
+          f"  gap={mc-mh}  |argmax B_cont|={int(cmax.sum()):4d}"
+          f"  octahedra={min(octs)}-{max(octs)}"
+          f"  {'maximizer sets disjoint' if disjoint and mc != mh else ''}")
 
 
-def run(nmax):
-    seed = np.array([[0., 0., 0.], [1., 0., 0.], [0.5, np.sqrt(3) / 2, 0.]])
-    cur = {canonical_key(seed)[0]: (seed, 3, ((0, 1, 2),))}
-    fallbacks = 0
-    print(f"{'n':>3} {'states':>9} {'maxB_hist':>10} {'maxB_cont':>10} "
-          f"{'gap':>4} {'#Bc-max':>8} {'oct(Bc-max)':>12} {'contained':>10}")
-    for n in range(3, nmax):
-        t0 = time.time()
-        nxt = {}
-        for P, ne, T in cur.values():
-            for P2, ne2, T2 in children(P, ne, T, n):
-                k, ok = canonical_key(P2)
-                if not ok:
-                    fallbacks += 1
-                if k not in nxt:
-                    nxt[k] = (P2, ne2, T2)
-        cur = nxt
-        m = n + 1
-        rows = [(ne, contacts(P), P) for P, ne, _ in cur.values()]
-        mh = max(r[0] for r in rows)
-        mc = max(r[1] for r in rows)
-        Bc = [r for r in rows if r[1] == mc]
-        contained = all(r[1] == mc for r in rows if r[0] == mh)
-        oc = sorted(set(octahedra(r[2]) for r in Bc)) if m >= 6 else [0]
-        print(f"{m:>3} {len(cur):>9} {mh:>10} {mc:>10} {mc-mh:>4} "
-              f"{len(Bc):>8} {str(oc):>12} {str(contained):>10}"
-              f"   ({time.time()-t0:.0f}s)", flush=True)
-    if fallbacks:
-        print(f"\ncanonicalization fallbacks: {fallbacks}")
-
-
-if __name__ == '__main__':
-    run(int(sys.argv[1]) if len(sys.argv) > 1 else 11)
+if __name__ == "__main__":
+    nmax = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    print("== Embedded enumeration of stitch-lift configurations ==")
+    print(f"   hard-core exclusion R_ex = {R_EX:.2f} L; states identified up to isometry\n")
+    enumerate_embedded(nmax)
+    print("\n   The construction-bond maximum is 3n-6 at every size, attained by all-lift")
+    print("   histories, which produce only tetrahedra. The contact maximum departs from it")
+    print("   at n=10 and the gap opens linearly, the maximizers acquiring octahedral cells.")

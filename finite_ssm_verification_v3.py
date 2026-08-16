@@ -1,196 +1,258 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-from dataclasses import dataclass
-from collections import defaultdict, deque
-from typing import FrozenSet, Tuple, List, Dict, Set
-import math
+"""finite_ssm_verification_v3.py
+
+Exact finite-state verification of the stitch-lift assembly, Part I of
+'Emergent Face-Centered Cubic Vacuum from Discrete Entanglement Networks'.
+
+Enumerates the reachable history-resolved simplicial complexes Omega_N(C0) from a
+triangular seed, deduplicates them up to isomorphism preserving the seed, builds the
+full Metropolis-Hastings transition matrix, and verifies:
+
+  * connectivity of the transition graph on Omega_N;
+  * the removable-exposed-node condition (every non-seed state has a reverse move);
+  * detailed balance and stationarity of pi_N ~ exp(beta eps B), entry by entry;
+  * the exact bond bookkeeping B = 3n - 6 - s and B_max(N) = 3N - 6;
+  * the deficit-sector counts |Omega_{N,m}| and the empirical entropy slope s_hat_N.
+
+Model. The seed is one oriented triangle. A stitch adds a vertex to an edge that
+carries fewer than two triangles, forming two bonds and one triangle. A lift adds a
+vertex to a triangle that carries fewer than two tetrahedra, forming three bonds,
+three triangles and one tetrahedron. Reverse moves delete an exposed non-seed vertex.
+
+Requires numpy only. Run time: about ten seconds through N=8.
+"""
 import numpy as np
-import networkx as nx
+from itertools import permutations, combinations
+from collections import Counter
 
-Face = FrozenSet[int]
-
-@dataclass(frozen=True)
-class ComplexState:
-    n: int
-    edges: FrozenSet[Face]
-    triangles: FrozenSet[Face]
-    tetrahedra: FrozenSet[Face]
-
-    @staticmethod
-    def seed() -> 'ComplexState':
-        tri = frozenset({0,1,2})
-        edges = frozenset({frozenset({0,1}), frozenset({1,2}), frozenset({0,2})})
-        return ComplexState(3, edges, frozenset({tri}), frozenset())
-
-    def bond_count(self) -> int:
-        return len(self.edges)
-
-    def incidence_graph(self) -> nx.Graph:
-        G = nx.Graph()
-        for v in range(self.n):
-            G.add_node(('v',v), kind='v', seed=(v<3))
-        for i,e in enumerate(sorted(self.edges, key=lambda x: tuple(sorted(x)))):
-            en=('e',i); G.add_node(en, kind='e', seed=False)
-            for v in e: G.add_edge(en, ('v',v))
-        for i,t in enumerate(sorted(self.triangles, key=lambda x: tuple(sorted(x)))):
-            tn=('t',i); G.add_node(tn, kind='t', seed=(t==frozenset({0,1,2})))
-            for v in t: G.add_edge(tn, ('v',v))
-        for i,q in enumerate(sorted(self.tetrahedra, key=lambda x: tuple(sorted(x)))):
-            qn=('q',i); G.add_node(qn, kind='q', seed=False)
-            for v in q: G.add_edge(qn, ('v',v))
-        return G
-
-    def hash(self) -> str:
-        return nx.weisfeiler_lehman_graph_hash(self.incidence_graph(), node_attr='kind') + f':{self.n}'
-
-    def isomorphic(self, other:'ComplexState') -> bool:
-        if self.n != other.n or len(self.edges)!=len(other.edges) or len(self.triangles)!=len(other.triangles) or len(self.tetrahedra)!=len(other.tetrahedra):
-            return False
-        nm = nx.algorithms.isomorphism.categorical_node_match(['kind','seed'], [None,False])
-        return nx.is_isomorphic(self.incidence_graph(), other.incidence_graph(), node_match=nm)
-
-    def boundary_edges(self) -> List[Face]:
-        counts=defaultdict(int)
-        for t in self.triangles:
-            vs=sorted(t)
-            for i in range(3):
-                counts[frozenset({vs[i],vs[(i+1)%3]})]+=1
-        return [e for e,c in counts.items() if c==1]
-
-    def boundary_triangles(self) -> List[Face]:
-        counts=defaultdict(int)
-        for q in self.tetrahedra:
-            for v in q:
-                counts[frozenset(set(q)-{v})]+=1
-        # seed and standalone stitch triangles have count 0 and are also liftable
-        return [t for t in self.triangles if counts[t] <= 1]
-
-    def stitch_moves(self, N:int) -> List['ComplexState']:
-        if self.n>=N: return []
-        out=[]; new=self.n
-        for e in self.boundary_edges():
-            a,b=sorted(e)
-            ne=set(self.edges); nt=set(self.triangles)
-            ne.add(frozenset({a,new})); ne.add(frozenset({b,new}))
-            nt.add(frozenset({a,b,new}))
-            out.append(ComplexState(self.n+1, frozenset(ne), frozenset(nt), self.tetrahedra))
-        return out
-
-    def lift_moves(self, N:int) -> List['ComplexState']:
-        if self.n>=N: return []
-        out=[]; new=self.n
-        for t in self.boundary_triangles():
-            a,b,c=sorted(t)
-            ne=set(self.edges); nt=set(self.triangles); nq=set(self.tetrahedra)
-            for v in (a,b,c): ne.add(frozenset({v,new}))
-            nt.update({frozenset({a,b,new}),frozenset({a,c,new}),frozenset({b,c,new})})
-            nq.add(frozenset({a,b,c,new}))
-            out.append(ComplexState(self.n+1, frozenset(ne), frozenset(nt), frozenset(nq)))
-        return out
-
-    def reverse_moves(self) -> List['ComplexState']:
-        out=[]
-        # only remove highest-labeled nonseed vertex; this is history-resolved and guarantees a seed path
-        if self.n<=3: return out
-        v=self.n-1
-        incident_edges=[e for e in self.edges if v in e]
-        incident_tri=[t for t in self.triangles if v in t]
-        incident_tet=[q for q in self.tetrahedra if v in q]
-        # stitch-like exposed vertex
-        if len(incident_edges)==2 and len(incident_tri)==1 and len(incident_tet)==0:
-            ne=frozenset(e for e in self.edges if v not in e)
-            nt=frozenset(t for t in self.triangles if v not in t)
-            out.append(ComplexState(self.n-1, ne, nt, self.tetrahedra))
-        # lift-like exposed vertex
-        if len(incident_edges)==3 and len(incident_tet)==1:
-            q=incident_tet[0]
-            if len(incident_tri)==3:
-                ne=frozenset(e for e in self.edges if v not in e)
-                nt=frozenset(t for t in self.triangles if v not in t)
-                nq=frozenset(q0 for q0 in self.tetrahedra if v not in q0)
-                out.append(ComplexState(self.n-1, ne, nt, nq))
-        return out
+SEED = (0, 1, 2)
+MAX_TRI_PER_EDGE = 2          # an edge closes once two triangles carry it
+MAX_TET_PER_TRI = 2           # a triangle closes once two tetrahedra carry it
 
 
-def dedup_add(state, buckets, states):
-    h=state.hash()
-    for idx in buckets[h]:
-        if state.isomorphic(states[idx]): return idx, False
-    idx=len(states); states.append(state); buckets[h].append(idx); return idx, True
+# ---------------------------------------------------------------- state handling
+_canon_cache = {}
 
 
-def enumerate_states(N:int):
-    states=[]; buckets=defaultdict(list); transitions=defaultdict(set)
-    seed=ComplexState.seed(); i,_=dedup_add(seed,buckets,states)
-    q=deque([i])
-    while q:
-        i=q.popleft(); s=states[i]
-        candidates=s.stitch_moves(N)+s.lift_moves(N)+s.reverse_moves()
-        for t in candidates:
-            j,new=dedup_add(t,buckets,states)
-            transitions[i].add(j)
-            transitions[j].add(i)
-            if new: q.append(j)
-    return states, transitions
+def _invariants(state, nv):
+    """Per-vertex signature preserved by any isomorphism: (edge, triangle, tet) degrees."""
+    E, T, Q = state
+    de = [0] * nv; dt = [0] * nv; dq = [0] * nv
+    for e in E:
+        for x in e: de[x] += 1
+    for t in T:
+        for x in t: dt[x] += 1
+    for q in Q:
+        for x in q: dq[x] += 1
+    return [(de[v], dt[v], dq[v]) for v in range(nv)]
 
 
-def transition_kind(a, b):
-    """Classify an adjacent directed transition."""
-    if b.n == a.n + 1:
-        return "lift" if len(b.tetrahedra) == len(a.tetrahedra) + 1 else "stitch"
-    if b.n == a.n - 1:
-        return "reverse_lift" if len(b.tetrahedra) + 1 == len(a.tetrahedra) else "reverse_stitch"
-    return "other"
+def canonical(state, nv):
+    """Canonical form under vertex permutations mapping the seed to itself.
 
-
-def build_mh(states, trans, beta=1.5, lift_weight=1.0):
-    """Build a Metropolis-Hastings kernel.
-
-    lift_weight changes only the proposal frequency of forward lift moves.
-    The MH correction preserves the same bond-weighted stationary measure.
+    Only permutations that preserve the vertex invariants can be isomorphisms, so we
+    permute within invariant classes rather than over all of S_3 x S_{nv-3}.
     """
-    if lift_weight <= 0:
-        raise ValueError("lift_weight must be positive")
-    n=len(states); P=np.zeros((n,n)); Q=np.zeros((n,n))
+    ck = (nv, state)
+    hit = _canon_cache.get(ck)
+    if hit is not None:
+        return hit
+    E, T, Q = state
+    inv = _invariants(state, nv)
+
+    def classes(verts):
+        buckets = {}
+        for v in verts:
+            buckets.setdefault(inv[v], []).append(v)
+        return [buckets[k] for k in sorted(buckets)]
+
+    def images(verts, start):
+        """Relabelings verts -> [start, start+len) that place invariant classes in
+        canonical order, permuting only within a class."""
+        cls = classes(verts)
+        slots, pos = [], start
+        for grp in cls:
+            slots.append(list(range(pos, pos + len(grp))))
+            pos += len(grp)
+        out = [{}]
+        for grp, sl in zip(cls, slots):
+            new = []
+            for base in out:
+                for p in permutations(sl):
+                    d = dict(base); d.update(dict(zip(grp, p)))
+                    new.append(d)
+            out = new
+        return out
+
+    best = None
+    for ms in images(list(SEED), 0):
+        for mr in images(list(range(3, nv)), 3):
+            m = dict(ms); m.update(mr)
+            key = (tuple(sorted(tuple(sorted(m[x] for x in e)) for e in E)),
+                   tuple(sorted(tuple(sorted(m[x] for x in t)) for t in T)),
+                   tuple(sorted(tuple(sorted(m[x] for x in q)) for q in Q)))
+            if best is None or key < best:
+                best = key
+    _canon_cache[ck] = (nv,) + best
+    return _canon_cache[ck]
+
+
+def incidences(state):
+    E, T, Q = state
+    tri = Counter()
+    for t in T:
+        for e in combinations(sorted(t), 2):
+            tri[e] += 1
+    tet = Counter()
+    for q in Q:
+        for t in combinations(sorted(q), 3):
+            tet[t] += 1
+    return tri, tet
+
+
+def forward_moves(state, nv):
+    """All admissible stitch and lift results, tagged by move type."""
+    E, T, Q = state
+    tri, tet = incidences(state)
+    v, out = nv, []
+    for e in E:
+        if tri[tuple(sorted(e))] < MAX_TRI_PER_EDGE:
+            a, b = e
+            out.append((("stitch"),
+                        (tuple(sorted(E + ((a, v), (b, v)))),
+                         tuple(sorted(T + (tuple(sorted((a, b, v))),))),
+                         Q), nv + 1))
+    for t in T:
+        if tet[tuple(sorted(t))] < MAX_TET_PER_TRI:
+            a, b, c = sorted(t)
+            out.append((("lift"),
+                        (tuple(sorted(E + ((a, v), (b, v), (c, v)))),
+                         tuple(sorted(T + (tuple(sorted((a, b, v))),
+                                           tuple(sorted((a, c, v))),
+                                           tuple(sorted((b, c, v)))))),
+                         tuple(sorted(Q + (tuple(sorted((a, b, c, v))),)))),
+                        nv + 1))
+    return out
+
+
+def enumerate_states(N):
+    """Breadth-first enumeration of Omega_N(C0), returning canonical -> (state, nv)."""
+    seed = (((0, 1), (0, 2), (1, 2)), ((0, 1, 2),), ())
+    states = {canonical(seed, 3): (seed, 3)}
+    frontier = [(seed, 3)]
+    while frontier:
+        nxt = []
+        for st, nv in frontier:
+            if nv >= N:
+                continue
+            for _, st2, nv2 in forward_moves(st, nv):
+                c = canonical(st2, nv2)
+                if c not in states:
+                    states[c] = (st2, nv2)
+                    nxt.append((st2, nv2))
+        frontier = nxt
+    return states
+
+
+# ------------------------------------------------------------- transition matrix
+def build_kernel(states, beta_eps, rho=1.0):
+    """Metropolis-Hastings kernel. rho weights forward lift proposals only.
+
+    Forward edges are computed once; reverse proposals are their transpose, which
+    avoids an O(|Omega|^2) search over candidate predecessors.
+    """
+    keys = sorted(states)
+    idx = {k: i for i, k in enumerate(keys)}
+    n = len(keys)
+
+    fwd = [[] for _ in range(n)]              # (successor, move kind)
+    rev = [[] for _ in range(n)]              # predecessors
+    for k in keys:
+        i = idx[k]
+        st, nv = states[k]
+        for kind, st2, nv2 in forward_moves(st, nv):
+            c = canonical(st2, nv2)
+            j = idx.get(c)
+            if j is not None:
+                fwd[i].append((j, kind))
+                rev[j].append(i)
+
+    Q = np.zeros((n, n))
     for i in range(n):
-        neigh=sorted(trans[i])
-        if neigh:
-            raw=[]
-            for j in neigh:
-                kind=transition_kind(states[i], states[j])
-                raw.append(lift_weight if kind == "lift" else 1.0)
-            z=sum(raw)
-            for j,w in zip(neigh,raw): Q[i,j]=w/z
+        props = [(j, rho if kind == "lift" else 1.0) for j, kind in fwd[i]]
+        props += [(j, 1.0) for j in rev[i]]
+        tot = sum(w for _, w in props)
+        if tot == 0:
+            continue
+        for j, w in props:
+            Q[i, j] += w / tot
+
+    B = np.array([len(states[k][0][0]) for k in keys], float)
+    logpi = beta_eps * B
+    P = np.zeros((n, n))
     for i in range(n):
-        for j in np.where(Q[i]>0)[0]:
-            ratio=math.exp(beta*(states[j].bond_count()-states[i].bond_count()))*Q[j,i]/Q[i,j]
-            P[i,j]=Q[i,j]*min(1.0,ratio)
-        P[i,i]=1-P[i].sum()
-    w=np.array([math.exp(beta*s.bond_count()) for s in states]); pi=w/w.sum()
-    db=np.max(np.abs(pi[:,None]*P - pi[None,:]*P.T))
-    stat=np.max(np.abs(pi@P-pi))
-    return P,pi,db,stat,float('nan')
+        for j in np.nonzero(Q[i])[0]:
+            if i == j or Q[j, i] == 0:
+                continue
+            ratio = np.exp(logpi[j] - logpi[i]) * (Q[j, i] / Q[i, j])
+            P[i, j] = Q[i, j] * min(1.0, ratio)
+        P[i, i] = 1.0 - P[i].sum()
+    pi = np.exp(logpi - logpi.max())
+    pi /= pi.sum()
+    return keys, P, pi, B
 
 
-def main():
-    rows=[]
-    for N in range(4,9):
-        states,trans=enumerate_states(N)
-        P,pi,db,stat,gap=build_mh(states,trans,beta=1.5,lift_weight=math.exp(-3))
-        bmax=max(s.bond_count() for s in states)
-        counts=defaultdict(int)
-        for s in states: counts[bmax-s.bond_count()]+=1
-        # empirical per-deficit entropy slope s_hat = max log(count_m/count_0)/m
-        c0=counts[0]
-        slopes=[math.log(counts[m]/c0)/m for m in counts if m>0 and counts[m]>0]
-        shat=max(slopes) if slopes else 0.0
-        pmax=sum(pi[i] for i,s in enumerate(states) if s.bond_count()==bmax)
-        removable=all((s.n==3 or len(s.reverse_moves())>0) for s in states)
-        connected=nx.is_connected(nx.Graph([(i,j) for i,js in trans.items() for j in js]))
-        rows.append((N,len(states),bmax,c0,shat,pmax,db,stat,gap,removable,connected,dict(sorted(counts.items()))))
-    for r in rows:
-        N,ns,bm,c0,sh,pm,db,st,gap,rem,conn,counts=r
-        print(f'N={N} states={ns} Bmax={bm} max_states={c0} shat={sh:.4f} pmax(beta=1.5)={pm:.4f} db={db:.2e} stat={st:.2e} gap={gap:.4f} removable={rem} connected={conn} counts={counts}')
+def check(N, beta_eps=1.5, rho=1.0, verbose=True):
+    states = enumerate_states(N)
+    keys, P, pi, B = build_kernel(states, beta_eps, rho)
+    n = len(keys)
 
-if __name__=='__main__':
-    main()
+    db = max(abs(pi[i] * P[i, j] - pi[j] * P[j, i])
+             for i in range(n) for j in range(n))
+    stat = np.abs(pi @ P - pi).max()
+
+    # connectivity of the undirected transition graph
+    adj = (P > 0) | (P > 0).T
+    seen, stack = {0}, [0]
+    while stack:
+        i = stack.pop()
+        for j in np.nonzero(adj[i])[0]:
+            if j not in seen:
+                seen.add(j); stack.append(int(j))
+    connected = len(seen) == n
+
+    # every non-seed state has at least one reverse move
+    removable = all((P[i][[j for j in range(n) if keys[j][0] == keys[i][0] - 1]] > 0).any()
+                    for i in range(n) if keys[i][0] > 3)
+
+    Bmax = int(B.max())
+    deficits = Counter(int(Bmax - b) for b in B)
+    s_hat = max((1.0 / m) * np.log(deficits[m] / deficits[0])
+                for m in deficits if m > 0) if len(deficits) > 1 else 0.0
+    pi0 = pi[B == Bmax].sum()
+
+    if verbose:
+        print(f"N={N}: |Omega_N|={n:4d}  B_max={Bmax:2d} (3N-6={3*N-6:2d})  "
+              f"|Omega_N,0|={deficits[0]:3d}  s_hat={s_hat:.3f}  pi(Omega_N,0)={pi0:.3f}")
+        print(f"      connected={connected}  removable-node={removable}  "
+              f"detailed balance={db:.1e}  stationarity={stat:.1e}")
+    return dict(n=n, Bmax=Bmax, deficits=deficits, s_hat=s_hat, pi0=pi0,
+                db=db, stat=stat, connected=connected, removable=removable, B=B)
+
+
+def partition_polynomial(deficits, Bmax):
+    return " + ".join(f"{deficits[m]}x^{Bmax-m}" for m in sorted(deficits))
+
+
+if __name__ == "__main__":
+    print("== Exact finite-state verification of the stitch-lift assembly ==")
+    print("   seed = one oriented triangle; states identified up to seed-preserving isomorphism\n")
+    for N in range(4, 9):
+        r = check(N)
+        print(f"      Z_{N}(x) = {partition_polynomial(r['deficits'], r['Bmax'])}\n")
+
+    print("== Exact bond bookkeeping: B = 3n - 6 - s ==")
+    bad = [(s, l) for s in range(12) for l in range(12)
+           if 3 + 2 * s + 3 * l != 3 * (3 + s + l) - 6 - s]
+    print(f"   identity holds for all (s,l) up to 11: {not bad}")
+    print("   => B_max(N) = 3N-6, attained by all-lift histories; deficit m = 3(N-n)+s")
