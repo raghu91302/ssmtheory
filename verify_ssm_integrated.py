@@ -79,11 +79,23 @@ for e in [0.2, 0.1, 0.05]:
           % (e, r, r / e ** 2, -1 / 72))
 
 
-print("== 4. Finite-size scaling effective amplitude ==")
-N = np.array([250, 500, 750, 1000])
-f = np.array([0.082, 0.159, 0.218, 0.254])
-print("  alpha_eff = (1-f) N^(1/3):", np.round((1 - f) * N ** (1 / 3.), 2),
-      "; one-term form gives f<0 below N =", round(6.8 ** 3))
+print("== 4. Part I: bond-set isotropy, centrosymmetry, and bond bookkeeping ==")
+# Rank-2 structure tensor of the 12 nearest-neighbour bond directions (Eq. Sexact)
+S = sum(np.outer(v, v) for v in n)
+print("  S_munu diagonal      =", np.round(np.diag(S), 12))
+print("  max |off-diagonal|   = %.2e" % np.abs(S - np.diag(np.diag(S))).max())
+print("  S_munu = 4 delta_munu:", np.allclose(S, 4 * np.eye(3), atol=1e-12))
+# Rank-3 tensor vanishes by inversion symmetry (Eq. Tzero)
+T = np.zeros((3, 3, 3))
+for v in n:
+    T += v[:, None, None] * v[None, :, None] * v[None, None, :]
+print("  max |T_munulambda|   = %.2e  -> centrosymmetric: %s"
+      % (np.abs(T).max(), np.abs(T).max() < 1e-12))
+# Exact bond bookkeeping B = 3n - 6 - s for a history of s stitches and l lifts
+bad = [(st, lf) for st in range(12) for lf in range(12)
+       if 3 + 2 * st + 3 * lf != 3 * (3 + st + lf) - 6 - st]
+print("  B = 3n-6-s holds for all (s,l) up to 11:", not bad)
+print("  => B_max(N) = 3N-6, attained by all-lift histories; deficit m = 3(N-n)+s")
 
 
 print("== 5. Eclipsed (AA) stacking at close-packed spacing ==")
