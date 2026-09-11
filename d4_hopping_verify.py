@@ -2,7 +2,7 @@ import numpy as np
 from itertools import product, combinations
 
 # D4 = { x in Z^4 : sum x_i even }.  x0 is the selected time axis.
-# The slice x0 = 0 is D3 (FCC), nearest-neighbour distance sqrt(2),
+# The slice x0 = 0 is D3 (FCC), nearest-neighbor distance sqrt(2),
 # conventional cubic cell side a = 2.
 a = 2.0
 inD4 = (
@@ -54,7 +54,7 @@ pmod = sorted({int(r.sum()) % 4 for r, t in zip(q, cls) if t == "P"})
 print(f"  P sum mod 4      : {pmod}")
 nmod = sorted({int(r.sum()) % 4 for r, t in zip(q, cls) if t == "N"})
 print(f"  N sum mod 4      : {nmod}")
-print("  -> simple cubic lattice, spacing a/2, two-coloured by sum mod 4")
+print("  -> simple cubic lattice, spacing a/2, two-colored by sum mod 4")
 
 print()
 print("=" * 68)
@@ -90,9 +90,9 @@ for i in range(8):
             opp &= t != cls[i]
             dst.add(round(float(np.linalg.norm(c - voids[i])) / a, 6))
     deg.append(n)
-print(f"  neighbours per void               : {deg}  {ok(set(deg)=={6})}")
+print(f"  neighbors per void               : {deg}  {ok(set(deg)=={6})}")
 print(f"  hop distance / a : {sorted(dst)} {ok(sorted(dst)==[0.5])}")
-print(f"  every neighbour of opposite class : {ok(opp)}")
+print(f"  every neighbor of opposite class : {ok(opp)}")
 print(f"  shared atoms/hop : {sorted(shr)} {ok(sorted(shr)==[2])}")
 print(f"  edges per conventional cell       : {8*6//2}")
 eg = lambda v: set(frozenset(p) for p in combinations(sorted(v), 2))
@@ -356,7 +356,7 @@ Tc = np.array([0.5, 0.5, 0.5])
 rT_ = a * np.sqrt(3) / 4
 bTc = [q for q in ATOMS if abs(np.linalg.norm(q - Tc) - rT_) < 1e-6]
 print(f"  bounding atoms: {len(bTc)}  {ok(len(bTc)==4)}")
-print(f"  atoms within wall at centre: {n_in(Tc)}  {ok(n_in(Tc)==0)}")
+print(f"  atoms within wall at center: {n_in(Tc)}  {ok(n_in(Tc)==0)}")
 
 face_bad = all(
     max(np.linalg.norm(sum(f) / 3 - q) for q in f) <= mwall + 1e-9
@@ -459,7 +459,7 @@ for st in [(0.5, 0.5, 0.5), (1.5, 0.5, 0.5),
 print(f"  released = engaged shifted by 2*hop {ok(good)}")
 print("    -> the shift has length a and even coordinate sum: a lattice")
 print("       translation, giving a canonical bijection on BOUNDING ATOMS.")
-print("       Note it is not an isometry on defect bonds: the centre moves")
+print("       Note it is not an isometry on defect bonds: the center moves")
 print("       by h and the atom by 2h, so d -> d + h. Species preservation")
 print("       therefore needs the winding labels to follow the bijection,")
 print("       which is an assumption, not a consequence (Prop. 8).")
@@ -483,3 +483,134 @@ for v in sorted(b1v & b2v):
     shift_ok &= np.allclose(dp - dvec, -hv)
 print(f"    released bonds shift by +h, shared bonds by -h {ok(shift_ok)}")
 print("    -> no defect bond is carried to itself; the local frame rotates.")
+
+
+print()
+print("=" * 68)
+print("13. QUANTUM-WALK DISPERSION ON THE VOID SUBLATTICE")
+print("=" * 68)
+# Sec. 4.3: a nearest-neighbor Hamiltonian on the bipartite void sublattice
+# is gapless, while a discrete-time walk carries a mass as a coin angle.
+s1 = np.array([[0, 1], [1, 0]], dtype=complex)
+s2 = np.array([[0, -1j], [1j, 0]])
+s3 = np.diag([1, -1]).astype(complex)
+I2c = np.eye(2, dtype=complex)
+al = [np.kron(s1, s) for s in (s1, s2, s3)]
+be = np.kron(s3, I2c)
+I4c = np.eye(4, dtype=complex)
+
+alg = all(
+    np.allclose(al[i] @ al[j] + al[j] @ al[i], 2 * (i == j) * I4c)
+    for i in range(3) for j in range(3)
+) and all(np.allclose(al[i] @ be + be @ al[i], 0) for i in range(3))
+print(f"  Dirac algebra {{a_i,a_j}}=2d_ij, {{a_i,b}}=0  {ok(alg)}")
+
+E = lambda t, M: np.cos(t) * I4c + 1j * np.sin(t) * M
+
+
+def walk(k, th):
+    Cm = np.cos(th / 2) * I4c - 1j * np.sin(th / 2) * be
+    M = E(k[0] / 2, al[0]) @ E(k[1] / 2, al[1]) @ E(k[2], al[2])
+    M = M @ E(k[1] / 2, al[1]) @ E(k[0] / 2, al[0])
+    return Cm @ M @ Cm
+
+
+def omg(k, th):
+    return np.sort(np.abs(np.angle(np.linalg.eigvals(walk(k, th)))))[-1]
+
+
+th = 0.05
+gap_ok = abs(omg(np.zeros(3), th) - th) < 1e-9
+print(f"  gap at k=0 equals the coin angle {ok(gap_ok)}")
+dirs = {"[100]": (1, 0, 0), "[110]": (1, 1, 0), "[111]": (1, 1, 1)}
+prev = None
+mono = True
+for km in (0.05, 0.02, 0.01, 0.005):
+    vals = []
+    for v in dirs.values():
+        u = np.array(v, float)
+        u /= np.linalg.norm(u)
+        vals.append(omg(km * u, th))
+    sp = (max(vals) - min(vals)) / np.mean(vals)
+    print(f"    |k|={km:6.4f}  anisotropy {sp:.2e}")
+    if prev is not None and sp > prev:
+        mono = False
+    prev = sp
+print(f"  anisotropy falls with |k| (isotropic limit)  {ok(mono)}")
+u = np.array([1.0, 0, 0])
+ks = np.array([0, 0.004, 0.008, 0.012, 0.016])
+w = np.array([omg(k * u, th) for k in ks])
+A2 = np.vstack([np.ones_like(ks), ks**2]).T
+co = np.linalg.lstsq(A2, w**2, rcond=None)[0]
+fit_ok = abs(np.sqrt(co[0]) - th) < 1e-6 and abs(np.sqrt(co[1]) - 1) < 1e-3
+print(f"  fit w^2 = m^2 + v^2 k^2:"
+      f" m={np.sqrt(co[0]):.6f}, v={np.sqrt(co[1]):.4f} {ok(fit_ok)}")
+
+print("\n  the two candidate internal spaces that do NOT carry the algebra:")
+Pl = [I2c, s1, s2, s3]
+B4 = [(np.kron(Pl[a], Pl[b]), a, b) for a in range(4) for b in range(4)][1:]
+acm = lambda A, B: np.allclose(A @ B + B @ A, 0)
+# (sigma, epsilon): shift flips sigma (a in 1,2), fixes epsilon (b in 0,3)
+adm = [M for M, a, b in B4 if a in (1, 2) and b in (0, 3)]
+best = 0
+for r in range(4, 0, -1):
+    for c in combinations(range(len(adm)), r):
+        if all(acm(adm[i], adm[j]) for i, j in combinations(c, 2)):
+            best = r
+            break
+    if best:
+        break
+print(f"    (sigma,epsilon): largest anticommuting set = {best},"
+      f" need 3 {ok(best==2)}")
+# four-bond space: hop axes act as the Klein four-group
+pm = {"x": (1, 0, 3, 2), "y": (2, 3, 0, 1), "z": (3, 2, 1, 0)}
+
+
+def PM(p):
+    M = np.zeros((4, 4), dtype=complex)
+    for i, j in enumerate(p):
+        M[j, i] = 1
+    return M
+
+
+Pp = {k: PM(v) for k, v in pm.items()}
+klein = all(
+    np.allclose(Pp[a] @ Pp[b], Pp[b] @ Pp[a]) for a in Pp for b in Pp
+) and all(np.allclose(Pp[a] @ Pp[a], np.eye(4)) for a in Pp)
+print(f"    hop axes generate the Klein four-group V4  {ok(klein)}")
+ph = [1, -1, 1j, -1j]
+found = []
+for dx in product(ph, repeat=4):
+    Xx = np.diag(dx) @ Pp["x"]
+    if not np.allclose(Xx @ Xx, np.eye(4)):
+        continue
+    for dy in product(ph, repeat=4):
+        Xy = np.diag(dy) @ Pp["y"]
+        if not np.allclose(Xy @ Xy, np.eye(4)) or not acm(Xx, Xy):
+            continue
+        for dz in product(ph, repeat=4):
+            Xz = np.diag(dz) @ Pp["z"]
+            if not np.allclose(Xz @ Xz, np.eye(4)):
+                continue
+            if acm(Xx, Xz) and acm(Xy, Xz):
+                found.append([Xx, Xy, Xz])
+print(f"    phase twists giving Cl(3) on the bond space: {len(found)}"
+      f"  {ok(len(found)>0)}")
+bas = []
+for i in range(4):
+    for j in range(4):
+        Em = np.zeros((4, 4), dtype=complex)
+        Em[i, j] = 1
+        bas.append(Em)
+nulls = set()
+for M3 in found:
+    A = np.array(
+        [np.concatenate([(X @ Bm + Bm @ X).flatten() for X in M3])
+         for Bm in bas]
+    ).T
+    sv = np.linalg.svd(A, compute_uv=False)
+    nulls.add(A.shape[1] - int((sv > 1e-9).sum()))
+print(f"    fourth anticommuting operator, over all twists: {nulls}"
+      f"  {ok(nulls=={0})}")
+print("  -> the lattice supplies the three spatial operators but no mass")
+print("     the coin must act on structure the hop does not touch.")
