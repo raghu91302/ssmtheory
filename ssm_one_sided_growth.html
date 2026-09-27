@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SSM: One-Sided Growth of an FCC Patch</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+#hd{padding:7px 14px;border-bottom:1px solid #ddd;transition:background 0.4s;}
+.pk6{background:#e6f5f5;}.pk4{background:#f3eeff;}.pk12{background:#e6f0ff;}
+#pb{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;display:inline-block;margin-right:8px;}
+#sl2{font-size:13px;font-weight:700;color:#222;}
+#vp{flex:1;position:relative;cursor:grab;}#vp:active{cursor:grabbing;}
+#lg{position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:7px;font-size:10.5px;color:#333;border:1px solid #ddd;line-height:1.7;pointer-events:none;max-width:280px;}
+.lt{font-weight:700;font-size:11px;margin-bottom:3px;}
+.mt{font-family:'Courier New',monospace;color:#0077BB;font-size:10px;}
+#dc{position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:7px;font-size:11.5px;color:#333;border:1px solid #ddd;max-width:400px;line-height:1.6;pointer-events:none;}
+#tl{position:absolute;bottom:8px;right:8px;background:rgba(255,255,255,0.96);padding:6px 10px;border-radius:7px;font-size:9.5px;color:#777;border:1px solid #ddd;pointer-events:none;line-height:1.6;}
+#ct{padding:7px 12px;background:#f8f8f8;border-top:1px solid #ddd;display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+.bn{padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;font-size:11px;font-family:inherit;}
+.bn.on{border:2px solid #0077BB;background:#e6f2ff;color:#005588;font-weight:600;}
+#sld{flex:1;margin:0 6px;}#sld input{width:100%;}
+#fc{font-size:10.5px;color:#888;min-width:48px;text-align:right;}
+</style>
+</head>
+<body>
+<div id="hd" class="pk6"><div style="display:flex;align-items:center;"><span id="pb" style="background:#EE7733;">GROWTH</span><span id="sl2">Loading...</span></div></div>
+<div id="vp"><div id="lg"></div><div id="dc"></div><div id="tl"></div></div>
+<div id="ct">
+<button class="bn" onclick="replay()">↺ Replay</button>
+<button class="bn on" id="bz" onclick="togZ()">⏸ Pause</button>
+<button class="bn on" id="br" onclick="togR()">Rot:ON</button>
+<div id="sld" style="display:none"><input type="range" min="0" max="0" value="0"></div>
+<span id="fc" style="display:none">1/1</span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){"use strict";
+var L=1.6,LH=Math.sqrt(3)/2*L,lH=Math.sqrt(2/3)*L,DI=Math.acos(1/3),DEF=2*Math.PI-5*DI,BR2=(L*1.05)*(L*1.05);
+var C={b:0x0077BB,cy:0x33BBEE,or:0xEE7733,rd:0xCC3311,tl:0x009988,wn:0xAA3377,gr:0x888888,lg:0xcccccc,yl:0xEECC00,gn:0x22AA44};
+var vp=document.getElementById("vp"),W=vp.clientWidth,H=vp.clientHeight;
+var sc=new THREE.Scene();sc.background=new THREE.Color(0xffffff);
+var cam=new THREE.PerspectiveCamera(42,W/H,0.1,300);cam.position.set(0,3,10);cam.lookAt(0,0.3,0);
+var ren=new THREE.WebGLRenderer({antialias:true});ren.setSize(W,H);ren.setPixelRatio(Math.min(window.devicePixelRatio,2));
+vp.insertBefore(ren.domElement,vp.firstChild);
+sc.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(5,10,6);sc.add(dl);
+sc.add(new THREE.DirectionalLight(0x8888cc,0.2)).position.set(-5,-3,-6);
+var G=new THREE.Group();sc.add(G);
+var rot={x:0.35,y:-0.3},md2=false,mx2=0,my2=0,ar2=true,cv2=ren.domElement;
+cv2.addEventListener("mousedown",function(e){md2=true;mx2=e.clientX;my2=e.clientY;});
+cv2.addEventListener("touchstart",function(e){md2=true;mx2=e.touches[0].clientX;my2=e.touches[0].clientY;},{passive:true});
+window.addEventListener("mouseup",function(){md2=false;});window.addEventListener("touchend",function(){md2=false;});
+window.addEventListener("mousemove",function(e){if(!md2)return;rot.y+=(e.clientX-mx2)*0.006;rot.x+=(e.clientY-my2)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx2=e.clientX;my2=e.clientY;});
+window.addEventListener("touchmove",function(e){if(!md2)return;var t=e.touches[0];rot.y+=(t.clientX-mx2)*0.006;rot.x+=(t.clientY-my2)*0.006;rot.x=Math.max(-1.5,Math.min(1.5,rot.x));mx2=t.clientX;my2=t.clientY;},{passive:true});
+cv2.addEventListener("wheel",function(e){cam.position.z=Math.max(3,Math.min(30,cam.position.z+e.deltaY*0.015));e.preventDefault();},{passive:false});
+window.addEventListener("resize",function(){var w=vp.clientWidth,h=vp.clientHeight;cam.aspect=w/h;cam.updateProjectionMatrix();ren.setSize(w,h);});
+var stepT0=performance.now(),paused=false,pausedT=0;
+function stepTime(){return paused?pausedT:(performance.now()-stepT0)/1000;}
+(function a(){requestAnimationFrame(a);if(ar2&&!md2)rot.y+=0.002;G.rotation.x=rot.x;G.rotation.y=rot.y;if(typeof si3==="number"&&steps[si3]&&steps[si3].anim)steps[si3].anim(G,stepTime());ren.render(sc,cam);})();
+function mS(p,r,c){var g=new THREE.SphereGeometry(r,10,10);var m=new THREE.MeshPhongMaterial({color:c});var s=new THREE.Mesh(g,m);s.position.copy(p);return s;}
+function mC(p1,p2,r,c,op){var d=new THREE.Vector3().subVectors(p2,p1);var l=d.length();if(l<0.001)return new THREE.Group();var mid=new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);var g=new THREE.CylinderGeometry(r,r,l,6);var m=new THREE.MeshPhongMaterial({color:c,transparent:op<1,opacity:op});var s=new THREE.Mesh(g,m);s.position.copy(mid);s.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return s;}
+function mT(v1,v2,v3,c,op){var g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(new Float32Array([v1.x,v1.y,v1.z,v2.x,v2.y,v2.z,v3.x,v3.y,v3.z]),3));g.computeVertexNormals();return new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:op,side:THREE.DoubleSide}));}
+function mL(t,p,c){var cv3=document.createElement("canvas");cv3.width=320;cv3.height=64;var ctx=cv3.getContext("2d");ctx.font="bold 26px -apple-system,sans-serif";ctx.fillStyle=c||"#333";ctx.textAlign="center";ctx.fillText(t,160,40);var tx=new THREE.CanvasTexture(cv3);var s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.position.copy(p);s.scale.set(1.5,0.3,1);return s;}
+function mA(cen,ax,sd,ang,r,c){var pts=[];var a2=ax.clone().normalize();for(var i=0;i<=40;i++){var a=(i/40)*ang;pts.push(sd.clone().applyAxisAngle(a2,a).multiplyScalar(r).add(cen));}return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:c}));}
+function hexN(rad){var ns=[];for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;ns.push([q*L+r*L/2,0,r*LH]);}return ns;}
+function hexB(ns){var bs=[];for(var i=0;i<ns.length;i++)for(var j=i+1;j<ns.length;j++){var dx=ns[i][0]-ns[j][0],dz=ns[i][2]-ns[j][2];if(dx*dx+dz*dz<BR2)bs.push([i,j]);}return bs;}
+function fccL(z,ty,rad){var off=[[0,0],[L/2,LH/3],[L,2*LH/3]];var o=off[ty%3];var ns=[];for(var q=-rad;q<=rad;q++)for(var r=-rad;r<=rad;r++){if(Math.abs(q+r)>rad)continue;ns.push([q*L+r*L/2+o[0],z,r*LH+o[1]]);}return ns;}
+var steps=[],ns3=hexN(3),bs3=hexB(ns3);
+// Find central triangle
+var triI=[],srt2=[];for(var i=0;i<ns3.length;i++)srt2.push(i);
+srt2.sort(function(a,b){return(ns3[a][0]*ns3[a][0]+ns3[a][2]*ns3[a][2])-(ns3[b][0]*ns3[b][0]+ns3[b][2]*ns3[b][2]);});
+for(var si2=0;si2<srt2.length&&triI.length<3;si2++){var ni2=srt2[si2];if(triI.length===0){triI.push(ni2);continue;}if(triI.length===1){var ddx=ns3[ni2][0]-ns3[triI[0]][0],ddz=ns3[ni2][2]-ns3[triI[0]][2];if(ddx*ddx+ddz*ddz<BR2){triI.push(ni2);continue;}}if(triI.length===2){var dd1=Math.sqrt(Math.pow(ns3[ni2][0]-ns3[triI[0]][0],2)+Math.pow(ns3[ni2][2]-ns3[triI[0]][2],2));var dd2=Math.sqrt(Math.pow(ns3[ni2][0]-ns3[triI[1]][0],2)+Math.pow(ns3[ni2][2]-ns3[triI[1]][2],2));if(dd1<L*1.05&&dd2<L*1.05){triI.push(ni2);break;}}}
+var tA=new THREE.Vector3(ns3[triI[0]][0],0,ns3[triI[0]][2]),tB=new THREE.Vector3(ns3[triI[1]][0],0,ns3[triI[1]][2]),tCV=new THREE.Vector3(ns3[triI[2]][0],0,ns3[triI[2]][2]);
+var cen2=new THREE.Vector3().addVectors(tA,tB).add(tCV).multiplyScalar(1/3);var apex2=new THREE.Vector3(cen2.x,lH,cen2.z);
+// ===== S5: One-sided growth of an FCC patch through the frozen K=4 foam (animated) =====
+(function(){
+var RAD=2,N0=3,NGROW=4,SETTLE=2.0,BUILD=2.8,HOLD=1.4,PER=6;
+var ATOM=[0xb4bcc7,0xc9ced6,0xdde1e6];
+function V(p){return new THREE.Vector3(p[0],p[1],p[2]);}
+function lat(a,b){return Math.hypot(a[0]-b[0],a[2]-b[2]);}
+function near3(site,list){var o=[];for(var i=0;i<list.length;i++)if(Math.abs(lat(site,list[i])-L/Math.sqrt(3))<0.03*L)o.push(list[i]);return o;}
+function sheet(k){return fccL(k*lH,k%3,RAD);}
+var st=null;
+function legendHTML(){
+  var c=st.c;
+  return '<div class="lt">One-sided growth</div>'+
+  '<span style="color:#AA3377">\u25CF</span> frozen K=4 foam: remnant nodes ahead of the front<br>'+
+  '<span style="color:#EE7733">\u25CF</span> settled in a hollow the next sheet covers: capped, apex along growth<br>'+
+  '<span style="color:#0077BB">\u25CF</span> settled in a hollow the sheet leaves open: octahedral void<br>'+
+  '<span style="color:#CC3311">\u25CF</span> settled on one atom: not held, pushed ahead<br><br>'+
+  '<b>Voids formed</b><br>along growth: '+c.vA+'\u00A0\u00A0 against growth: '+c.vB+'<br><br>'+
+  '<b>Remnants trapped</b><br>tetrahedral, along: <b style="color:#EE7733">'+c.tA+'</b><br>'+
+  'tetrahedral, against: <b style="color:#222">'+c.tB+'</b><br>'+
+  'octahedral: '+c.tO+'<br>pushed ahead of the front: '+c.push;
+}
+function placeNode(k,S,i,lower){
+  var p=S[i];st.stk.add(mS(V(p),0.08,ATOM[k%3]));
+  for(var j=0;j<i;j++){var q=S[j];if(Math.hypot(p[0]-q[0],p[2]-q[2])<L*1.05)st.stk.add(mC(V(p),V(q),0.018,C.gr,0.35));}
+  if(lower)for(var m=0;m<lower.length;m++){var q2=lower[m];if(Math.hypot(p[0]-q2[0],p[1]-q2[1],p[2]-q2[2])<L*1.05)st.stk.add(mC(V(p),V(q2),0.016,C.wn,0.4));}
+}
+function countVoids(lower,upper){
+  for(var i=0;i<upper.length;i++)if(near3(upper[i],lower).length===3)st.c.vA++;
+  for(var j=0;j<lower.length;j++)if(near3(lower[j],upper).length===3)st.c.vB++;
+}
+function setFront(){st.front.position.y=(st.sheets.length-1)*lH+0.02;}
+function startSettle(){
+  var k=st.sheets.length-1,ytop=k*lH,own=k%3,nxt=(k+1)%3,opn=3-own-nxt;
+  var top=st.sheets[k],up=sheet(k+1);
+  var fam={};fam[own]=fccL(ytop,own,RAD);
+  // a hollow can hold a node only if three atoms support it; an open hollow also needs its three atoms above
+  fam[nxt]=fccL(ytop,nxt,RAD).filter(function(q){return near3(q,top).length===3;});
+  fam[opn]=fccL(ytop,opn,RAD).filter(function(q){return near3(q,top).length===3&&near3(q,up).length===3;});
+  st.band=[];var taken={};
+  st.foam.forEach(function(r){
+    if(r.state!=="foam"||r.m.position.y>ytop+lH)return;
+    var p=[r.m.position.x,0,r.m.position.z],best=null,bd=1e9,bf=-1;
+    [own,nxt,opn].forEach(function(f){fam[f].forEach(function(q){var d=lat(p,q);if(d<bd){bd=d;best=q;bf=f;}});});
+    var key=bf+":"+best[0].toFixed(3)+":"+best[2].toFixed(3);
+    r.kind=bf===own||taken[key]?"atop":(bf===nxt?"covered":"open");r.site=best;taken[key]=true;
+    r.from=r.m.position.clone();
+    r.to=new THREE.Vector3(best[0],r.kind==="atop"?ytop+Math.sqrt(3/8)*L:ytop+lH/4,best[2]);
+    r.state="settling";r.m.material.opacity=1;st.band.push(r);
+  });
+  st.phase="settle";st.t0=st.t;
+}
+function startBuild(){
+  var k=st.sheets.length,S=sheet(k);
+  S=S.map(function(p){return{p:p,d:Math.hypot(p[0],p[2])+st.rng()*0.8};}).sort(function(a,b){return a.d-b.d;}).map(function(o){return o.p;});
+  st.build={k:k,S:S,placed:0};st.phase="build";st.t0=st.t;
+}
+function resolve(){
+  var k=st.build.k,lower=st.sheets[k-1],upper=st.build.S;
+  st.sheets[k]=upper;countVoids(lower,upper);
+  st.band.forEach(function(r){
+    if(r.kind==="covered"){
+      r.m.material.color.setHex(C.or);r.state="trapped";st.c.tA++;
+      var b=near3(r.site,lower),apx=null;
+      for(var i=0;i<upper.length;i++)if(lat(upper[i],r.site)<0.02*L)apx=upper[i];
+      if(b.length===3&&apx){var v0=V(b[0]),v1=V(b[1]),v2=V(b[2]),a=V(apx);
+        st.stk.add(mT(v0,v1,a,C.or,0.22));st.stk.add(mT(v1,v2,a,C.or,0.22));st.stk.add(mT(v2,v0,a,C.or,0.22));
+        [v0,v1,v2].forEach(function(v){st.stk.add(mC(v,a,0.02,C.or,0.9));});}
+    }else if(r.kind==="open"){
+      r.m.material.color.setHex(C.b);r.state="trapped";st.c.tO++;
+      var lo=near3(r.site,lower),hi=near3(r.site,upper);
+      if(lo.length===3&&hi.length===3)for(var i=0;i<3;i++)for(var j=0;j<3;j++){var d=Math.hypot(lo[i][0]-hi[j][0],lo[i][1]-hi[j][1],lo[i][2]-hi[j][2]);if(d<L*1.05)st.stk.add(mC(V(lo[i]),V(hi[j]),0.012,C.b,0.6));}
+    }
+  });
+  setFront();
+  document.getElementById("lg").innerHTML=legendHTML();
+  st.phase="hold";st.t0=st.t;
+}
+steps.push({dur:NGROW*(SETTLE+BUILD+HOLD)+4,
+b:function(g){
+  var s=42;
+  st={stk:new THREE.Group(),sheets:[],foam:[],band:[],c:{vA:0,vB:0,tA:0,tB:0,tO:0,push:0},t:0,t0:0,phase:"start",
+      rng:function(){s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;}};
+  g.add(st.stk);
+  // the existing FCC patch: three ABC sheets
+  for(var k=0;k<N0;k++){var S=sheet(k);for(var i=0;i<S.length;i++)placeNode(k,S,i,k>0?st.sheets[k-1]:null);st.sheets[k]=S;if(k>0)countVoids(st.sheets[k-1],S);}
+  // the frozen K=4 foam ahead of the front: sparse remnant nodes, fixed in place
+  var y0=(N0-1)*lH;
+  for(var b=0;b<NGROW;b++)for(var n=0;n<PER;n++){
+    var p;do{p=[(st.rng()*2-1)*RAD*L*0.62,(st.rng()*2-1)*RAD*L*0.62];}while(Math.hypot(p[0],p[1])>RAD*L*0.62);
+    var y=y0+(b+0.15+0.8*st.rng())*lH;
+    var m=mS(new THREE.Vector3(p[0],y,p[1]),0.07,C.wn);m.material.transparent=true;m.material.opacity=0.55;
+    st.stk.add(m);st.foam.push({m:m,state:"foam"});
+  }
+  // the growth front: a faint plane at the top sheet
+  st.front=new THREE.Mesh(new THREE.CircleGeometry(RAD*L*1.15,48),new THREE.MeshBasicMaterial({color:C.tl,transparent:true,opacity:0.1,side:THREE.DoubleSide,depthWrite:false}));
+  st.front.rotation.x=-Math.PI/2;st.stk.add(st.front);setFront();
+  st.stk.position.y=-(N0-1)*lH/2-0.8;
+  g.add(mL("growth direction \u2191",new THREE.Vector3(RAD*L+1.4,1.6,0),"#333"));
+},
+anim:function(g,t){
+  if(!st)return;st.t=t;var lt=t-st.t0;
+  if(st.phase==="start"){if(t>1.0){document.getElementById("lg").innerHTML=legendHTML();startSettle();}}
+  else if(st.phase==="settle"){
+    st.band.forEach(function(r){
+      if(r.state==="settling"){
+        var u=Math.min(1,lt/1.1),e=u*u*(3-2*u);r.m.position.lerpVectors(r.from,r.to,e);
+        if(u>=1&&r.kind==="atop"){r.state="pushed";r.m.material.color.setHex(C.rd);r.from=r.m.position.clone();r.to=r.m.position.clone().add(new THREE.Vector3(0,lH*0.9,0));st.c.push++;}
+      }else if(r.state==="pushed"){
+        var w=Math.min(1,(lt-1.1)/0.8),e2=w*w*(3-2*w);r.m.position.lerpVectors(r.from,r.to,e2);
+        if(w>=1){r.state="foam";r.m.material.color.setHex(C.wn);r.m.material.opacity=0.55;}
+      }
+    });
+    if(lt>=SETTLE){document.getElementById("lg").innerHTML=legendHTML();st.band=st.band.filter(function(r){return r.state==="settling";});startBuild();}
+  }else if(st.phase==="build"){
+    var B=st.build,want=Math.min(B.S.length,Math.floor(lt/BUILD*B.S.length)+1);
+    while(B.placed<want){placeNode(B.k,B.S,B.placed,st.sheets[B.k-1]);B.placed++;}
+    if(B.placed>=B.S.length)resolve();
+  }else if(st.phase==="hold"){
+    if(lt>=HOLD){if(st.sheets.length>=N0+NGROW)st.phase="done";else startSettle();}
+  }
+  var target=-(st.sheets.length-1)*lH/2-0.8;st.stk.position.y+=(target-st.stk.position.y)*0.04;
+},
+ph:"k12",badge:"ONE-SIDED GROWTH",bc:"#EE7733",
+label:"A Patch Grows in One Direction: Sheets Advance Through the Frozen Foam",
+desc:"A patch of the K=12 crystal, far from where growth began, grows upward only. Ahead of the front lies the frozen K=4 foam, with scattered remnant nodes. As the front reaches them, each remnant settles into the nearest surface site. In a hollow, three atoms hold it. On a single atom nothing holds it, and the front pushes it ahead. The next sheet then covers one kind of hollow and leaves the other open. A remnant in a covered hollow is capped into a tetrahedron whose apex points along the growth. Voids of both classes form in equal numbers, but no remnant is ever trapped in the class that points against the growth.",
+legend:'<div class="lt">One-sided growth</div>Starting\u2026',
+tl:'Drag to rotate, scroll to zoom.<br>Space: pause or resume. R: replay.'});
+})();
+
+// RENDER
+var si3=0,pl2=false,pt2=null;var sli2=document.querySelector("#sld input");sli2.max=steps.length-1;
+function rn2(idx){si3=Math.max(0,Math.min(idx,steps.length-1));sli2.value=si3;while(G.children.length){var c=G.children[0];c.traverse(function(o){if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(function(m){m.dispose();});else o.material.dispose();}});G.remove(c);}var s=steps[si3];s.b(G);stepT0=performance.now();document.getElementById("hd").className=s.ph==="k6"?"pk6":s.ph==="k4"?"pk4":"pk12";document.getElementById("pb").textContent=s.badge;document.getElementById("pb").style.background=s.bc;document.getElementById("sl2").textContent=s.label;document.getElementById("lg").innerHTML=s.legend;document.getElementById("dc").textContent=s.desc;document.getElementById("tl").innerHTML=s.tl;document.getElementById("fc").textContent=(si3+1)+"/"+steps.length;sli2.style.accentColor=s.bc;}
+function stp2(){pl2=false;if(pt2)clearTimeout(pt2);pt2=null;document.getElementById("bp").textContent="\u25B6 Play";document.getElementById("bp").classList.remove("on");}
+window.togP=function(){if(pl2){stp2();return;}pl2=true;document.getElementById("bp").textContent="\u23F8 Pause";document.getElementById("bp").classList.add("on");function nxt(){if(si3>=steps.length-1){stp2();return;}rn2(si3+1);var s=steps[si3];var delay=s.dur?s.dur*1000:(s.ph==="k6"?2500:4500);pt2=setTimeout(nxt,delay);}var s0=steps[si3];pt2=setTimeout(nxt,s0.dur?s0.dur*1000:(s0.ph==="k6"?2500:4500));};
+window.goS=function(){stp2();rn2(0);};window.goP=function(){stp2();rn2(si3-1);};window.goN=function(){stp2();rn2(si3+1);};window.goE=function(){stp2();rn2(steps.length-1);};window.goTo=function(v){stp2();rn2(v);};
+window.replay=function(){paused=false;var b=document.getElementById("bz");b.textContent="\u23F8 Pause";b.classList.add("on");rn2(0);};
+window.togZ=function(){var b=document.getElementById("bz");if(paused){stepT0=performance.now()-pausedT*1000;paused=false;b.textContent="\u23F8 Pause";b.classList.add("on");}else{pausedT=stepTime();paused=true;b.textContent="\u25B6 Resume";b.classList.remove("on");}};
+window.togR=function(){ar2=!ar2;var b=document.getElementById("br");b.textContent="Rot:"+(ar2?"ON":"OFF");b.classList.toggle("on",ar2);};
+window.addEventListener("keydown",function(e){if(e.key===" "){e.preventDefault();togZ();}else if(e.key==="r"||e.key==="R")replay();});
+rn2(0);
+})();
+</script>
+</body>
+</html>
