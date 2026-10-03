@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How a new sheet starts at a step edge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{ --bg:#eef2f5; --panel:#ffffff; --ink:#1f2a36; --muted:#5b6876; --rule:#d3dbe1; --focus:#1f6fb2;
+  --lower:#888780; --upper:#378ADD; --tri:#EF9F27; --new:#D85A30;
+  --serif:"Source Serif 4", Georgia, "Times New Roman", serif; --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#1b232b; --panel:#222c35; --ink:#e4e9ee; --muted:#9aa7b4; --rule:#34414d; --focus:#7db7ea; } }
+:root[data-theme="dark"]{ --bg:#1b232b; --panel:#222c35; --ink:#e4e9ee; --muted:#9aa7b4; --rule:#34414d; --focus:#7db7ea; }
+:root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.5; }
+main{ max-width:920px; margin:0 auto; padding:32px 20px 40px; }
+h1{ font-family:var(--serif); font-weight:600; font-size:28px; line-height:1.2; margin:0 0 8px; text-align:center; }
+.lede{ font-family:var(--serif); color:var(--muted); font-size:17px; max-width:640px; margin:0 auto 22px; text-align:center; }
+.steps{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:14px; }
+.steps button{ font:500 14px var(--sans); padding:8px 14px; border-radius:999px; border:1px solid var(--rule); background:var(--panel); color:var(--ink); cursor:pointer; }
+.steps button[aria-pressed="true"]{ background:var(--ink); color:var(--panel); border-color:var(--ink); }
+.steps button:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+#v{ width:100%; height:min(62vh,560px); min-height:340px; border-radius:14px; background:var(--panel); border:1px solid var(--rule); overflow:hidden; }
+#v canvas{ display:block; width:100%; height:100%; }
+.caption{ font-family:var(--serif); font-size:17px; line-height:1.6; max-width:680px; margin:16px auto 10px; min-height:4.8em; text-align:center; }
+.legend{ display:flex; flex-wrap:wrap; gap:8px 18px; justify-content:center; font-size:14px; color:var(--muted); }
+.legend span::before{ content:""; display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:var(--c); }
+.legend .sq::before{ border-radius:2px; }
+.hint{ text-align:center; font-size:13px; color:var(--muted); margin-top:14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>How a new sheet starts at a step edge</h1>
+  <p class="lede">Every sheet stays flat. A new sheet begins where an island of the top sheet ends, by stitching on the triangles that join two neighbouring sheets.</p>
+  <div class="steps" role="group" aria-label="Steps">
+    <button data-k="1">1. Two flat sheets</button>
+    <button data-k="2">2. Triangle between sheets</button>
+    <button data-k="3">3. First node above</button>
+    <button data-k="4">4. A row along the step</button>
+    <button data-k="5">5. Rows join into a sheet</button>
+  </div>
+  <div id="v" aria-label="3D view. Drag to rotate, scroll or pinch to zoom."></div>
+  <p class="caption" id="cap" aria-live="polite"></p>
+  <div class="legend">
+    <span style="--c:var(--lower)">Lower sheet</span>
+    <span style="--c:var(--upper)">Upper sheet (island)</span>
+    <span class="sq" style="--c:var(--tri)">Triangle being stitched</span>
+    <span style="--c:var(--new)">New sheet</span>
+  </div>
+  <p class="hint">Drag to rotate · scroll or pinch to zoom · use the arrow keys to change step</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+const host=document.getElementById('v');
+const R=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});R.setPixelRatio(Math.min(devicePixelRatio||1,2));host.appendChild(R.domElement);
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(38,1,0.1,100);C.position.set(3.0,-7.8,6.0);C.up.set(0,0,1);
+const O=new THREE.OrbitControls(C,R.domElement);O.target.set(1.1,0.4,0.7);O.enableDamping=true;
+S.add(new THREE.HemisphereLight(0xffffff,0x888888,1));
+const h=Math.sqrt(2/3),s3=Math.sqrt(3)/2;
+const P=(i,j,k)=>{const o=[[0,0],[0.5,s3/3],[1,2*s3/3]][k];return new THREE.Vector3(i+0.5*j+o[0],j*s3+o[1],k*h)};
+const A=[],B=[];
+for(let j=-3;j<=3;j++)for(let i=-4;i<=5;i++){const p=P(i,j,0);if(Math.abs(p.x-1.2)<3.6&&Math.abs(p.y-0.2)<2.8)A.push(p)}
+for(let j=0;j<=2;j++)for(let i=-3;i<=4;i++){const p=P(i,j,1);if(Math.abs(p.x-1.2)<3.1)B.push(p)}
+const dot=(p,c,r)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r||0.06,14,10),new THREE.MeshLambertMaterial({color:c}));m.position.copy(p);S.add(m);return m};
+const segs=(pts,col,op)=>{const g=new THREE.BufferGeometry().setFromPoints(pts);const l=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op}));S.add(l);return l};
+const pairs=(X,Y,same)=>{const o=[];X.forEach((a,ia)=>Y.forEach((b,ib)=>{if(same&&ib<=ia)return;const d=a.distanceTo(b);if(d>0.01&&d<1.02)o.push(a,b)}));return o};
+const tri=(a,b,c,col,op)=>{const g=new THREE.BufferGeometry().setFromPoints([a,b,c]);const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,side:THREE.DoubleSide,depthWrite:false}));S.add(m);return m};
+A.forEach(p=>dot(p,0x888780));B.forEach(p=>dot(p,0x378ADD));
+segs(pairs(A,A,true),0x888780,0.55);segs(pairs(B,B,true),0x378ADD,0.7);segs(pairs(B,A),0x9a9a9a,0.3);
+const b1=P(0,0,1),b2=P(1,0,1),a0=P(1,0,0),c0=P(0,0,2);
+const step2=[tri(b1,b2,a0,0xEF9F27,0.55),segs([b1,b2,b2,a0,a0,b1],0xBA7517,1)];
+const step3=[tri(b1,b2,c0,0xD85A30,0.25),segs([b1,c0,b2,c0],0xD85A30,1),dot(c0,0xD85A30,0.09)];
+const row1=[P(1,0,2),P(2,0,2),P(3,0,2)], Crow=[c0,...row1];
+const step4tri=tri(b2,c0,row1[0],0xEF9F27,0.45), step4=[];
+row1.forEach(p=>step4.push(dot(p,0xD85A30,0.09)));
+step4.push(segs(pairs(Crow,Crow,true),0xD85A30,1));step4.push(segs(pairs(Crow,B),0xD85A30,0.35));
+const row2=[P(-1,1,2),P(0,1,2),P(1,1,2),P(2,1,2)], Call=[...Crow,...row2];
+const step5tri=tri(c0,P(0,1,1),P(-1,1,2),0xEF9F27,0.45), step5=[];
+row2.forEach(p=>step5.push(dot(p,0xD85A30,0.09)));
+step5.push(segs(pairs(Call,Call,true).slice(pairs(Crow,Crow,true).length),0xD85A30,1));
+step5.push(segs(pairs(row2,B),0xD85A30,0.35));
+for(let i=0;i<3;i++) step5.push(tri(Crow[i],Crow[i+1],row2[i+1],0xD85A30,0.18));
+const caps=["Two flat sheets: a complete lower sheet and an island of the upper sheet sitting in its hollows.",
+"At the island's edge, this triangle has two corners in the upper sheet and one in the lower sheet. It is a face of the tetrahedron between the two flat sheets, not a tilted sheet.",
+"Stitching across the triangle's top edge places one node a layer higher, on top of the island. On its own it is just a node, not yet a sheet.",
+"The new node's own triangle is stitched across its slanted edge (amber), placing the next node one bond along, in the same new layer. Repeating this lays a bonded row along the step.",
+"Stitching triangles that bridge the row and the island (amber) adds a second row. Nodes in the two rows are one bond apart, so they bond into flat triangles, and the sheet spreads by ordinary in-plane stitching."];
+let cur=1;
+function show(k){cur=k;
+  step2.forEach(o=>o.visible=k===2); step3.forEach(o=>o.visible=k>=3);
+  step4.forEach(o=>o.visible=k>=4); step4tri.visible=k===4;
+  step5.forEach(o=>o.visible=k>=5); step5tri.visible=k===5;
+  document.getElementById('cap').textContent=caps[k-1];
+  document.querySelectorAll('.steps button').forEach(b=>b.setAttribute('aria-pressed', +b.dataset.k===k));}
+document.querySelectorAll('.steps button').forEach(b=>b.addEventListener('click',()=>show(+b.dataset.k)));
+addEventListener('keydown',e=>{ if(e.key==='ArrowRight') show(Math.min(5,cur+1)); if(e.key==='ArrowLeft') show(Math.max(1,cur-1)); });
+const q=new URLSearchParams(location.search); show(Math.min(5,Math.max(1,+(q.get('step')||1))));
+window.showStep=show;
+function rs(){const w=host.clientWidth,hh=host.clientHeight;R.setSize(w,hh,false);C.aspect=w/hh;C.updateProjectionMatrix()}
+addEventListener('resize',rs);rs();(function L(){O.update();R.render(S,C);requestAnimationFrame(L)})();
+})();
+</script>
+</body>
+</html>
