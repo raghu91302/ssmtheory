@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leptons on the FCC Lattice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+/* Layout: a large orbitable 3D stage on the left, a narrow instrument panel on the right; stacks on phones. */
+:root {
+  --bg: #f3f4f6;
+  --panel: #ffffff;
+  --fg: #1b1f27;
+  --muted: #5b6372;
+  --line: #d7dbe2;
+  --stage: #eef0f3;
+  --sheetA: #1f4e79;
+  --sheetB: #b0522a;
+  --sheetC: #3a7d44;
+  --ph0: #d99512;
+  --ph120: #7b3fa0;
+  --ph240: #128f8f;
+  --bond: #9aa1ad;
+  --edge: #4a5160;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --panel: #1a1e26; --fg: #e6e8ec; --muted: #9aa2b0; --line: #2c323d; --stage: #0e1116;
+    --sheetA: #5b9bd5; --sheetB: #e08a5c; --sheetC: #6dbb78;
+    --ph0: #f0b43a; --ph120: #b583e0; --ph240: #3cc6c6; --bond: #6b7383; --edge: #aab2c0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --panel: #1a1e26; --fg: #e6e8ec; --muted: #9aa2b0; --line: #2c323d; --stage: #0e1116;
+  --sheetA: #5b9bd5; --sheetB: #e08a5c; --sheetC: #6dbb78;
+  --ph0: #f0b43a; --ph120: #b583e0; --ph240: #3cc6c6; --bond: #6b7383; --edge: #aab2c0;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { padding-inline: 16px; padding-block: 16px 24px; max-width: 1280px; margin: 0 auto; display: grid; gap: 14px; }
+header h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.7rem; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.stage { position: relative; background: var(--stage); border: 1px solid var(--line); border-radius: 6px; aspect-ratio: 4 / 3; max-width: 100%; overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hint { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: var(--muted); pointer-events: none; }
+.legend { position: absolute; right: 10px; top: 8px; display: grid; gap: 2px; font-size: 12px; font-family: var(--font-mono); }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 16px; min-width: 0; }
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg button { font: inherit; padding: 8px 4px; border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 4px; cursor: pointer; display: grid; gap: 0; }
+.seg button small { font-family: var(--font-mono); color: var(--muted); font-size: 11px; }
+.seg button[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ph0); outline-offset: 2px; }
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+td, th { padding: 3px 4px; text-align: left; border-bottom: 1px solid var(--line); }
+th { font-weight: 400; color: var(--muted); font-family: var(--font-body); font-size: 12px; }
+.bars { display: grid; gap: 6px; font-size: 12px; }
+.bar { display: grid; grid-template-columns: 96px 1fr 52px; align-items: center; gap: 6px; }
+.track { position: relative; height: 12px; }
+.track .zero { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--fg); }
+.track .fill { position: absolute; top: 0; bottom: 0; }
+.num { font-family: var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.slider { display: grid; gap: 4px; }
+.slider input { width: 100%; }
+.readout { font-family: var(--font-mono); font-size: 13px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.toggles { display: grid; gap: 4px; font-size: 14px; }
+.toggles label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions button { font: inherit; font-size: 14px; padding: 6px 10px; border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 4px; cursor: pointer; }
+.snap { display: grid; gap: 6px; }
+.snap img { border: 1px solid var(--line); border-radius: 4px; }
+.note { font-size: 13px; color: var(--muted); }
+.err { color: var(--sheetB); font-size: 14px; padding: 16px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Leptons on the FCC lattice</h1>
+    <p>A 2&times;2&times;2 block of face-centered-cubic cells, to scale, stood on a corner so the &lang;111&rang; stacking axis is vertical. Each lepton is an eigenstate of the family operator <i>W</i>: equal weight on one site of each sheet type A, B, C, with its own phase on each sheet. Drag to rotate, scroll or pinch to zoom.</p>
+  </header>
+  <div class="main">
+    <div class="stage" id="stage">
+      <div class="legend" aria-hidden="true">
+        <span><i class="dot" style="background:var(--sheetA)"></i>sheet A</span>
+        <span><i class="dot" style="background:var(--sheetB)"></i>sheet B</span>
+        <span><i class="dot" style="background:var(--sheetC)"></i>sheet C</span>
+      </div>
+      <div class="hint">Lepton sites: ringed, colored by phase; arrows show the phase in each sheet.</div>
+    </div>
+    <aside class="panel">
+      <div>
+        <p class="label">Lepton</p>
+        <div class="seg" id="leptons" role="group" aria-label="Choose lepton"></div>
+      </div>
+      <div>
+        <p class="label">Phase on each sheet</p>
+        <table><thead><tr><th>sheet</th><th>phase</th><th>weight</th></tr></thead><tbody id="phases"></tbody></table>
+      </div>
+      <div>
+        <p class="label">Amplitude &radic;m in units of t</p>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="slider">
+        <p class="label" style="margin:0">Phase &delta; of the inter-sheet hop</p>
+        <input type="range" id="delta" min="0" max="0.2618" step="0.0001" value="0.22222205" aria-label="Phase delta">
+        <div class="readout"><span id="dval">&delta; = 0.2222</span><span id="kval">K = 0.666667</span></div>
+        <div class="readout"><span id="ratios"></span></div>
+        <button class="actions" id="reset" style="justify-self:start;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:4px;cursor:pointer">Reset to fitted &delta;</button>
+      </div>
+      <div class="toggles">
+        <p class="label" style="margin:0">Show</p>
+        <label><input type="checkbox" id="tSheets" checked> Shaded sheets A, B, C</label>
+        <label><input type="checkbox" id="tAllSheets"> All seven (111) sheets</label>
+        <label><input type="checkbox" id="tBonds" checked> All nearest-neighbor bonds</label>
+        <label><input type="checkbox" id="tCube" checked> Cubic cell edges</label>
+        <label><input type="checkbox" id="tNbr"> The 12 bonds of the A site (6 : 3 : 3)</label>
+        <label><input type="checkbox" id="tSpin"> Advance a common phase (time evolution)</label>
+      </div>
+      <div class="actions">
+        <button id="snapBtn">Take snapshot</button>
+        <button id="viewBtn">Reset view</button>
+      </div>
+      <div class="snap" id="snap" hidden>
+        <img id="snapImg" alt="Snapshot of the current 3D view">
+        <span class="note">Right-click or long-press the image to save it.</span>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  const stage = document.getElementById('stage');
+  if (!window.THREE) { stage.insertAdjacentHTML('beforeend', '<p class="err">The 3D library did not load. Reload the page to try again.</p>'); return; }
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- physics: W = t[sqrt6 I + sqrt3 (e^{i d} P + e^{-i d} P^-1)], eigenstate k has phase -2*pi*j*k/3 on sheet j
+  const S6 = Math.sqrt(6), S3 = Math.sqrt(3);
+  let delta = 0.22222205;
+  function spectrum(d) {
+    const ks = [0, 1, 2].map(k => ({ k, amp: S6 + 2 * S3 * Math.cos(d + 2 * Math.PI * k / 3) }));
+    ks.sort((a, b) => a.amp - b.amp);                // lightest first: e, mu, tau
+    return ks;
+  }
+  const names = [['Electron', 'e'], ['Muon', 'μ'], ['Tau', 'τ']];
+  let sel = 0;
+
+  // ---- scene
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  stage.prepend(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 4 / 3, 0.1, 100);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.minDistance = 3; controls.maxDistance = 30;
+  function resetView() { camera.position.set(6.2, 2.4, 7.4); controls.target.set(0, 0.2, 0); controls.update(); }
+  resetView();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+  const key = new THREE.DirectionalLight(0xffffff, 0.75); key.position.set(4, 8, 6); scene.add(key);
+
+  // FCC block: even-sum integer points in [0,4]^3, scaled so the bond length is 1, rotated so [111] is +y
+  const N = 4, sc = 1 / Math.SQRT2;
+  const e1 = new THREE.Vector3(1, -1, 0).normalize(), e2 = new THREE.Vector3(1, 1, -2).normalize(), nz = new THREE.Vector3(1, 1, 1).normalize();
+  const toWorld = (x, y, z) => { const v = new THREE.Vector3(x - 2, y - 2, z - 2); return new THREE.Vector3(v.dot(e1) * sc, v.dot(nz) * sc, -v.dot(e2) * sc); };
+  const raw = [];
+  for (let x = 0; x <= N; x++) for (let y = 0; y <= N; y++) for (let z = 0; z <= N; z++) if ((x + y + z) % 2 === 0) raw.push([x, y, z]);
+  const sheetOf = p => (((p[0] + p[1] + p[2] - 4) / 2) % 3 + 3) % 3;
+  const chain = [[1, 1, 2], [2, 2, 2], [3, 3, 2]];      // sums 4, 6, 8: one site in A, B, C
+  const isChain = p => chain.some(c => c[0] === p[0] && c[1] === p[1] && c[2] === p[2]);
+  const shaded = s => s === 4 || s === 6 || s === 8;
+
+  const groups = { bonds: new THREE.Group(), cube: new THREE.Group(), sheets: new THREE.Group(), allSheets: new THREE.Group(), nbr: new THREE.Group(), lepton: new THREE.Group() };
+  Object.values(groups).forEach(g => scene.add(g));
+
+  // nodes
+  const nodeGeo = new THREE.SphereGeometry(0.055, 16, 12);
+  const nodes = raw.map(p => {
+    const m = new THREE.Mesh(nodeGeo, new THREE.MeshLambertMaterial({ color: 0x999999 }));
+    m.position.copy(toWorld(...p)); m.userData.p = p; scene.add(m); return m;
+  });
+  // bonds
+  const bondPos = [];
+  for (let i = 0; i < raw.length; i++) for (let j = i + 1; j < raw.length; j++) {
+    const a = raw[i], b = raw[j]; const d = (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    if (d === 2) { const A = toWorld(...a), B = toWorld(...b); bondPos.push(A.x, A.y, A.z, B.x, B.y, B.z); }
+  }
+  const bondGeo = new THREE.BufferGeometry(); bondGeo.setAttribute('position', new THREE.Float32BufferAttribute(bondPos, 3));
+  const bondMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.45 });
+  groups.bonds.add(new THREE.LineSegments(bondGeo, bondMat));
+  // cube edges
+  const cubePos = [];
+  for (const a of [0, N]) for (const b of [0, N]) {
+    [[[a, b, 0], [a, b, N]], [[a, 0, b], [a, N, b]], [[0, a, b], [N, a, b]]].forEach(([p, q]) => { const A = toWorld(...p), B = toWorld(...q); cubePos.push(A.x, A.y, A.z, B.x, B.y, B.z); });
+  }
+  const cubeGeo = new THREE.BufferGeometry(); cubeGeo.setAttribute('position', new THREE.Float32BufferAttribute(cubePos, 3));
+  const cubeMat = new THREE.LineBasicMaterial({});
+  groups.cube.add(new THREE.LineSegments(cubeGeo, cubeMat));
+  // sheet cross-sections of the cube with x+y+z = s
+  function section(s) {
+    const pts = [];
+    for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) if (a !== b) {
+      const k = 3 - a - b;
+      for (const u of [0, N]) for (const v of [0, N]) { const w = s - u - v; if (w >= 0 && w <= N) { const p = [0, 0, 0]; p[a] = u; p[b] = v; p[k] = w; pts.push(p); } }
+    }
+    const uniq = []; pts.forEach(p => { if (!uniq.some(q => q[0] === p[0] && q[1] === p[1] && q[2] === p[2])) uniq.push(p); });
+    const W = uniq.map(p => toWorld(...p)); const c = W.reduce((s_, v) => s_.add(v), new THREE.Vector3()).multiplyScalar(1 / W.length);
+    W.sort((A, B) => Math.atan2(A.z - c.z, A.x - c.x) - Math.atan2(B.z - c.z, B.x - c.x));
+    const pos = []; for (let i = 0; i < W.length; i++) { const A = W[i], B = W[(i + 1) % W.length]; pos.push(c.x, c.y, c.z, A.x, A.y, A.z, B.x, B.y, B.z); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const outline = new THREE.BufferGeometry().setFromPoints([...W, W[0]]);
+    return { g, outline };
+  }
+  const sheetMats = [0, 1, 2].map(() => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+  const sheetLineMats = [0, 1, 2].map(() => new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
+  for (let s = 2; s <= 10; s += 2) {
+    const t = (((s - 4) / 2) % 3 + 3) % 3; const { g, outline } = section(s);
+    const target = shaded(s) ? groups.sheets : groups.allSheets;
+    target.add(new THREE.Mesh(g, sheetMats[t])); target.add(new THREE.Line(outline, sheetLineMats[t]));
+  }
+  // cylinders between two points
+  function rod(A, B, r, mat) {
+    const dir = new THREE.Vector3().subVectors(B, A); const len = dir.length();
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10), mat);
+    m.position.copy(A).addScaledVector(dir, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()); return m;
+  }
+  // the 12 bonds of the A site
+  const nbrMats = [0, 1, 2].map(() => new THREE.MeshLambertMaterial({}));
+  { const a = chain[0], A = toWorld(...a);
+    raw.forEach(p => { const d = (a[0] - p[0]) ** 2 + (a[1] - p[1]) ** 2 + (a[2] - p[2]) ** 2; if (d === 2) groups.nbr.add(rod(A, toWorld(...p), 0.03, nbrMats[sheetOf(p)])); }); }
+  // lepton: chain rods, rings and phase arrows
+  const chainMat = new THREE.MeshLambertMaterial({});
+  const cw = chain.map(p => toWorld(...p));
+  groups.lepton.add(rod(cw[0], cw[1], 0.035, chainMat)); groups.lepton.add(rod(cw[1], cw[2], 0.035, chainMat));
+  const ringMats = [0, 1, 2].map(() => new THREE.MeshBasicMaterial({}));
+  const rings = cw.map((w, j) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.018, 10, 40), ringMats[j]); r.position.copy(w); r.rotation.x = Math.PI / 2; groups.lepton.add(r); return r; });
+  const arrows = cw.map(w => { const a = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), w, 0.8, 0x000000, 0.2, 0.12); groups.lepton.add(a); return a; });
+
+  // ---- theme colors
+  function applyTheme() {
+    scene.background = new THREE.Color(css('--stage'));
+    bondMat.color.set(css('--bond')); cubeMat.color.set(css('--edge')); chainMat.color.set(css('--fg'));
+    const sc_ = [css('--sheetA'), css('--sheetB'), css('--sheetC')];
+    sheetMats.forEach((m, i) => m.color.set(sc_[i])); sheetLineMats.forEach((m, i) => m.color.set(sc_[i])); nbrMats.forEach((m, i) => m.color.set(sc_[i]));
+    nodes.forEach(n => { const p = n.userData.p; const s = p[0] + p[1] + p[2];
+      n.material.color.set(shaded(s) || allOn() ? sc_[sheetOf(p)] : css('--bond')); });
+    arrows.forEach(a => a.setColor(new THREE.Color(css('--fg'))));
+    update();
+  }
+  const allOn = () => document.getElementById('tAllSheets').checked;
+
+  // ---- UI
+  const phCol = deg => css(deg === 0 ? '--ph0' : deg === 120 ? '--ph120' : '--ph240');
+  const segEl = document.getElementById('leptons');
+  names.forEach(([n, s], i) => { const b = document.createElement('button'); b.type = 'button'; b.id = 'lep' + i; b.innerHTML = `${n} <small id="r${i}"></small>`; b.addEventListener('click', () => { sel = i; update(); }); segEl.appendChild(b); });
+  const fmt = (x, d = 2) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(d);
+  let spin = 0;
+  function update() {
+    const sp = spectrum(delta); const me = sp[0].amp ** 2;
+    const K = sp.reduce((s, x) => s + x.amp ** 2, 0) / sp.reduce((s, x) => s + x.amp, 0) ** 2;
+    document.getElementById('dval').textContent = `δ = ${delta.toFixed(4)}`;
+    document.getElementById('kval').textContent = `K = ${K.toFixed(6)}`;
+    document.getElementById('ratios').textContent = `m_μ/m_e = ${(sp[1].amp ** 2 / me).toFixed(2)}   m_τ/m_e = ${(sp[2].amp ** 2 / me).toFixed(2)}`;
+    names.forEach((_, i) => { document.getElementById('lep' + i).setAttribute('aria-pressed', i === sel); document.getElementById('r' + i).textContent = i === 0 ? 'm/mₑ = 1' : `m/mₑ = ${(sp[i].amp ** 2 / me).toFixed(1)}`; });
+    const st = sp[sel]; const phases = [0, 1, 2].map(j => ((-120 * j * st.k) % 360 + 360) % 360);
+    document.getElementById('phases').innerHTML = phases.map((ph, j) => `<tr><td style="color:${css(['--sheetA', '--sheetB', '--sheetC'][j])}">${'ABC'[j]}</td><td><i class="dot" style="background:${phCol(ph)}"></i> ${ph}°</td><td>1/3</td></tr>`).join('');
+    const ins = S6, out = st.amp - S6, lo = -3.6, hi = 6.0, X = v => (v - lo) / (hi - lo) * 100;
+    const bar = (lab, v, col) => `<div class="bar"><span>${lab}</span><span class="track"><span class="zero" style="left:${X(0)}%"></span><span class="fill" style="left:${X(Math.min(0, v))}%;width:${Math.abs(v) / (hi - lo) * 100}%;background:${col}"></span></span><span class="num">${fmt(v)}</span></div>`;
+    document.getElementById('bars').innerHTML = bar('in-sheet', ins, css('--sheetA')) + bar('between sheets', out, css('--bond')) + bar('total √m', st.amp, css('--fg'));
+    phases.forEach((ph, j) => {
+      ringMats[j].color.set(phCol(ph));
+      const node = nodes.find(n => n.userData.p.join() === chain[j].join()); node.material.color.set(phCol(ph));
+      const th = (ph + spin) * Math.PI / 180; arrows[j].setDirection(new THREE.Vector3(Math.cos(th), 0, -Math.sin(th)));
+    });
+  }
+  const dEl = document.getElementById('delta');
+  dEl.addEventListener('input', () => { delta = parseFloat(dEl.value); update(); });
+  document.getElementById('reset').addEventListener('click', () => { delta = 0.22222205; dEl.value = delta; update(); });
+  const bind = (id, g) => { const el = document.getElementById(id); const f = () => { g.visible = el.checked; }; el.addEventListener('change', f); f(); };
+  bind('tSheets', groups.sheets); bind('tBonds', groups.bonds); bind('tCube', groups.cube); bind('tNbr', groups.nbr);
+  const allEl = document.getElementById('tAllSheets'); allEl.addEventListener('change', () => { groups.allSheets.visible = allEl.checked; applyTheme(); }); groups.allSheets.visible = false;
+  document.getElementById('viewBtn').addEventListener('click', resetView);
+  document.getElementById('snapBtn').addEventListener('click', () => { renderer.render(scene, camera); document.getElementById('snapImg').src = renderer.domElement.toDataURL('image/png'); document.getElementById('snap').hidden = false; });
+
+  // ---- sizing and loop
+  function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(stage); resize();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  applyTheme();
+  const spinEl = document.getElementById('tSpin');
+  if (reduce) { spinEl.disabled = true; spinEl.parentElement.title = 'Disabled because reduced motion is on'; }
+  let last = performance.now();
+  function loop(t) {
+    const dt = (t - last) / 1000; last = t;
+    if (spinEl.checked && !reduce) { spin = (spin + dt * 40) % 360; update(); }
+    controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
